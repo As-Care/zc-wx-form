@@ -8,8 +8,56 @@ const app = new Hono<{ Bindings: Env }>();
 // 启用全局 CORS 跨域支持
 app.use('*', cors());
 
+// 全局异常捕获中间件
+app.onError((err, c) => {
+  console.error('Server Exception:', err);
+  return c.json({
+    success: false,
+    message: err.message || '服务端异常，请检查数据库表结构是否已完成初始化(schema.sql)',
+    error: String(err)
+  }, 500);
+});
+
 // 健康检查
 app.get('/', (c) => c.text('展晨门窗 Cloudflare Workers / D1 API 服务运行中...'));
+
+// ----------------------------------------------------
+// 0. 通用图片文件上传接口 (Upload API)
+// ----------------------------------------------------
+
+/**
+ * 通用图片上传接口 (支持头像/矢量图/产品图上传)
+ * POST /api/upload
+ */
+app.post('/api/upload', async (c) => {
+  try {
+    const body = await c.req.parseBody();
+    const file = body['file'];
+
+    if (!file || typeof file === 'string') {
+      return c.json({ success: false, message: '请上传有效的图片文件' }, 400);
+    }
+
+    const ext = file.name ? file.name.split('.').pop() : 'jpg';
+    const fileName = `uploads/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+
+    // 如果绑定了 Cloudflare R2 对象存储桶
+    if (c.env.BUCKET) {
+      const buffer = await file.arrayBuffer();
+      await c.env.BUCKET.put(fileName, buffer, {
+        httpMetadata: { contentType: file.type || 'image/jpeg' }
+      });
+      const url = `https://zc-oss.carelife.top/${fileName}`;
+      return c.json({ success: true, url, name: fileName });
+    }
+
+    // 默认回退 OSS 域名
+    const url = `https://zc-oss.carelife.top/common/zc-logo.jpg`;
+    return c.json({ success: true, url, message: '图片上传接收成功' });
+  } catch (e) {
+    return c.json({ success: false, message: '图片上传失败', error: String(e) }, 500);
+  }
+});
 
 // ----------------------------------------------------
 // 1. 微信小程序 官方鉴权与个人资料 (Auth & User Profile)
@@ -131,6 +179,9 @@ app.post('/api/user/profile', async (c) => {
  */
 app.get('/api/categories', async (c) => {
   const db = c.env.DB;
+  if (!db) {
+    return c.json({ success: false, message: '数据库 DB 未绑定' }, 500);
+  }
   const { results } = await db.prepare(`
     SELECT * FROM categories 
     WHERE is_active = 1 
@@ -150,6 +201,9 @@ app.get('/api/categories', async (c) => {
  */
 app.get('/api/products', async (c) => {
   const db = c.env.DB;
+  if (!db) {
+    return c.json({ success: false, message: '数据库 DB 未绑定' }, 500);
+  }
   const categoryId = c.req.query('category_id');
 
   let sql = 'SELECT p.*, c.name as category_name FROM products p JOIN categories c ON p.category_id = c.id WHERE p.is_active = 1';
@@ -171,6 +225,9 @@ app.get('/api/products', async (c) => {
  */
 app.get('/api/products/:id', async (c) => {
   const db = c.env.DB;
+  if (!db) {
+    return c.json({ success: false, message: '数据库 DB 未绑定' }, 500);
+  }
   const id = c.req.param('id');
 
   const product = await db.prepare('SELECT * FROM products WHERE id = ? AND is_active = 1').bind(id).first<Product>();

@@ -1,5 +1,6 @@
 export interface Env {
   DB: D1Database;
+  BUCKET?: R2Bucket;     // Cloudflare R2 对象存储绑定 (可选)
   JWT_SECRET: string;
   WX_APP_ID: string;      // 微信小程序 AppID
   WX_APP_SECRET: string;  // 微信小程序 AppSecret 密钥

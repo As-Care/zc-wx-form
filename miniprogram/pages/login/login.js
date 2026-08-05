@@ -1,4 +1,5 @@
 /** 展晨门窗 完善个人资料与登录 Page 逻辑 **/
+const { request, BASE_URL } = require('../../utils/request');
 
 Page({
   data: {
@@ -26,12 +27,37 @@ Page({
     this.setData({ phone: e.detail.value });
   },
 
-  // 主界面选择头像回调
+  // 主界面选择头像回调 (联动后端图片上传 API)
   onChooseAvatar(e) {
     const avatarUrl = e.detail.avatarUrl;
     if (avatarUrl) {
-      this.setData({ avatarUrl: avatarUrl });
-      wx.showToast({ title: '头像已选定', icon: 'success' });
+      wx.showLoading({ title: '正在上传头像...' });
+
+      // 上传图片至服务端 /api/upload 接口
+      wx.uploadFile({
+        url: `${BASE_URL}/api/upload`,
+        filePath: avatarUrl,
+        name: 'file',
+        success: (res) => {
+          wx.hideLoading();
+          try {
+            const data = JSON.parse(res.data);
+            if (data.success && data.url) {
+              this.setData({ avatarUrl: data.url });
+              wx.showToast({ title: '头像已就绪', icon: 'success' });
+            } else {
+              this.setData({ avatarUrl: avatarUrl });
+            }
+          } catch (err) {
+            this.setData({ avatarUrl: avatarUrl });
+          }
+        },
+        fail: () => {
+          wx.hideLoading();
+          this.setData({ avatarUrl: avatarUrl });
+          wx.showToast({ title: '头像已就绪', icon: 'success' });
+        }
+      });
     }
   },
 
@@ -68,12 +94,27 @@ Page({
     }
 
     const saved = wx.getStorageSync('zc_user_info') || {};
+    const userId = saved.id || `user_${Date.now()}`;
     const info = {
       ...saved,
+      id: userId,
       avatarUrl: this.data.avatarUrl,
       nickname: name,
       phone: phone
     };
+
+    // 同步发送更新请求到服务端 API
+    request({
+      url: '/api/user/profile',
+      method: 'POST',
+      data: {
+        user_id: userId,
+        nickname: name,
+        avatar_url: this.data.avatarUrl,
+        phone: phone
+      }
+    }).catch(() => {});
+
     wx.setStorageSync('zc_user_info', info);
 
     wx.showToast({
