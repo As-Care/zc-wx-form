@@ -112,6 +112,10 @@
               <template #icon><IconUserGroup /></template>
               客户管理
             </a-menu-item>
+            <a-menu-item key="Settings">
+              <template #icon><IconSettings /></template>
+              全局设置
+            </a-menu-item>
           </a-menu>
         </a-layout-sider>
 

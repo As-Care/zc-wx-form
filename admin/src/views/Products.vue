@@ -96,7 +96,7 @@
           :rules="[{ required: true, message: '请上传商品封面主图' }]"
         >
           <div class="luxury-upload-card">
-            <a-spin :loading="uploading" tip="图片上传至 R2 中...">
+            <a-spin :loading="uploading" tip="正在上传中">
               <a-upload
                 action="https://zc-api.carelife.top/api/upload"
                 :show-file-list="false"
@@ -362,10 +362,8 @@ const onCoverUploadSuccess = (fileItem) => {
   uploading.value = false;
   if (fileItem && fileItem.response && fileItem.response.url) {
     form.value.cover_image = fileItem.response.url;
-    Message.success('商品主图已成功上传至 Cloudflare R2 对象存储！');
   } else if (fileItem && fileItem.url) {
     form.value.cover_image = fileItem.url;
-    Message.success('商品主图已成功上传至 Cloudflare R2 对象存储！');
   }
 };
 
@@ -411,22 +409,18 @@ const handleSaveProduct = async () => {
   }
 
   try {
-    const isUpdate = Boolean(form.value.id);
-    const url = isUpdate ? `${API_BASE}/api/admin/products/${form.value.id}` : `${API_BASE}/api/admin/products`;
-    const method = isUpdate ? 'PUT' : 'POST';
-
-    const res = await fetch(url, {
-      method,
+    const res = await fetch(`${API_BASE}/api/admin/products`, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
     });
     const data = await res.json();
     if (res.ok && data.success) {
-      Message.success('门窗商品方案保存成功！已同步至线上数据库。');
+      Message.success('保存成功！');
       modalVisible.value = false;
-      fetchProducts();
+      await fetchProducts();
     } else {
-      Message.error(data.message || `接口处理失败 (HTTP ${res.status})`);
+      Message.error(data.message || `保存失败 (HTTP ${res.status})`);
     }
   } catch (e) {
     Message.error('网络连接异常，保存失败');

@@ -58,13 +58,13 @@
     </view>
   </view>
 
-  <!-- 门店地址与联系 -->
+  <!-- 门店地址与联系 (动态数据) -->
   <view class="glass-card store-card flex-column">
     <text class="section-title">📍 品牌旗舰店地址</text>
-    <text class="store-info-text">门店地址：湖北省仙桃市恒迪建材市场2期14栋1-107</text>
-    <text class="store-info-text">联系电话：13545941637</text>
-    <text class="store-info-text">营业时间：周一至周日 8:00 - 18:00</text>
-    <button class="call-btn btn-gold" bindtap="callStore">一键拨号联系</button>
+    <text class="store-info-text">门店地址：{{storeInfo.address}}</text>
+    <text class="store-info-text">联系电话：{{storeInfo.phone}}</text>
+    <text class="store-info-text">营业时间：{{storeInfo.business_hours || '08:30 - 18:30'}}</text>
+    <view class="call-btn btn-gold flex-center mt-2" bindtap="callStore">一键拨号联系</view>
   </view>
 
 </view>

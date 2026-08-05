@@ -74,7 +74,7 @@
         <!-- 分类图标上传至 Cloudflare R2 对象存储桶 -->
         <a-form-item label="首页导航区分类图标 (存储于 Cloudflare R2)">
           <div class="luxury-upload-card">
-            <a-spin :loading="uploading" tip="正在上传至 Cloudflare R2...">
+            <a-spin :loading="uploading" tip="正在上传中">
               <a-upload
                 action="https://zc-api.carelife.top/api/upload"
                 :show-file-list="false"
@@ -88,7 +88,7 @@
                   </div>
                   <div v-else class="upload-dropzone">
                     <icon-plus style="font-size: 20px; color: #C5A880;" />
-                    <span class="upload-title">上传至 R2</span>
+                    <span class="upload-title">上传图片</span>
                   </div>
                 </template>
               </a-upload>
@@ -122,13 +122,11 @@ const fetchCategories = async () => {
   try {
     const res = await fetch(`${API_BASE}/api/categories`);
     const data = await res.json();
-    if (data.success && data.categories) {
-      categories.value = data.categories;
-    } else {
-      categories.value = [];
+    if (data.success && (data.data || data.categories)) {
+      categories.value = data.data || data.categories || [];
     }
   } catch (e) {
-    categories.value = [];
+    console.error('获取分类列表失败', e);
   }
 };
 
@@ -153,16 +151,14 @@ const onIconUploadSuccess = (fileItem) => {
   uploading.value = false;
   if (fileItem && fileItem.response && fileItem.response.url) {
     form.value.icon_url = fileItem.response.url;
-    Message.success('图标成功上传至 Cloudflare R2 存储桶！');
   } else if (fileItem && fileItem.url) {
     form.value.icon_url = fileItem.url;
-    Message.success('图标成功上传至 Cloudflare R2 存储桶！');
   }
 };
 
 const onIconUploadError = () => {
   uploading.value = false;
-  Message.error('图片上传至 Cloudflare R2 失败，请重试');
+  Message.error('图片上传失败，请重试');
 };
 
 const handleSaveCategory = async () => {
@@ -171,40 +167,20 @@ const handleSaveCategory = async () => {
     return;
   }
 
-  if (form.value.id) {
-    const idx = categories.value.findIndex(c => c.id === form.value.id);
-    if (idx !== -1) {
-      categories.value[idx] = { ...form.value };
-      categories.value = [...categories.value];
-    }
-  } else {
-    categories.value.push({
-      id: `cat_${Date.now()}`,
-      name: form.value.name,
-      sub_title: form.value.sub_title || form.value.name.slice(0, 5),
-      icon_url: form.value.icon_url || ''
-    });
-    categories.value = [...categories.value];
-  }
-
   try {
-    const isUpdate = Boolean(form.value.id);
-    const url = isUpdate ? `${API_BASE}/api/admin/categories/${form.value.id}` : `${API_BASE}/api/admin/categories`;
-    const method = isUpdate ? 'PUT' : 'POST';
-
-    const res = await fetch(url, {
-      method,
+    const res = await fetch(`${API_BASE}/api/admin/categories`, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
     });
     const data = await res.json();
 
     if (res.ok && data.success) {
-      Message.success('门窗分类保存成功！已同步至数据库。');
+      Message.success('保存成功！');
       modalVisible.value = false;
-      fetchCategories();
+      await fetchCategories();
     } else {
-      Message.error(data.message || `接口处理失败 (HTTP ${res.status})`);
+      Message.error(data.message || `保存失败 (HTTP ${res.status})`);
     }
   } catch (e) {
     Message.error('网络错误，无法保存分类');
@@ -216,8 +192,8 @@ const deleteCategory = async (id) => {
     const res = await fetch(`${API_BASE}/api/admin/categories/${id}`, { method: 'DELETE' });
     const data = await res.json();
     if (res.ok && data.success) {
-      Message.success('分类已成功从数据库移除');
-      fetchCategories();
+      Message.success('删除成功！');
+      await fetchCategories();
     } else {
       Message.error(data.message || `删除失败 (HTTP ${res.status})`);
     }

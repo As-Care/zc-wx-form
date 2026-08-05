@@ -1,36 +1,15 @@
 <template>
   <div class="staff-config-view">
     <div class="header-bar flex-between mb-4">
-      <h2 class="view-title">接单员配置与门店信息</h2>
+      <h2 class="view-title">接单员配置 (小程序专人接单展示)</h2>
       <a-button type="primary" @click="openReceiverModal">
         <template #icon><icon-plus /></template>
         添加接单员
       </a-button>
     </div>
 
-    <!-- 门店基本地址配置卡片 -->
-    <a-card title="📍 门店地址与客服电话配置" class="mb-4">
-      <a-form :model="storeForm" layout="inline" @submit="saveStoreConfig">
-        <a-form-item label="门店名称">
-          <a-input v-model="storeForm.name" style="width: 200px;" />
-        </a-form-item>
-
-        <a-form-item label="官方客服电话">
-          <a-input v-model="storeForm.phone" style="width: 180px;" />
-        </a-form-item>
-
-        <a-form-item label="门店详细地址">
-          <a-input v-model="storeForm.address" style="width: 340px;" />
-        </a-form-item>
-
-        <a-form-item>
-          <a-button type="primary" html-type="submit">保存地址配置</a-button>
-        </a-form-item>
-      </a-form>
-    </a-card>
-
     <!-- 接单员列表数据表格 -->
-    <a-card title="👥 接单员列表 (小程序专人接单展示)">
+    <a-card title="👥 接单员列表">
       <a-table :data="receivers" :pagination="{ pageSize: 10 }" border row-key="id">
         <template #columns>
           <a-table-column title="接单员姓名" data-index="name" :width="220">
@@ -91,7 +70,7 @@
         <!-- 高奢品质二维码图片上传区域 (直存 Cloudflare R2) -->
         <a-form-item label="微信二维码图片 (直存 Cloudflare R2)">
           <div class="luxury-upload-card">
-            <a-spin :loading="uploading" tip="二维码上传至 R2 中...">
+            <a-spin :loading="uploading" tip="正在上传中">
               <a-upload
                 action="https://zc-api.carelife.top/api/upload"
                 :show-file-list="false"
@@ -111,7 +90,7 @@
                     <div class="upload-icon-circle">
                       <icon-plus style="font-size: 22px; color: #C5A880;" />
                     </div>
-                    <span class="upload-title">点击上传至 R2</span>
+                    <span class="upload-title">点击上传图片</span>
                     <span class="upload-sub">支持 PNG / JPG 格式</span>
                   </div>
                 </template>
@@ -141,12 +120,6 @@ import { Message } from '@arco-design/web-vue';
 
 const API_BASE = 'https://zc-api.carelife.top';
 
-const storeForm = ref({
-  name: '展晨门窗',
-  phone: '13545941637',
-  address: '湖北仙桃恒迪建材市场2期14栋1-107'
-});
-
 const receivers = ref([]);
 
 const modalVisible = ref(false);
@@ -158,38 +131,6 @@ const receiverForm = ref({
   phone: '',
   qr_code_url: ''
 });
-
-const fetchStoreConfig = async () => {
-  try {
-    const res = await fetch(`${API_BASE}/api/config/store`);
-    const data = await res.json();
-    if (data.success && data.data) {
-      storeForm.value = {
-        name: data.data.name || '展晨门窗',
-        phone: data.data.phone || '13545941637',
-        address: data.data.address || '湖北省仙桃市恒迪建材市场2期14栋1-107'
-      };
-    }
-  } catch (e) {}
-};
-
-const saveStoreConfig = async () => {
-  try {
-    const res = await fetch(`${API_BASE}/api/admin/config/store`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(storeForm.value)
-    });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      Message.success('门店信息与客服电话成功保存至数据库！已实时同步至小程序。');
-    } else {
-      Message.error(data.message || `门店配置保存失败 (HTTP ${res.status})`);
-    }
-  } catch (e) {
-    Message.error('无法连接后端服务，请检查网络！');
-  }
-};
 
 const openReceiverModal = () => {
   receiverForm.value = {
@@ -222,10 +163,8 @@ const onQrUploadSuccess = (fileItem) => {
   uploading.value = false;
   if (fileItem && fileItem.response && fileItem.response.url) {
     receiverForm.value.qr_code_url = fileItem.response.url;
-    Message.success('客服微信二维码成功保存至 Cloudflare R2 存储桶！');
   } else if (fileItem && fileItem.url) {
     receiverForm.value.qr_code_url = fileItem.url;
-    Message.success('客服微信二维码成功保存至 Cloudflare R2 存储桶！');
   }
 };
 
@@ -244,27 +183,6 @@ const handleSaveReceiver = async () => {
     return;
   }
 
-  if (receiverForm.value.id) {
-    const idx = receivers.value.findIndex(r => r.id === receiverForm.value.id);
-    if (idx !== -1) {
-      receivers.value[idx] = {
-        id: receiverForm.value.id,
-        name: receiverForm.value.name,
-        phone: receiverForm.value.phone,
-        qr_code_url: receiverForm.value.qr_code_url
-      };
-      receivers.value = [...receivers.value];
-    }
-  } else {
-    receivers.value.push({
-      id: `rec_${Date.now()}`,
-      name: receiverForm.value.name,
-      phone: receiverForm.value.phone,
-      qr_code_url: receiverForm.value.qr_code_url || ''
-    });
-    receivers.value = [...receivers.value];
-  }
-
   try {
     const res = await fetch(`${API_BASE}/api/admin/receivers`, {
       method: 'POST',
@@ -273,9 +191,9 @@ const handleSaveReceiver = async () => {
     });
     const data = await res.json();
     if (res.ok && data.success) {
-      Message.success('接单员配置保存成功！已同步至线上数据库。');
+      Message.success('保存成功！');
       modalVisible.value = false;
-      fetchReceivers();
+      await fetchReceivers();
     } else {
       Message.error(data.message || `接口响应失败 (HTTP ${res.status})`);
     }
@@ -289,8 +207,8 @@ const deleteReceiver = async (id) => {
     const res = await fetch(`${API_BASE}/api/admin/receivers/${id}`, { method: 'DELETE' });
     const data = await res.json();
     if (res.ok && data.success) {
-      Message.success('接单员信息已从数据库移除');
-      fetchReceivers();
+      Message.success('删除成功！');
+      await fetchReceivers();
     } else {
       Message.error(data.message || `操作失败 (HTTP ${res.status})`);
     }
@@ -298,6 +216,7 @@ const deleteReceiver = async (id) => {
     Message.error('删除操作失败，网络连接错误');
   }
 };
+
 const fetchReceivers = async () => {
   try {
     const res = await fetch(`${API_BASE}/api/receivers`);
@@ -313,7 +232,6 @@ const fetchReceivers = async () => {
 };
 
 onMounted(() => {
-  fetchStoreConfig();
   fetchReceivers();
 });
 </script>

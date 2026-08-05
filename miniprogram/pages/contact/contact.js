@@ -8,21 +8,41 @@ Page({
     receivers: []
   },
 
-  onLoad() {
+  onShow() {
+    this.fetchStoreConfig();
     this.fetchReceivers();
+  },
+
+  fetchStoreConfig() {
+    request({ url: '/api/config/store' }).then(res => {
+      if (res.success && res.data) {
+        this.setData({
+          storeInfo: {
+            name: res.data.name || '展晨门窗',
+            phone: res.data.phone || '13545941637',
+            address: res.data.address || '湖北省仙桃市恒迪建材市场2期14栋1-107',
+            business_hours: res.data.business_hours || '08:30 - 18:30'
+          }
+        });
+      }
+    }).catch(() => {});
   },
 
   fetchReceivers() {
     request({ url: '/api/receivers' }).then(res => {
       if (res.success && res.data) {
         this.setData({ receivers: res.data });
+      } else {
+        this.setData({ receivers: [] });
       }
+    }).catch(() => {
+      this.setData({ receivers: [] });
     });
   },
 
   callStore() {
     wx.makePhoneCall({
-      phoneNumber: this.data.storeInfo.phone
+      phoneNumber: this.data.storeInfo.phone || '13545941637'
     });
   },
 

@@ -90,7 +90,7 @@
         <!-- 客户微信头像上传 (直存 Cloudflare R2) -->
         <a-form-item label="客户微信头像 (直存 Cloudflare R2)">
           <div class="luxury-upload-card">
-            <a-spin :loading="uploading" tip="头像上传至 R2 中...">
+            <a-spin :loading="uploading" tip="正在上传中">
               <a-upload
                 action="https://zc-api.carelife.top/api/upload"
                 :show-file-list="false"
@@ -107,7 +107,7 @@
                   </div>
                   <div v-else class="upload-dropzone">
                     <icon-plus style="font-size: 20px; color: #C5A880;" />
-                    <span class="upload-title">上传至 R2</span>
+                    <span class="upload-title">上传头像</span>
                   </div>
                 </template>
               </a-upload>
@@ -176,10 +176,8 @@ const onAvatarUploadSuccess = (fileItem) => {
   uploading.value = false;
   if (fileItem && fileItem.response && fileItem.response.url) {
     editForm.value.avatar_url = fileItem.response.url;
-    Message.success('客户头像成功上传至 Cloudflare R2 存储桶！');
   } else if (fileItem && fileItem.url) {
     editForm.value.avatar_url = fileItem.url;
-    Message.success('客户头像成功上传至 Cloudflare R2 存储桶！');
   }
 };
 
@@ -206,7 +204,7 @@ const handleSaveUser = async () => {
   }
 
   try {
-    await fetch(`${API_BASE}/api/user/profile`, {
+    const res = await fetch(`${API_BASE}/api/user/profile`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -216,10 +214,17 @@ const handleSaveUser = async () => {
         phone: editForm.value.phone
       })
     });
-  } catch (e) {}
-
-  Message.success('客户姓名与头像修改成功！已保存至数据库。');
-  modalVisible.value = false;
+    const data = await res.json();
+    if (res.ok && data.success) {
+      Message.success('保存成功！');
+      modalVisible.value = false;
+      await fetchUsers();
+    } else {
+      Message.error(data.message || `保存失败 (HTTP ${res.status})`);
+    }
+  } catch (e) {
+    Message.error('无法连接后端服务');
+  }
 };
 
 onMounted(() => {

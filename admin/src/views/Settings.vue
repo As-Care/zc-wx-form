@@ -1,236 +1,103 @@
 <template>
-  <div class="page-layout">
-    <div class="view-header">
-      <h1 class="view-title">⚙️ 系统全局配置</h1>
+  <div class="settings-view">
+    <div class="header-bar flex-between mb-4">
+      <h2 class="view-title">全局设置与门店信息配置</h2>
     </div>
 
-    <div class="settings-content">
-      <a-spin :loading="loading" style="width: 100%">
-        <a-form :model="form" layout="vertical" class="settings-form" @submit="handleSave">
-          
-          <!-- Section 1: 公告设置 -->
-          <div class="settings-section glass-panel">
-            <h3 class="section-title">📢 微信小程序公告</h3>
-            <p class="section-desc">编辑此公告文案，将在微信小程序的首页顶部进行展示，提示打牌玩家重要信息。</p>
-            <a-form-item field="announcement" label="公告内容">
-              <a-textarea 
-                v-model="form.announcement" 
-                placeholder="例如：打牌记账，自觉自觉！撤销分数需要找房主进行。" 
-                :auto-size="{ minRows: 3, maxRows: 6 }"
-                class="custom-textarea"
-              />
+    <!-- 门店基本地址与客服电话配置卡片 (双列栅格布局) -->
+    <a-card title="📍 门店地址与客服电话配置" class="mb-4">
+      <a-form :model="storeForm" layout="vertical" @submit="saveStoreConfig">
+        <a-row :gutter="24">
+          <a-col :span="12">
+            <a-form-item label="门店名称" required>
+              <a-input v-model="storeForm.name" placeholder="如: 展晨门窗" />
             </a-form-item>
-          </div>
-
-          <!-- Section 2: 安全限制 -->
-          <div class="settings-section glass-panel">
-            <h3 class="section-title">🔒 平台安全与限制</h3>
-            <p class="section-desc">限制单个用户的活跃资源，防止出现恶意建房等滥用服务器资源的行为。</p>
-            <a-form-item field="max_active_rooms" label="单用户最大活跃房间数">
-              <a-input-number 
-                v-model="form.max_active_rooms" 
-                :min="1" 
-                :max="50" 
-                placeholder="默认: 5" 
-                class="custom-number-input"
-              />
-              <template #extra>
-                <div>当房主拥有的进行中房间数达到此限制时，将无法创建新房间，直至历史房间结算。</div>
-              </template>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="官方客服电话" required>
+              <a-input v-model="storeForm.phone" placeholder="如: 13545941637" />
             </a-form-item>
-          </div>
+          </a-col>
+        </a-row>
 
-          <!-- Section 3: 系统维护 -->
-          <div class="settings-section glass-panel">
-            <h3 class="section-title">🛠️ 系统运行状态</h3>
-            <p class="section-desc">紧急或例行维护时开启，开启后小程序将冻结房间的创建和玩家的加入。</p>
-            <a-form-item field="maintenance_mode" label="系统维护模式">
-              <a-switch 
-                v-model="form.maintenance_mode" 
-                type="round"
-                class="custom-switch-input"
-              >
-                <template #checked>开启</template>
-                <template #unchecked>关闭</template>
-              </a-switch>
-              <template #extra>
-                <div :class="{ 'warning-text': form.maintenance_mode }">
-                  {{ form.maintenance_mode ? '⚠️ 当前系统处于维护状态，小程序端所有玩家将无法创建或加入新房间！' : '系统运行正常。' }}
-                </div>
-              </template>
+        <a-row :gutter="24">
+          <a-col :span="12">
+            <a-form-item label="门店详细地址" required>
+              <a-input v-model="storeForm.address" placeholder="如: 湖北仙桃恒迪建材市场2期14栋1-107" />
             </a-form-item>
-          </div>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="营业时间">
+              <a-input v-model="storeForm.business_hours" placeholder="如: 08:30 - 18:30 (周一至周日)" />
+            </a-form-item>
+          </a-col>
+        </a-row>
 
-          <!-- Save Button -->
-          <div class="form-actions">
-            <a-button type="primary" size="large" class="save-btn" html-type="submit" :loading="saving">
-              <template #icon><IconSave /></template>
-              保存配置项
-            </a-button>
-          </div>
-
-        </a-form>
-      </a-spin>
-    </div>
+        <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+          <a-button type="primary" html-type="submit" size="medium">
+            <template #icon><icon-save /></template>
+            保存全局配置
+          </a-button>
+        </div>
+      </a-form>
+    </a-card>
   </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';
-import { API_BASE } from '../config';
 
-const loading = ref(false);
-const saving = ref(false);
+const API_BASE = 'https://zc-api.carelife.top';
 
-const form = reactive({
-  announcement: '',
-  max_active_rooms: 5,
-  maintenance_mode: false
+const storeForm = ref({
+  name: '展晨门窗',
+  phone: '13545941637',
+  address: '湖北仙桃恒迪建材市场2期14栋1-107',
+  business_hours: '08:30 - 18:30 (周一至周日)'
 });
 
-const fetchConfig = async () => {
-  loading.value = true;
-  const token = localStorage.getItem('admin_token');
+const fetchStoreConfig = async () => {
   try {
-    const response = await fetch(`${API_BASE}/api/admin/config`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    const result = await response.json();
-    if (result.code === 0) {
-      form.announcement = result.data.announcement || '';
-      form.max_active_rooms = parseInt(result.data.max_active_rooms || '5');
-      form.maintenance_mode = result.data.maintenance_mode === '1';
-    } else {
-      Message.error(result.message || '获取配置失败');
+    const res = await fetch(`${API_BASE}/api/config/store`);
+    const data = await res.json();
+    if (data.success && data.data) {
+      storeForm.value = {
+        name: data.data.name || '展晨门窗',
+        phone: data.data.phone || '13545941637',
+        address: data.data.address || '湖北省仙桃市恒迪建材市场2期14栋1-107',
+        business_hours: data.data.business_hours || '08:30 - 18:30 (周一至周日)'
+      };
     }
-  } catch (err) {
-    console.error('Fetch config error', err);
-    Message.error('无法请求接口数据');
-  } finally {
-    loading.value = false;
-  }
+  } catch (e) {}
 };
 
-const handleSave = async () => {
-  saving.value = true;
-  const token = localStorage.getItem('admin_token');
+const saveStoreConfig = async () => {
   try {
-    const response = await fetch(`${API_BASE}/api/admin/config`, {
+    const res = await fetch(`${API_BASE}/api/admin/config/store`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        announcement: form.announcement,
-        max_active_rooms: String(form.max_active_rooms),
-        maintenance_mode: form.maintenance_mode ? '1' : '0'
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(storeForm.value)
     });
-    const result = await response.json();
-    if (result.code === 0) {
-      Message.success('配置已保存成功！');
-      fetchConfig();
+    const data = await res.json();
+    if (res.ok && data.success) {
+      Message.success('保存成功！');
     } else {
-      Message.error(result.message || '保存配置失败');
+      Message.error(data.message || `全局设置保存失败 (HTTP ${res.status})`);
     }
-  } catch (err) {
-    console.error('Save config error', err);
-    Message.error('接口请求错误，无法保存');
-  } finally {
-    saving.value = false;
+  } catch (e) {
+    Message.error('无法连接后端服务，请检查网络！');
   }
 };
 
 onMounted(() => {
-  fetchConfig();
+  fetchStoreConfig();
 });
 </script>
 
 <style scoped>
-.page-layout {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.view-header {
-  margin-bottom: 24px;
-  flex-shrink: 0;
-}
-
-.view-title {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  color: #1a202c;
-}
-
-body[arco-theme='dark'] .view-title {
-  color: #f5f5f5;
-}
-
-.settings-content {
-  flex: 1;
-  overflow-y: auto;
-  padding-bottom: 40px;
-}
-
-.settings-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.settings-section {
-  padding: 24px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.45) !important;
-}
-
-body[arco-theme='dark'] .settings-section {
-  background: rgba(30, 30, 35, 0.4) !important;
-}
-
-.section-title {
-  margin-top: 0;
-  margin-bottom: 6px;
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.section-desc {
-  font-size: 13px;
-  color: #718096;
-  margin-top: 0;
-  margin-bottom: 20px;
-}
-
-body[arco-theme='dark'] .section-desc {
-  color: #a0aec0;
-}
-
-.custom-textarea, .custom-number-input, .custom-switch-input {
-  border-radius: 8px;
-}
-
-.warning-text {
-  color: #e53e3e;
-  font-weight: 600;
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 10px;
-}
-
-.save-btn {
-  border-radius: 8px;
-  font-weight: 600;
-  min-width: 140px;
-}
+.settings-view { display: flex; flex-direction: column; }
+.view-title { font-size: 20px; font-weight: 700; margin: 0; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.mb-4 { margin-bottom: 16px; }
 </style>

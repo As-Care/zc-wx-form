@@ -8,6 +8,7 @@ import Categories from '../views/Categories.vue';
 import Users from '../views/Users.vue';
 import Overview from '../views/Overview.vue';
 import StaffConfig from '../views/StaffConfig.vue';
+import Settings from '../views/Settings.vue';
 
 const routes = [
   {
@@ -54,6 +55,11 @@ const routes = [
         path: 'staff',
         name: 'StaffConfig',
         component: StaffConfig
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: Settings
       }
     ]
   },

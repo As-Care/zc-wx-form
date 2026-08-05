@@ -350,13 +350,28 @@ app.get('/api/categories', async (c) => {
   if (!db) {
     return c.json({ success: false, message: '数据库 DB 未绑定' }, 500);
   }
+
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        sub_title TEXT,
+        icon_url TEXT,
+        sort_order INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (e) {}
+
   const { results } = await db.prepare(`
     SELECT * FROM categories 
     WHERE is_active = 1 
-    ORDER BY sort_order ASC
+    ORDER BY sort_order ASC, created_at DESC
   `).all<Category>();
 
-  return c.json({ success: true, data: results || [] });
+  return c.json({ success: true, data: results || [], categories: results || [] });
 });
 
 // ----------------------------------------------------
@@ -372,16 +387,34 @@ app.get('/api/products', async (c) => {
   if (!db) {
     return c.json({ success: false, message: '数据库 DB 未绑定' }, 500);
   }
-  const categoryId = c.req.query('category_id');
 
-  let sql = 'SELECT p.*, c.name as category_name FROM products p JOIN categories c ON p.category_id = c.id WHERE p.is_active = 1';
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS products (
+        id TEXT PRIMARY KEY,
+        category_id TEXT,
+        category_name TEXT,
+        name TEXT NOT NULL,
+        description TEXT,
+        cover_image TEXT,
+        base_price_sqm REAL DEFAULT 680,
+        min_area REAL DEFAULT 1.5,
+        sort_order INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (e) {}
+
+  const categoryId = c.req.query('category_id');
+  let sql = 'SELECT * FROM products WHERE is_active = 1';
   const params: any[] = [];
 
   if (categoryId) {
-    sql += ' AND p.category_id = ?';
-    params.push(categoryId);
+    sql += ' AND (category_id = ? OR category_name = ?)';
+    params.push(categoryId, categoryId);
   }
-  sql += ' ORDER BY p.sort_order ASC';
+  sql += ' ORDER BY sort_order ASC, created_at DESC';
 
   const { results } = await db.prepare(sql).bind(...params).all<Product>();
   return c.json({ success: true, data: results || [] });
@@ -846,14 +879,44 @@ app.patch('/api/admin/orders/:id/status', async (c) => {
 app.post('/api/admin/categories', async (c) => {
   const db = c.env.DB;
   const body = await c.req.json();
-  const id = `cat_${Date.now()}`;
 
-  await db.prepare(`
-    INSERT INTO categories (id, name, sub_title, icon_url, sort_order, is_active) 
-    VALUES (?, ?, ?, ?, ?, 1)
-  `).bind(id, body.name, body.sub_title || body.name, body.icon_url || '', body.sort_order || 0).run();
+  if (!body.name || !body.name.trim()) {
+    return c.json({ success: false, message: '分类名称为必填项' }, 400);
+  }
 
-  return c.json({ success: true, id });
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        sub_title TEXT,
+        icon_url TEXT,
+        sort_order INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (e) {}
+
+  const id = body.id || `cat_${Date.now()}`;
+  const name = body.name.trim();
+  const sub_title = (body.sub_title && body.sub_title.trim()) || name.slice(0, 5);
+  const icon_url = body.icon_url || '';
+
+  if (body.id) {
+    await db.prepare(`
+      UPDATE categories 
+      SET name = ?, sub_title = ?, icon_url = ? 
+      WHERE id = ?
+    `).bind(name, sub_title, icon_url, body.id).run();
+    return c.json({ success: true, id: body.id, message: '保存成功' });
+  } else {
+    await db.prepare(`
+      INSERT INTO categories (id, name, sub_title, icon_url, sort_order, is_active) 
+      VALUES (?, ?, ?, ?, 0, 1)
+    `).bind(id, name, sub_title, icon_url).run();
+    return c.json({ success: true, id, message: '保存成功' });
+  }
 });
 
 app.put('/api/admin/categories/:id', async (c) => {
@@ -863,18 +926,18 @@ app.put('/api/admin/categories/:id', async (c) => {
 
   await db.prepare(`
     UPDATE categories 
-    SET name = ?, sub_title = ?, icon_url = ?, sort_order = ? 
+    SET name = ?, sub_title = ?, icon_url = ?
     WHERE id = ?
-  `).bind(body.name, body.sub_title || body.name, body.icon_url || '', body.sort_order || 0, id).run();
+  `).bind(body.name, body.sub_title || body.name, body.icon_url || '', id).run();
 
-  return c.json({ success: true });
+  return c.json({ success: true, message: '保存成功' });
 });
 
 app.delete('/api/admin/categories/:id', async (c) => {
   const db = c.env.DB;
   const id = c.req.param('id');
   await db.prepare('UPDATE categories SET is_active = 0 WHERE id = ?').bind(id).run();
-  return c.json({ success: true });
+  return c.json({ success: true, message: '删除成功' });
 });
 
 /**
@@ -884,7 +947,64 @@ app.delete('/api/admin/categories/:id', async (c) => {
 app.post('/api/admin/products', async (c) => {
   const db = c.env.DB;
   const body = await c.req.json();
-  const id = `prod_${Date.now()}`;
+
+  if (!body.name || !body.name.trim()) {
+    return c.json({ success: false, message: '商品名称为必填项' }, 400);
+  }
+
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS products (
+        id TEXT PRIMARY KEY,
+        category_id TEXT,
+        category_name TEXT,
+        name TEXT NOT NULL,
+        description TEXT,
+        cover_image TEXT,
+        base_price_sqm REAL DEFAULT 680,
+        min_area REAL DEFAULT 1.5,
+        sort_order INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (e) {}
+
+  const id = body.id || `prod_${Date.now()}`;
+
+  if (body.id) {
+    await db.prepare(`
+      UPDATE products 
+      SET category_id = ?, category_name = ?, name = ?, description = ?, cover_image = ?, base_price_sqm = ?, min_area = ?
+      WHERE id = ?
+    `).bind(
+      body.category_id || '',
+      body.category_name || '',
+      body.name,
+      body.description || '',
+      body.cover_image || '',
+      body.base_price_sqm || 680,
+      body.min_area || 1.5,
+      body.id
+    ).run();
+    return c.json({ success: true, id: body.id, message: '保存成功' });
+  } else {
+    await db.prepare(`
+      INSERT INTO products (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1)
+    `).bind(
+      id,
+      body.category_id || '',
+      body.category_name || '',
+      body.name,
+      body.description || '',
+      body.cover_image || '',
+      body.base_price_sqm || 680,
+      body.min_area || 1.5
+    ).run();
+    return c.json({ success: true, id, message: '保存成功' });
+  }
+});
 
   await db.prepare(`
     INSERT INTO products (id, category_id, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active) 

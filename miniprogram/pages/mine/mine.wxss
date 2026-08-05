@@ -63,26 +63,30 @@
   flex-shrink: 0;
 }
 
-.edit-profile-btn {
+.edit-profile-btn,
+.address-manage-btn {
+  width: 196rpx;
+  height: 52rpx;
   font-size: 22rpx;
-  color: #C5A880;
-  background: rgba(197, 168, 128, 0.15);
-  border: 1rpx solid rgba(197, 168, 128, 0.35);
-  padding: 8rpx 20rpx;
-  border-radius: 30rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 26rpx;
+  box-sizing: border-box;
   flex-shrink: 0;
   text-align: center;
 }
 
+.edit-profile-btn {
+  color: #C5A880;
+  background: rgba(197, 168, 128, 0.15);
+  border: 1rpx solid rgba(197, 168, 128, 0.35);
+}
+
 .address-manage-btn {
-  font-size: 22rpx;
   color: #F8FAFC;
   background: rgba(255, 255, 255, 0.08);
   border: 1rpx solid rgba(255, 255, 255, 0.2);
-  padding: 8rpx 20rpx;
-  border-radius: 30rpx;
-  flex-shrink: 0;
-  text-align: center;
 }
 
 .mb-1 { margin-bottom: 10rpx; }

@@ -48,6 +48,7 @@ Page({
             name: res.data.name || '展晨门窗',
             phone: res.data.phone || '13545941637',
             address: res.data.address || '湖北省仙桃市恒迪建材市场2期14栋1-107',
+            business_hours: res.data.business_hours || '08:30 - 18:30',
             hours: res.data.business_hours || '08:30 - 18:30'
           }
         });

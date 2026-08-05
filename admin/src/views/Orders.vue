@@ -456,9 +456,9 @@ const handleSaveOrder = async () => {
     });
     const data = await res.json();
     if (res.ok && data.success) {
-      Message.success('订单状态及备注更新成功！已保存至数据库。');
+      Message.success('保存成功！');
       modalVisible.value = false;
-      fetchOrders();
+      await fetchOrders();
     } else {
       Message.error(data.message || `订单状态修改失败 (HTTP ${res.status})`);
     }

@@ -77,7 +77,7 @@
         <text class="row-icon">⏰</text>
         <text class="row-label">营业时间</text>
       </view>
-      <text class="row-val">{{storeInfo.businessHours}}</text>
+      <text class="row-val">{{storeInfo.business_hours || storeInfo.hours || '08:30 - 18:30'}}</text>
     </view>
   </view>
 
