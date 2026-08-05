@@ -92,17 +92,17 @@
               <template #icon><IconDashboard /></template>
               大盘数据
             </a-menu-item>
-            <a-menu-item key="Orders">
-              <template #icon><IconFile /></template>
-              订单管理
+            <a-menu-item key="Categories">
+              <template #icon><IconFolder /></template>
+              门窗分类
             </a-menu-item>
             <a-menu-item key="Products">
               <template #icon><IconApps /></template>
               门窗商品
             </a-menu-item>
-            <a-menu-item key="Categories">
-              <template #icon><IconFolder /></template>
-              门窗分类
+            <a-menu-item key="Orders">
+              <template #icon><IconFile /></template>
+              订单管理
             </a-menu-item>
             <a-menu-item key="StaffConfig">
               <template #icon><IconPhone /></template>

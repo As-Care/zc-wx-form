@@ -52,6 +52,12 @@
       <text class="empty-title">该分类暂无定制商品方案</text>
       <text class="empty-sub">商家正在为您陆续配置上架中，敬请期待</text>
     </view>
+
+    <!-- 右侧商品列表 Loading 遮罩蒙层 -->
+    <view class="product-loading-mask flex-column flex-center" wx:if="{{loading}}">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">加载中...</text>
+    </view>
   </scroll-view>
 
 </view>

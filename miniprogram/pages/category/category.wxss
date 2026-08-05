@@ -205,3 +205,51 @@ page {
   font-size: 22rpx;
   color: #6C727F;
 }
+
+/* 右侧商品列表 加载中 Loading 遮罩蒙层 (黑曜石玻璃暗纹) */
+.product-main {
+  position: relative;
+}
+
+.product-loading-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(18, 19, 22, 0.78);
+  backdrop-filter: blur(8rpx);
+  -webkit-backdrop-filter: blur(8rpx);
+  z-index: 99;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16rpx;
+}
+
+.loading-spinner {
+  width: 52rpx;
+  height: 52rpx;
+  border: 4rpx solid rgba(197, 168, 128, 0.2);
+  border-top-color: #C5A880;
+  border-radius: 50%;
+  animation: spinner-rotate 0.8s linear infinite;
+  margin-bottom: 20rpx;
+}
+
+@keyframes spinner-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  font-size: 24rpx;
+  color: #C5A880;
+  font-weight: 600;
+  letter-spacing: 1rpx;
+}

@@ -901,7 +901,35 @@ app.patch('/api/admin/orders/:id/status', async (c) => {
 });
 
 /**
- * 管理端 分类管理 CRUD (创建、编辑、禁用)
+ * 管理端 获取全量分类列表 (包含已禁用的分类)
+ * GET /api/admin/categories
+ */
+app.get('/api/admin/categories', async (c) => {
+  const db = c.env.DB;
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        sub_title TEXT,
+        icon_url TEXT,
+        sort_order INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (e) {}
+
+  const { results } = await db.prepare(`
+    SELECT * FROM categories 
+    ORDER BY sort_order ASC, created_at DESC
+  `).all<Category>();
+
+  return c.json({ success: true, data: results || [], categories: results || [] });
+});
+
+/**
+ * 管理端 分类管理 CRUD (创建、编辑、禁用/启用)
  * POST /api/admin/categories
  */
 app.post('/api/admin/categories', async (c) => {
@@ -930,17 +958,18 @@ app.post('/api/admin/categories', async (c) => {
   const name = body.name.trim();
   const sub_title = (body.sub_title && body.sub_title.trim()) || name.slice(0, 5);
   const icon_url = body.icon_url || '';
+  const isActive = (body.is_active !== undefined && body.is_active !== null) ? Number(body.is_active) : 1;
 
   // UPSERT: ID 存在即更新原记录，不存在则精准新建，绝无重复数据
   await db.prepare(`
     INSERT INTO categories (id, name, sub_title, icon_url, sort_order, is_active) 
-    VALUES (?, ?, ?, ?, 0, 1)
+    VALUES (?, ?, ?, ?, 0, ?)
     ON CONFLICT(id) DO UPDATE SET 
       name = excluded.name, 
       sub_title = excluded.sub_title, 
       icon_url = excluded.icon_url,
-      is_active = 1
-  `).bind(id, name, sub_title, icon_url).run();
+      is_active = excluded.is_active
+  `).bind(id, name, sub_title, icon_url, isActive).run();
 
   return c.json({ success: true, id, message: '保存成功' });
 });
@@ -952,16 +981,17 @@ app.put('/api/admin/categories/:id', async (c) => {
   const name = (body.name || '').trim();
   const sub_title = (body.sub_title && body.sub_title.trim()) || name.slice(0, 5);
   const icon_url = body.icon_url || '';
+  const isActive = (body.is_active !== undefined && body.is_active !== null) ? Number(body.is_active) : 1;
 
   await db.prepare(`
     INSERT INTO categories (id, name, sub_title, icon_url, sort_order, is_active) 
-    VALUES (?, ?, ?, ?, 0, 1)
+    VALUES (?, ?, ?, ?, 0, ?)
     ON CONFLICT(id) DO UPDATE SET 
       name = excluded.name, 
       sub_title = excluded.sub_title, 
       icon_url = excluded.icon_url,
-      is_active = 1
-  `).bind(id, name, sub_title, icon_url).run();
+      is_active = excluded.is_active
+  `).bind(id, name, sub_title, icon_url, isActive).run();
 
   return c.json({ success: true, message: '保存成功' });
 });
@@ -970,7 +1000,7 @@ app.delete('/api/admin/categories/:id', async (c) => {
   const db = c.env.DB;
   const id = c.req.param('id');
   await db.prepare('UPDATE categories SET is_active = 0 WHERE id = ?').bind(id).run();
-  return c.json({ success: true, message: '删除成功' });
+  return c.json({ success: true, message: '分类已成功禁用' });
 });
 
 /**
@@ -1172,6 +1202,13 @@ app.get('/api/config/store', async (c) => {
     `).run();
   } catch (e) {}
 
+  try {
+    await db.prepare('ALTER TABLE store_config ADD COLUMN latitude REAL').run();
+  } catch (e) {}
+  try {
+    await db.prepare('ALTER TABLE store_config ADD COLUMN longitude REAL').run();
+  } catch (e) {}
+
   const config = await db.prepare('SELECT * FROM store_config WHERE id = ?').bind('default').first<any>();
   if (config) {
     return c.json({ success: true, data: config });
@@ -1215,6 +1252,13 @@ app.post('/api/admin/config/store', async (c) => {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `).run();
+  } catch (e) {}
+
+  try {
+    await db.prepare('ALTER TABLE store_config ADD COLUMN latitude REAL').run();
+  } catch (e) {}
+  try {
+    await db.prepare('ALTER TABLE store_config ADD COLUMN longitude REAL').run();
   } catch (e) {}
 
   const lat = (latitude !== undefined && latitude !== null && latitude !== '') ? parseFloat(latitude) : null;

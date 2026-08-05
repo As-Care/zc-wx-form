@@ -7,7 +7,8 @@ Page({
     activeCatId: '',
     activeCatName: '断桥铝系统窗',
     allProducts: [],
-    productList: []
+    productList: [],
+    loading: false
   },
 
   onShow() {
@@ -58,6 +59,7 @@ Page({
   },
 
   fetchProducts(catId, catName) {
+    this.setData({ loading: true });
     const queryParam = catId || catName || '';
     request({ url: `/api/products?category_id=${encodeURIComponent(queryParam)}` }).then(res => {
       if (res.success && Array.isArray(res.data)) {
@@ -71,6 +73,8 @@ Page({
       const allMock = mockData.products || [];
       const filtered = allMock.filter(p => p.category_id === catId || p.category_name === catName || (p.name && catName && p.name.includes(catName)));
       this.setData({ productList: filtered });
+    }).finally(() => {
+      this.setData({ loading: false });
     });
   },
 

@@ -19,7 +19,7 @@
 
         <a-table-column title="首页导航区小标签" data-index="sub_title" :width="200">
           <template #cell="{ record }">
-            <a-tag color="gold">{{ record.sub_title }}</a-tag>
+            <a-tag class="champagne-tag">{{ record.sub_title }}</a-tag>
           </template>
         </a-table-column>
 
@@ -37,9 +37,17 @@
           </template>
         </a-table-column>
 
-        <a-table-column title="状态" :width="120">
+        <a-table-column title="状态" :width="140">
           <template #cell="{ record }">
-            <a-tag color="green">已启用</a-tag>
+            <a-switch
+              v-model="record.is_active"
+              :checked-value="1"
+              :unchecked-value="0"
+              @change="(val) => handleStatusChange(record, val)"
+            >
+              <template #checked>已启用</template>
+              <template #unchecked>已禁用</template>
+            </a-switch>
           </template>
         </a-table-column>
 
@@ -49,10 +57,10 @@
               <template #icon><icon-edit /></template>
               编辑
             </a-button>
-            <a-popconfirm content="确定删除此分类吗？" type="warning" @ok="deleteCategory(record.id)">
+            <a-popconfirm content="确定禁用此分类吗？" type="warning" @ok="deleteCategory(record.id)">
               <a-button type="outline" status="danger" size="small">
                 <template #icon><icon-delete /></template>
-                删除
+                禁用
               </a-button>
             </a-popconfirm>
           </template>
@@ -69,6 +77,13 @@
 
         <a-form-item label="首页导航区小标签 (限5字以内，如: 极窄推拉门)" required>
           <a-input v-model="form.sub_title" maxlength="5" show-word-limit placeholder="最多5字，适合首页导航显示" />
+        </a-form-item>
+
+        <a-form-item label="分类状态" required>
+          <a-radio-group v-model="form.is_active" type="button">
+            <a-radio :value="1">启用 (小程序端展示)</a-radio>
+            <a-radio :value="0">禁用 (停用隐藏)</a-radio>
+          </a-radio-group>
         </a-form-item>
 
         <!-- 首页导航区分类图标 -->
@@ -127,11 +142,11 @@ import { Message } from '@arco-design/web-vue';
 const API_BASE = 'https://zc-api.carelife.top';
 
 const DEFAULT_CATEGORIES = [
-  { id: 'cat_1', name: '断桥铝系统窗', sub_title: '系统断桥窗', icon_url: '' },
-  { id: 'cat_2', name: '极窄推拉门/平开门', sub_title: '极窄推拉门', icon_url: '' },
-  { id: 'cat_3', name: '系统封阳台/阳光房', sub_title: '封阳台阳光房', icon_url: '' },
-  { id: 'cat_4', name: '金刚网纱窗及配件', sub_title: '金刚网纱窗', icon_url: '' },
-  { id: 'cat_5', name: '幕墙工程系', sub_title: '幕墙工程系', icon_url: '' }
+  { id: 'cat_1', name: '断桥铝系统窗', sub_title: '系统断桥窗', icon_url: '', is_active: 1 },
+  { id: 'cat_2', name: '极窄推拉门/平开门', sub_title: '极窄推拉门', icon_url: '', is_active: 1 },
+  { id: 'cat_3', name: '系统封阳台/阳光房', sub_title: '封阳台阳光房', icon_url: '', is_active: 1 },
+  { id: 'cat_4', name: '金刚网纱窗及配件', sub_title: '金刚网纱窗', icon_url: '', is_active: 1 },
+  { id: 'cat_5', name: '幕墙工程系', sub_title: '幕墙工程系', icon_url: '', is_active: 1 }
 ];
 
 const categories = ref([]);
@@ -144,17 +159,21 @@ const form = ref({
   id: '',
   name: '',
   sub_title: '',
-  icon_url: ''
+  icon_url: '',
+  is_active: 1
 });
 
 const fetchCategories = async () => {
   tableLoading.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/categories`);
+    const res = await fetch(`${API_BASE}/api/admin/categories`);
     const data = await res.json();
     const list = data.data || data.categories;
     if (data.success && list && list.length > 0) {
-      categories.value = list;
+      categories.value = list.map(c => ({
+        ...c,
+        is_active: (c.is_active !== undefined && c.is_active !== null) ? Number(c.is_active) : 1
+      }));
     } else {
       categories.value = DEFAULT_CATEGORIES;
     }
@@ -166,13 +185,19 @@ const fetchCategories = async () => {
 };
 
 const openModal = () => {
-  form.value = { id: '', name: '', sub_title: '', icon_url: '' };
+  form.value = { id: '', name: '', sub_title: '', icon_url: '', is_active: 1 };
   uploading.value = false;
   modalVisible.value = true;
 };
 
 const editCategory = (record) => {
-  form.value = { ...record };
+  form.value = {
+    id: record.id,
+    name: record.name,
+    sub_title: record.sub_title,
+    icon_url: record.icon_url || '',
+    is_active: (record.is_active !== undefined && record.is_active !== null) ? Number(record.is_active) : 1
+  };
   uploading.value = false;
   modalVisible.value = true;
 };
@@ -219,6 +244,33 @@ const handleSaveCategory = async () => {
     }
   } catch (e) {
     Message.error('网络错误，无法保存分类');
+  }
+};
+
+const handleStatusChange = async (record, val) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/categories`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: record.id,
+        name: record.name,
+        sub_title: record.sub_title,
+        icon_url: record.icon_url || '',
+        is_active: val
+      })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      Message.success(`已成功${val === 1 ? '启用' : '禁用'}分类【${record.name}】`);
+      await fetchCategories();
+    } else {
+      Message.error('状态修改失败');
+      record.is_active = val === 1 ? 0 : 1;
+    }
+  } catch (e) {
+    Message.error('网络联通失败');
+    record.is_active = val === 1 ? 0 : 1;
   }
 };
 
@@ -323,4 +375,12 @@ onMounted(() => {
   color: #ffffff;
 }
 .ml-2 { margin-left: 8px; }
+
+:deep(.champagne-tag) {
+  background-color: #c5a880 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  border: none !important;
+  border-radius: 4px;
+}
 </style>
