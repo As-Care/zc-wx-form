@@ -1,14 +1,14 @@
-name = "zc-wx-server"
+name = "zc-wx-form"
 main = "src/index.ts"
 compatibility_date = "2024-02-01"
 
 [vars]
-ENVIRONMENT = "development"
+ENVIRONMENT = "production"
 JWT_SECRET = "zhanchen_menye_secret_key_2026"
-WX_APP_ID = "wx012162a3e0fe4288"         # 微信小程序 AppID (微信公众平台获取)
-WX_APP_SECRET = "9087e85db61a697b6a3b2ef7a9906d25" # 微信小程序 AppSecret (微信公众平台获取)
+WX_APP_ID = "wx012162a3e0fe4288"
+WX_APP_SECRET = "9087e85db61a697b6a3b2ef7a9906d25"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "zc-db"
-database_id = "local-zc-d1-id"
+database_id = "fa0ee2ed-2492-402e-bb27-98e7f4a8e7b3" # 请在 Cloudflare 后台创建 D1 数据库后填入真实 UUID
