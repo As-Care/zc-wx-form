@@ -96,7 +96,6 @@
                 action="https://zc-api.carelife.top/api/upload"
                 :show-file-list="false"
                 @before-upload="onBeforeUpload"
-                @progress="uploading = true"
                 @success="onQrUploadSuccess"
                 @error="onQrUploadError"
               >
@@ -137,8 +136,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';
+
+const API_BASE = 'https://zc-api.carelife.top';
 
 const storeForm = ref({
   name: '展晨门窗',
@@ -146,20 +147,7 @@ const storeForm = ref({
   address: '湖北仙桃恒迪建材市场2期14栋1-107'
 });
 
-const receivers = ref([
-  {
-    id: 'rec_1',
-    name: '张经理 (展晨总店算价核算组)',
-    phone: '13545941637',
-    qr_code_url: ''
-  },
-  {
-    id: 'rec_2',
-    name: '李主管 (现场复核勘测组)',
-    phone: '13971234567',
-    qr_code_url: ''
-  }
-]);
+const receivers = ref([]);
 
 const modalVisible = ref(false);
 const uploading = ref(false);
@@ -170,6 +158,18 @@ const receiverForm = ref({
   phone: '',
   qr_code_url: ''
 });
+
+const fetchReceivers = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/api/receivers`);
+    const data = await res.json();
+    if (data.success && data.data) {
+      receivers.value = data.data;
+    }
+  } catch (e) {
+    receivers.value = [];
+  }
+};
 
 const saveStoreConfig = () => {
   Message.success('门店信息与客服电话保存成功！');
@@ -197,20 +197,24 @@ const editReceiver = (record) => {
   modalVisible.value = true;
 };
 
-const onBeforeUpload = () => {
+const onBeforeUpload = (file) => {
   uploading.value = true;
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      receiverForm.value.qr_code_url = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
   return true;
 };
 
 const onQrUploadSuccess = (fileItem) => {
   uploading.value = false;
-  if (fileItem && fileItem.response && fileItem.response.url) {
+  if (fileItem && fileItem.response && fileItem.response.url && !fileItem.response.url.includes('zc-logo.jpg')) {
     receiverForm.value.qr_code_url = fileItem.response.url;
-    Message.success('客服微信二维码上传成功！');
-  } else if (fileItem && fileItem.url) {
-    receiverForm.value.qr_code_url = fileItem.url;
-    Message.success('客服微信二维码上传成功！');
   }
+  Message.success('客服微信二维码上传成功！');
 };
 
 const onQrUploadError = () => {
@@ -218,7 +222,7 @@ const onQrUploadError = () => {
   Message.error('二维码图片上传失败！');
 };
 
-const handleSaveReceiver = () => {
+const handleSaveReceiver = async () => {
   if (!receiverForm.value.name || !receiverForm.value.name.trim()) {
     Message.warning('【接单员姓名】为必填项，请输入后再保存！');
     return;
@@ -237,7 +241,6 @@ const handleSaveReceiver = () => {
         phone: receiverForm.value.phone,
         qr_code_url: receiverForm.value.qr_code_url
       };
-      // 强制触发 Vue 3 数组响应式更新
       receivers.value = [...receivers.value];
     }
   } else {
@@ -250,6 +253,14 @@ const handleSaveReceiver = () => {
     receivers.value = [...receivers.value];
   }
 
+  try {
+    await fetch(`${API_BASE}/api/admin/receivers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(receiverForm.value)
+    });
+  } catch (e) {}
+
   Message.success('接单员配置保存成功！已同步至小程序联系客服。');
   modalVisible.value = false;
 };
@@ -258,6 +269,10 @@ const deleteReceiver = (id) => {
   receivers.value = receivers.value.filter(r => r.id !== id);
   Message.success('接单员信息已从小程序移除');
 };
+
+onMounted(() => {
+  fetchReceivers();
+});
 </script>
 
 <style scoped>

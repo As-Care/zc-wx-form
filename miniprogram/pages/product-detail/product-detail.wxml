@@ -3,7 +3,7 @@
   <!-- 商品封面图 -->
   <view class="cover-box">
     <image class="cover-img" src="{{product.cover_image}}" mode="aspectFill"></image>
-    <view class="cover-overlay flex-between">
+    <view class="cover-overlay flex-column align-start">
       <text class="product-title">{{product.name}}</text>
       <text class="base-tag">基础单价 ¥ {{product.base_price_sqm}} / ㎡</text>
     </view>
@@ -67,12 +67,12 @@
     <!-- 针对当前套系的算价结果卡片 -->
     <view class="area-summary-box flex-between">
       <view class="area-item flex-column">
-        <text class="a-label">本套算得面积</text>
+        <text class="a-label">本套实际面积</text>
         <text class="a-val">{{customSets[activeSetIndex].calcResult.actualArea}} ㎡</text>
       </view>
       <view class="area-line"></view>
       <view class="area-item flex-column">
-        <text class="a-label">本套计费面积 (底线{{product.min_area}}㎡)</text>
+        <text class="a-label">本套计费面积</text>
         <text class="a-val theme-gold-text">
           {{customSets[activeSetIndex].calcResult.billedArea}} ㎡
         </text>

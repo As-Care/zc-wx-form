@@ -9,7 +9,7 @@
     </div>
 
     <!-- 门窗商品数据表格 -->
-    <a-table :data="products" :pagination="{ pageSize: 10 }" border>
+    <a-table :data="products" :pagination="{ pageSize: 10 }" border row-key="id">
       <template #columns>
         <a-table-column title="商品主图" :width="110">
           <template #cell="{ record }">
@@ -37,7 +37,7 @@
 
         <a-table-column title="所属分类" data-index="category_name" :width="150">
           <template #cell="{ record }">
-            <a-tag class="soft-cat-tag">{{ record.category_name }}</a-tag>
+            <a-tag class="soft-cat-tag">{{ record.category_name || '门窗分类' }}</a-tag>
           </template>
         </a-table-column>
 
@@ -101,7 +101,6 @@
                 action="https://zc-api.carelife.top/api/upload"
                 :show-file-list="false"
                 @before-upload="onBeforeUpload"
-                @progress="uploading = true"
                 @success="onCoverUploadSuccess"
                 @error="onCoverUploadError"
               >
@@ -245,8 +244,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';
+
+const API_BASE = 'https://zc-api.carelife.top';
 
 const categories = ref([
   '断桥铝系统窗',
@@ -256,53 +257,7 @@ const categories = ref([
   '幕墙工程系'
 ]);
 
-const products = ref([
-  {
-    id: 'prod_1',
-    name: '展晨108热桥级系统断桥铝窗',
-    description: '高隔音高隔热，适合高层住宅与阳台封窗，支持双色定制',
-    cover_image: '',
-    category_name: '断桥铝系统窗',
-    base_price_sqm: 680,
-    min_area: 1.5,
-    options: [
-      { id: 'opt_1', group_name: '玻璃配置', option_name: '5+18A+5 标准中空钢化玻璃', price_type: 'per_sqm', price: 0, is_default: 1 },
-      { id: 'opt_2', group_name: '玻璃配置', option_name: '5+18A+5 Low-E 超白隔热玻璃', price_type: 'per_sqm', price: 80, is_default: 0 },
-      { id: 'opt_3', group_name: '玻璃配置', option_name: '5+12A+5+12A+5 三玻两腔降噪玻璃', price_type: 'per_sqm', price: 150, is_default: 0 },
-      { id: 'opt_4', group_name: '五金执手', option_name: '德国好博 (Hoppe) 原装执手五金', price_type: 'per_item', price: 150, is_default: 1 },
-      { id: 'opt_5', group_name: '五金执手', option_name: '德国丝吉利娅 隐藏锁扣', price_type: 'per_item', price: 220, is_default: 0 },
-      { id: 'opt_6', group_name: '型材颜色', option_name: '氟碳雅致黑', price_type: 'fixed', price: 0, is_default: 1 },
-      { id: 'opt_7', group_name: '型材颜色', option_name: '阳极氧化香槟银', price_type: 'fixed', price: 50, is_default: 0 }
-    ]
-  },
-  {
-    id: 'prod_2',
-    name: '展晨120超静音三玻两腔系统窗',
-    description: '顶级三玻两腔超静音，抗台风防暴雨设计',
-    cover_image: '',
-    category_name: '断桥铝系统窗',
-    base_price_sqm: 880,
-    min_area: 1.5,
-    options: [
-      { id: 'opt_201', group_name: '玻璃配置', option_name: '5+12A+5+12A+5 三玻两腔', price_type: 'per_sqm', price: 0, is_default: 1 },
-      { id: 'opt_202', group_name: '五金执手', option_name: '德国好博原装五金执手', price_type: 'per_item', price: 150, is_default: 1 },
-      { id: 'opt_203', group_name: '型材颜色', option_name: '氟碳雅致黑', price_type: 'fixed', price: 0, is_default: 1 }
-    ]
-  },
-  {
-    id: 'prod_3',
-    name: '展晨极简16窄边重型推拉门',
-    description: '极简16边框视野无界，极顺滑下轨设计',
-    cover_image: '',
-    category_name: '极窄推拉门/平开门',
-    base_price_sqm: 980,
-    min_area: 2.0,
-    options: [
-      { id: 'opt_301', group_name: '玻璃配置', option_name: '8mm 单层超白钢化玻璃', price_type: 'per_sqm', price: 0, is_default: 1 },
-      { id: 'opt_302', group_name: '五金执手', option_name: '极简暗藏式拉手', price_type: 'per_item', price: 0, is_default: 1 }
-    ]
-  }
-]);
+const products = ref([]);
 
 const modalVisible = ref(false);
 const optionsDrawerVisible = ref(false);
@@ -318,6 +273,18 @@ const form = ref({
   base_price_sqm: 680,
   min_area: 1.5
 });
+
+const fetchProducts = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/api/products`);
+    const data = await res.json();
+    if (data.success && data.data) {
+      products.value = data.data;
+    }
+  } catch (e) {
+    products.value = [];
+  }
+};
 
 const openProductModal = () => {
   form.value = {
@@ -339,11 +306,19 @@ const editProduct = (record) => {
   modalVisible.value = true;
 };
 
-const openOptionsDrawer = (record) => {
+const openOptionsDrawer = async (record) => {
   currentProduct.value = JSON.parse(JSON.stringify(record));
   if (!currentProduct.value.options) {
     currentProduct.value.options = [];
   }
+  try {
+    const res = await fetch(`${API_BASE}/api/products/${record.id}`);
+    const data = await res.json();
+    if (data.success && data.data && data.data.options) {
+      currentProduct.value.options = data.data.options;
+    }
+  } catch (e) {}
+
   optionsDrawerVisible.value = true;
 };
 
@@ -371,26 +346,31 @@ const saveOptions = () => {
     const target = products.value.find(p => p.id === currentProduct.value.id);
     if (target) {
       target.options = currentProduct.value.options;
+      products.value = [...products.value];
     }
     Message.success('选配加价规则保存成功！');
     optionsDrawerVisible.value = false;
   }
 };
 
-const onBeforeUpload = () => {
+const onBeforeUpload = (file) => {
   uploading.value = true;
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      form.value.cover_image = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
   return true;
 };
 
 const onCoverUploadSuccess = (fileItem) => {
   uploading.value = false;
-  if (fileItem && fileItem.response && fileItem.response.url) {
+  if (fileItem && fileItem.response && fileItem.response.url && !fileItem.response.url.includes('zc-logo.jpg')) {
     form.value.cover_image = fileItem.response.url;
-    Message.success('商品主图上传成功！');
-  } else if (fileItem && fileItem.url) {
-    form.value.cover_image = fileItem.url;
-    Message.success('商品主图上传成功！');
   }
+  Message.success('商品主图上传成功！');
 };
 
 const onCoverUploadError = () => {
@@ -398,7 +378,7 @@ const onCoverUploadError = () => {
   Message.error('图片上传失败，请重试！');
 };
 
-const handleSaveProduct = () => {
+const handleSaveProduct = async () => {
   if (!form.value.name || !form.value.name.trim()) {
     Message.warning('【商品名称】为必填项，请输入后再保存！');
     return;
@@ -415,14 +395,10 @@ const handleSaveProduct = () => {
   }
 
   if (form.value.id) {
-    const item = products.value.find(p => p.id === form.value.id);
-    if (item) {
-      item.name = form.value.name;
-      item.description = form.value.description;
-      item.cover_image = form.value.cover_image;
-      item.category_name = form.value.category_name;
-      item.base_price_sqm = form.value.base_price_sqm;
-      item.min_area = form.value.min_area;
+    const idx = products.value.findIndex(p => p.id === form.value.id);
+    if (idx !== -1) {
+      products.value[idx] = { ...form.value };
+      products.value = [...products.value];
     }
   } else {
     products.value.push({
@@ -435,11 +411,24 @@ const handleSaveProduct = () => {
       min_area: form.value.min_area || 1.5,
       options: []
     });
+    products.value = [...products.value];
   }
+
+  try {
+    await fetch(`${API_BASE}/api/admin/products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form.value)
+    });
+  } catch (e) {}
 
   Message.success('门窗商品方案保存成功！');
   modalVisible.value = false;
 };
+
+onMounted(() => {
+  fetchProducts();
+});
 </script>
 
 <style scoped>

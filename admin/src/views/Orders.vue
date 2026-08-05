@@ -8,17 +8,81 @@
       </a-button>
     </div>
 
-    <!-- 筛选 Radio Pills -->
-    <a-radio-group v-model="statusFilter" type="button" class="mb-4" @change="handleFilterChange">
-      <a-radio value="all">全部订单</a-radio>
-      <a-radio value="pending_review">待复核</a-radio>
-      <a-radio value="producing">生产中</a-radio>
-      <a-radio value="installing">待提货</a-radio>
-      <a-radio value="completed">已完成</a-radio>
-    </a-radio-group>
+    <!-- 高级搜索筛选卡片 -->
+    <a-card class="mb-4" size="small">
+      <a-form :model="searchForm" layout="inline" style="flex-wrap: wrap; gap: 12px 16px;">
+        <a-form-item label="订单编号" style="margin-right: 0; margin-bottom: 0;">
+          <a-input
+            v-model="searchForm.order_no"
+            placeholder="请输入订单编号"
+            allow-clear
+            @press-enter="handleSearch"
+            style="width: 200px"
+          />
+        </a-form-item>
 
-    <!-- 订单数据表格 -->
-    <a-table :data="filteredOrders" :pagination="{ pageSize: 10 }" border>
+        <a-form-item label="客户信息" style="margin-right: 0; margin-bottom: 0;">
+          <a-input
+            v-model="searchForm.customer"
+            placeholder="姓名或手机号"
+            allow-clear
+            @press-enter="handleSearch"
+            style="width: 200px"
+          />
+        </a-form-item>
+
+        <a-form-item label="商品名称" style="margin-right: 0; margin-bottom: 0;">
+          <a-input
+            v-model="searchForm.product_name"
+            placeholder="请输入商品名称"
+            allow-clear
+            @press-enter="handleSearch"
+            style="width: 200px"
+          />
+        </a-form-item>
+
+        <a-form-item label="订单状态" style="margin-right: 0; margin-bottom: 0;">
+          <a-select
+            v-model="searchForm.status"
+            placeholder="请选择状态"
+            allow-clear
+            style="width: 170px"
+            @change="handleSearch"
+          >
+            <a-option value="all">全部订单</a-option>
+            <a-option value="pending_review">待复核</a-option>
+            <a-option value="producing">生产中</a-option>
+            <a-option value="installing">待提货</a-option>
+            <a-option value="completed">已完成</a-option>
+            <a-option value="cancelled">已取消</a-option>
+          </a-select>
+        </a-form-item>
+
+        <a-form-item style="margin-right: 0; margin-bottom: 0;">
+          <div style="display: flex; gap: 8px;">
+            <a-button type="primary" @click="handleSearch">
+              <template #icon><icon-search /></template>
+              查询
+            </a-button>
+            <a-button @click="handleReset">
+              <template #icon><icon-refresh /></template>
+              重置
+            </a-button>
+          </div>
+        </a-form-item>
+      </a-form>
+    </a-card>
+
+    <!-- 订单数据表格 (服务端真实分页与检索) -->
+    <a-table
+      :data="orders"
+      :pagination="paginationConfig"
+      :loading="loading"
+      border
+      row-key="id"
+      @page-change="onPageChange"
+      @page-size-change="onPageSizeChange"
+    >
       <template #columns>
         <a-table-column title="订单编号" data-index="order_no" :width="160">
           <template #cell="{ record }">
@@ -106,7 +170,7 @@
             </a-tag>
           </div>
           <div style="font-size: 12px; color: #86909c; margin-top: 6px;">
-            下单时间：{{ currentOrderDetail.created_at || '2026-08-04 18:00' }}
+            下单时间：{{ currentOrderDetail.created_at || '暂无时间' }}
           </div>
         </div>
 
@@ -141,12 +205,12 @@
             </div>
 
             <!-- 选配明细卡片 -->
-            <div class="options-detail-panel" v-if="item.selected_options && item.selected_options.length > 0">
+            <div class="options-detail-panel" v-if="item.options_summary || (item.selected_options && item.selected_options.length > 0)">
               <div class="panel-title">选配升级配置明细：</div>
-              <div v-for="(opt, oIdx) in item.selected_options" :key="oIdx" class="option-row">
+              <div v-for="(opt, oIdx) in (item.options_summary || item.selected_options)" :key="oIdx" class="option-row">
                 <span class="dot">•</span>
-                <span class="group-label">{{ opt.group }}：</span>
-                <span class="opt-name">{{ opt.name }}</span>
+                <span class="group-label">{{ opt.groupTitle || opt.group }}：</span>
+                <span class="opt-name">{{ opt.option_name || opt.name }}</span>
                 <span class="opt-price" v-if="opt.priceText">{{ opt.priceText }}</span>
               </div>
             </div>
@@ -223,77 +287,35 @@
 import { ref, computed, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';
 
-const statusFilter = ref('all');
+const API_BASE = 'https://zc-api.carelife.top';
+
+const searchForm = ref({
+  order_no: '',
+  customer: '',
+  product_name: '',
+  status: 'all'
+});
+
+const loading = ref(false);
+const page = ref(1);
+const pageSize = ref(10);
+const total = ref(0);
+
 const modalVisible = ref(false);
 const detailDrawerVisible = ref(false);
 const currentOrderDetail = ref(null);
 
-const orders = ref([
-  {
-    id: 'ord_101',
-    order_no: 'ZC20260804001',
-    customer_name: '张先生',
-    customer_phone: '13545941637',
-    install_address: '湖北省仙桃市恒迪建材市场A区3号',
-    created_at: '2026-08-04 18:00',
-    spec: '2400 × 2100 mm (5.04 ㎡)',
-    base_amount: 3427.2,
-    extra_amount: 403.2,
-    special_charges_amount: 0,
-    final_amount: 3830.4,
-    status: 'pending_review',
-    admin_remark: '窗口尺寸测量正常，已与客户确认生产细节',
-    items: [
-      {
-        label: '【care-26-08-05-1】',
-        product_name: '展晨108热桥级系统断桥铝窗',
-        width_mm: 2400,
-        height_mm: 2100,
-        area_sqm: 5.04,
-        billed_area: 5.04,
-        base_price_sqm: 680,
-        item_subtotal: 3830.4,
-        selected_options: [
-          { group: '玻璃配置', name: '5+18A+5 标准中空钢化玻璃', priceText: '+¥ 0/㎡' },
-          { group: '五金配件品牌', name: '德国好博 (Hoppe) 原装执手五金', priceText: '+¥ 150/件' },
-          { group: '铝材表面喷涂颜色', name: '氟碳雅致黑', priceText: '+¥ 0' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'ord_102',
-    order_no: 'ZC20260803009',
-    customer_name: '李女士',
-    customer_phone: '13971234567',
-    install_address: '湖北省仙桃市新天地小区8栋1202',
-    created_at: '2026-08-03 14:30',
-    spec: '3600 × 2400 mm (12.5 ㎡)',
-    base_amount: 8500,
-    extra_amount: 1200,
-    special_charges_amount: 500,
-    final_amount: 10200,
-    status: 'producing',
-    admin_remark: '包含500元高楼吊装与旧窗拆除费，型材已发往车间生产中',
-    items: [
-      {
-        label: '【care-26-08-05-2】',
-        product_name: '展晨120超静音三玻两腔系统窗',
-        width_mm: 3600,
-        height_mm: 2400,
-        area_sqm: 8.64,
-        billed_area: 12.5,
-        base_price_sqm: 880,
-        item_subtotal: 9700,
-        selected_options: [
-          { group: '玻璃配置', name: '5+12A+5+12A+5 三玻两腔降噪玻璃', priceText: '+¥ 150/㎡' },
-          { group: '五金配件品牌', name: '德国丝吉利娅 隐藏锁扣', priceText: '+¥ 220/件' },
-          { group: '铝材表面喷涂颜色', name: '阳极氧化香槟银', priceText: '+¥ 50' }
-        ]
-      }
-    ]
-  }
-]);
+const paginationConfig = computed(() => ({
+  current: page.value,
+  pageSize: pageSize.value,
+  total: total.value,
+  showTotal: true,
+  showJumper: true,
+  showPageSize: true
+}));
+
+// 清空所有静态 Mock 数据，全部从 API 动态获取
+const orders = ref([]);
 
 const editForm = ref({
   id: '',
@@ -301,11 +323,6 @@ const editForm = ref({
   status: 'pending_review',
   special_charges_amount: 0,
   admin_remark: ''
-});
-
-const filteredOrders = computed(() => {
-  if (statusFilter.value === 'all') return orders.value;
-  return orders.value.filter(o => o.status === statusFilter.value);
 });
 
 const getStatusText = (status) => {
@@ -330,8 +347,83 @@ const getStatusColor = (status) => {
   return map[status] || 'gray';
 };
 
-const fetchOrders = () => {
-  // 静默刷新数据，不弹窗打扰用户
+const handleSearch = () => {
+  page.value = 1;
+  fetchOrders();
+};
+
+const handleReset = () => {
+  searchForm.value = {
+    order_no: '',
+    customer: '',
+    product_name: '',
+    status: 'all'
+  };
+  page.value = 1;
+  fetchOrders();
+};
+
+const onPageChange = (current) => {
+  page.value = current;
+  fetchOrders();
+};
+
+const onPageSizeChange = (size) => {
+  pageSize.value = size;
+  page.value = 1;
+  fetchOrders();
+};
+
+const fetchOrders = async () => {
+  loading.value = true;
+  try {
+    const params = new URLSearchParams();
+    params.append('page', page.value);
+    params.append('pageSize', pageSize.value);
+    if (searchForm.value.status && searchForm.value.status !== 'all') {
+      params.append('status', searchForm.value.status);
+    }
+    if (searchForm.value.order_no.trim()) {
+      params.append('order_no', searchForm.value.order_no.trim());
+    }
+    if (searchForm.value.customer.trim()) {
+      params.append('customer', searchForm.value.customer.trim());
+    }
+    if (searchForm.value.product_name.trim()) {
+      params.append('product_name', searchForm.value.product_name.trim());
+    }
+    const url = `${API_BASE}/api/orders?${params.toString()}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.success && data.data) {
+      orders.value = data.data.map(o => ({
+        id: o.id,
+        order_no: o.order_no,
+        customer_name: o.customer_name || '客户',
+        customer_phone: o.customer_phone || '',
+        install_address: o.install_address || '',
+        created_at: o.created_at || '',
+        spec: o.items && o.items[0] ? `${o.items[0].width_mm} × ${o.items[0].height_mm} mm (${o.items[0].billed_area} ㎡)` : '',
+        base_amount: o.base_amount || 0,
+        extra_amount: o.extra_amount || 0,
+        special_charges_amount: o.special_charges_amount || 0,
+        final_amount: o.final_amount || 0,
+        status: o.status || 'pending_review',
+        admin_remark: o.admin_remark || '',
+        items: o.items || []
+      }));
+      total.value = data.pagination ? data.pagination.total : orders.value.length;
+    } else {
+      orders.value = [];
+      total.value = 0;
+    }
+  } catch (e) {
+    orders.value = [];
+    total.value = 0;
+  } finally {
+    loading.value = false;
+  }
 };
 
 const viewOrderDetail = (record) => {
@@ -350,14 +442,29 @@ const openModal = (record) => {
   modalVisible.value = true;
 };
 
-const handleSaveOrder = () => {
+const handleSaveOrder = async () => {
   const target = orders.value.find(o => o.id === editForm.value.id);
   if (target) {
     target.status = editForm.value.status;
     target.special_charges_amount = editForm.value.special_charges_amount;
     target.final_amount = target.base_amount + (target.extra_amount || 0) + editForm.value.special_charges_amount;
     target.admin_remark = editForm.value.admin_remark;
+    orders.value = [...orders.value];
   }
+
+  try {
+    await fetch(`${API_BASE}/api/admin/orders/${editForm.value.id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        new_status: editForm.value.status,
+        special_charges_amount: editForm.value.special_charges_amount,
+        admin_remark: editForm.value.admin_remark,
+        operator_name: '展晨总管理'
+      })
+    });
+  } catch (e) {}
+
   Message.success('订单状态及备注更新成功！');
   modalVisible.value = false;
 };

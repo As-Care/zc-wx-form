@@ -78,7 +78,7 @@
               <a-upload
                 action="https://zc-api.carelife.top/api/upload"
                 :show-file-list="false"
-                @before-upload="uploading = true"
+                @before-upload="onBeforeUpload"
                 @success="onIconUploadSuccess"
                 @error="uploading = false"
               >
@@ -106,13 +106,7 @@ import { Message } from '@arco-design/web-vue';
 
 const API_BASE = 'https://zc-api.carelife.top';
 
-const categories = ref([
-  { id: 'cat_1', name: '断桥铝系统窗', sub_title: '断桥铝窗', icon_url: '' },
-  { id: 'cat_2', name: '极窄推拉门/平开门', sub_title: '极窄推拉门', icon_url: '' },
-  { id: 'cat_3', name: '系统封阳台/阳光房', sub_title: '系统封阳台', icon_url: '' },
-  { id: 'cat_4', name: '金刚网纱窗及配件', sub_title: '金刚网纱窗', icon_url: '' },
-  { id: 'cat_5', name: '幕墙工程系', sub_title: '幕墙工程系', icon_url: '' }
-]);
+const categories = ref([]);
 
 const modalVisible = ref(false);
 const uploading = ref(false);
@@ -128,11 +122,13 @@ const fetchCategories = async () => {
   try {
     const res = await fetch(`${API_BASE}/api/categories`);
     const data = await res.json();
-    if (data.success && data.categories && data.categories.length > 0) {
+    if (data.success && data.categories) {
       categories.value = data.categories;
+    } else {
+      categories.value = [];
     }
   } catch (e) {
-    console.warn('Backend offline, using fallback state', e);
+    categories.value = [];
   }
 };
 
@@ -146,12 +142,24 @@ const editCategory = (record) => {
   modalVisible.value = true;
 };
 
+const onBeforeUpload = (file) => {
+  uploading.value = true;
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      form.value.icon_url = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+  return true;
+};
+
 const onIconUploadSuccess = (fileItem) => {
   uploading.value = false;
-  if (fileItem && fileItem.response && fileItem.response.url) {
+  if (fileItem && fileItem.response && fileItem.response.url && !fileItem.response.url.includes('zc-logo.jpg')) {
     form.value.icon_url = fileItem.response.url;
-    Message.success('图标上传成功！');
   }
+  Message.success('分类图标上传成功！');
 };
 
 const handleSaveCategory = async () => {
@@ -176,7 +184,6 @@ const handleSaveCategory = async () => {
     categories.value = [...categories.value];
   }
 
-  // 连通 API 存储
   try {
     await fetch(`${API_BASE}/api/categories`, {
       method: 'POST',

@@ -41,7 +41,7 @@ app.post('/api/upload', async (c) => {
     const ext = file.name ? file.name.split('.').pop() : 'jpg';
     const fileName = `uploads/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
 
-    // 如果绑定了 Cloudflare R2 对象存储桶
+    // 1. 如果绑定了 Cloudflare R2 对象存储桶
     if (c.env.BUCKET) {
       const buffer = await file.arrayBuffer();
       await c.env.BUCKET.put(fileName, buffer, {
@@ -51,9 +51,18 @@ app.post('/api/upload', async (c) => {
       return c.json({ success: true, url, name: fileName });
     }
 
-    // 默认回退 OSS 域名
-    const url = `https://zc-oss.carelife.top/common/zc-logo.jpg`;
-    return c.json({ success: true, url, message: '图片上传接收成功' });
+    // 2. 未配置 R2 存储桶或本地开发环境：将上传的图片文件实时转为 Base64 Data URL
+    const buffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+    const mimeType = file.type || 'image/jpeg';
+    const dataUrl = `data:${mimeType};base64,${base64}`;
+
+    return c.json({ success: true, url: dataUrl, name: fileName, message: '图片上传接收成功' });
   } catch (e) {
     return c.json({ success: false, message: '图片上传失败', error: String(e) }, 500);
   }
@@ -433,30 +442,63 @@ app.post('/api/orders', async (c) => {
 });
 
 /**
- * 获取订单列表 (支持 user_id 与 status 过滤)
- * GET /api/orders?user_id=xxx&status=pending_review
+ * 获取订单列表 (支持 user_id, status, order_no, customer, product_name, keyword 模糊搜索与服务端分页 page/pageSize)
+ * GET /api/orders?status=pending_review&order_no=ZC&customer=张&product_name=108&page=1&pageSize=10
  */
 app.get('/api/orders', async (c) => {
   const db = c.env.DB;
   const userId = c.req.query('user_id');
   const status = c.req.query('status');
+  const orderNo = c.req.query('order_no');
+  const customer = c.req.query('customer');
+  const productName = c.req.query('product_name');
+  const keyword = c.req.query('keyword') || c.req.query('search');
 
-  let sql = 'SELECT * FROM orders WHERE 1=1';
+  const page = Math.max(1, parseInt(c.req.query('page') || '1', 10));
+  const pageSize = Math.max(1, parseInt(c.req.query('pageSize') || c.req.query('limit') || '10', 10));
+  const offset = (page - 1) * pageSize;
+
+  let whereClause = ' WHERE 1=1';
   const params: any[] = [];
 
   if (userId) {
-    sql += ' AND user_id = ?';
+    whereClause += ' AND o.user_id = ?';
     params.push(userId);
   }
   if (status && status !== 'all') {
-    sql += ' AND status = ?';
+    whereClause += ' AND o.status = ?';
     params.push(status);
   }
-  sql += ' ORDER BY created_at DESC';
+  if (orderNo && orderNo.trim() !== '') {
+    whereClause += ' AND o.order_no LIKE ?';
+    params.push(`%${orderNo.trim()}%`);
+  }
+  if (customer && customer.trim() !== '') {
+    const cust = `%${customer.trim()}%`;
+    whereClause += ' AND (o.customer_name LIKE ? OR o.customer_phone LIKE ? OR u.nickname LIKE ?)';
+    params.push(cust, cust, cust);
+  }
+  if (productName && productName.trim() !== '') {
+    whereClause += ' AND oi.product_name LIKE ?';
+    params.push(`%${productName.trim()}%`);
+  }
+  if (keyword && keyword.trim() !== '') {
+    const kw = `%${keyword.trim()}%`;
+    whereClause += ' AND (o.order_no LIKE ? OR o.customer_name LIKE ? OR o.customer_phone LIKE ? OR u.nickname LIKE ? OR oi.product_name LIKE ?)';
+    params.push(kw, kw, kw, kw, kw);
+  }
 
-  const { results: orders } = await db.prepare(sql).bind(...params).all<Order>();
+  // 1. 查询符合条件的总记录数
+  const countSql = `SELECT COUNT(DISTINCT o.id) as total FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id LEFT JOIN users u ON o.user_id = u.id${whereClause}`;
+  const countRes = await db.prepare(countSql).bind(...params).first<{ total: number }>();
+  const total = countRes ? countRes.total : 0;
 
-  // 抓取各订单的第一条/主要明细项用于卡片预览
+  // 2. 分页查询当前页订单列表
+  const dataSql = `SELECT DISTINCT o.* FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id LEFT JOIN users u ON o.user_id = u.id${whereClause} ORDER BY o.created_at DESC LIMIT ? OFFSET ?`;
+  const dataParams = [...params, pageSize, offset];
+  const { results: orders } = await db.prepare(dataSql).bind(...dataParams).all<Order>();
+
+  // 抓取各订单的明细项用于卡片预览
   for (const order of orders || []) {
     const { results: items } = await db.prepare('SELECT * FROM order_items WHERE order_id = ?').bind(order.id).all<OrderItem>();
     (items || []).forEach(it => {
@@ -471,7 +513,16 @@ app.get('/api/orders', async (c) => {
     order.items = items || [];
   }
 
-  return c.json({ success: true, data: orders || [] });
+  return c.json({
+    success: true,
+    data: orders || [],
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages: Math.ceil(total / pageSize)
+    }
+  });
 });
 
 /**

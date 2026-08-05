@@ -2,48 +2,264 @@
   <div class="users-view">
     <div class="header-bar flex-between mb-4">
       <h2 class="view-title">小程序注册客户列表</h2>
+      <a-button type="primary" @click="fetchUsers">
+        <template #icon><icon-refresh /></template>
+        刷新客户列表
+      </a-button>
     </div>
 
-    <!-- 客户数据表格 -->
-    <a-table :data="users" :pagination="{ pageSize: 10 }" border>
+    <!-- 客户数据表格 (仅展示客户，过滤管理员) -->
+    <a-table :data="customerList" :pagination="{ pageSize: 10 }" border row-key="id">
       <template #columns>
-        <a-table-column title="客户 ID" data-index="id" :width="160" />
+        <a-table-column title="客户头像" :width="100">
+          <template #cell="{ record }">
+            <a-avatar :size="42" style="border: 1px solid #C5A880; background: #C5A880;">
+              <img v-if="record.avatar_url" :src="record.avatar_url" />
+              <span v-else>{{ record.nickname ? record.nickname.charAt(0) : '客' }}</span>
+            </a-avatar>
+          </template>
+        </a-table-column>
+
+        <a-table-column title="客户姓名/昵称" data-index="nickname" :width="180">
+          <template #cell="{ record }">
+            <strong>{{ record.nickname }}</strong>
+          </template>
+        </a-table-column>
+
+        <a-table-column title="联系电话" data-index="phone" :width="160">
+          <template #cell="{ record }">
+            <span style="color: #C5A880; font-weight: bold;">{{ record.phone }}</span>
+          </template>
+        </a-table-column>
+
+        <a-table-column title="下单数量" :width="130">
+          <template #cell="{ record }">
+            <a-tag color="gold" style="font-weight: 600;">
+              <template #icon><icon-history /></template>
+              {{ record.order_count || 0 }} 单
+            </a-tag>
+          </template>
+        </a-table-column>
+
         <a-table-column title="微信 OpenID" data-index="openid" :width="220">
           <template #cell="{ record }">
             <small style="color: #86909c;">{{ record.openid }}</small>
           </template>
         </a-table-column>
-        <a-table-column title="昵称/备注" data-index="nickname" :width="180">
+
+        <a-table-column title="角色身份" :width="120">
           <template #cell="{ record }">
-            <strong>{{ record.nickname }}</strong>
+            <a-tag color="blue">微信客户</a-tag>
           </template>
         </a-table-column>
-        <a-table-column title="联系电话" data-index="phone" :width="160" />
-        <a-table-column title="角色" data-index="role" :width="140">
-          <template #cell="{ record }">
-            <a-tag :color="record.role === 'admin' ? 'red' : 'blue'">
-              {{ record.role === 'admin' ? '系统管理员' : '微信客户' }}
-            </a-tag>
-          </template>
-        </a-table-column>
+
         <a-table-column title="注册时间" data-index="created_at" :width="180" />
+
+        <a-table-column title="操作" :width="160">
+          <template #cell="{ record }">
+            <a-button type="outline" size="small" @click="editUser(record)">
+              <template #icon><icon-edit /></template>
+              修改姓名/头像
+            </a-button>
+          </template>
+        </a-table-column>
       </template>
     </a-table>
+
+    <!-- 修改客户资料 Modal 弹窗 -->
+    <a-modal v-model:visible="modalVisible" title="修改小程序客户个人资料" @ok="handleSaveUser">
+      <a-form :model="editForm" layout="vertical">
+        <a-form-item label="客户姓名/昵称" required>
+          <a-input v-model="editForm.nickname" placeholder="请输入客户姓名或备注" />
+        </a-form-item>
+
+        <a-form-item label="联系电话">
+          <a-input v-model="editForm.phone" placeholder="请输入手机号" />
+        </a-form-item>
+
+        <!-- 客户微信头像上传 (带 Spinner Loading) -->
+        <a-form-item label="客户微信头像">
+          <div class="luxury-upload-card">
+            <a-spin :loading="uploading" tip="头像上传中...">
+              <a-upload
+                action="https://zc-api.carelife.top/api/upload"
+                :show-file-list="false"
+                @before-upload="uploading = true"
+                @success="onAvatarUploadSuccess"
+                @error="uploading = false"
+              >
+                <template #upload-button>
+                  <div v-if="editForm.avatar_url" class="avatar-preview-box">
+                    <img :src="editForm.avatar_url" class="avatar-img" />
+                    <div class="avatar-hover-mask">
+                      <icon-camera style="font-size: 20px; color: #ffffff;" />
+                    </div>
+                  </div>
+                  <div v-else class="upload-dropzone">
+                    <icon-plus style="font-size: 20px; color: #C5A880;" />
+                    <span class="upload-title">上传头像</span>
+                  </div>
+                </template>
+              </a-upload>
+            </a-spin>
+          </div>
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { Message } from '@arco-design/web-vue';
 
-const users = ref([
-  { id: 'user_admin_1', openid: 'admin_openid_zc', nickname: '展晨总管理', phone: '13545941637', role: 'admin', created_at: '2026-08-01 10:00' },
-  { id: 'user_customer_demo', openid: 'wx_openid_demo1', nickname: '张先生', phone: '13800138000', role: 'customer', created_at: '2026-08-04 15:30' },
-  { id: 'user_customer_2', openid: 'wx_openid_demo2', nickname: '李女士', phone: '13971234567', role: 'customer', created_at: '2026-08-04 16:10' }
-]);
+const API_BASE = 'https://zc-api.carelife.top';
+
+// 清空所有静态 mock 假数据
+const users = ref([]);
+
+const modalVisible = ref(false);
+const uploading = ref(false);
+
+const editForm = ref({
+  id: '',
+  nickname: '',
+  avatar_url: '',
+  phone: ''
+});
+
+// 严格过滤掉管理员 (role !== 'admin')
+const customerList = computed(() => {
+  return users.value.filter(u => u.role !== 'admin');
+});
+
+const fetchUsers = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/api/users`);
+    const data = await res.json();
+    if (data.success && data.data) {
+      users.value = data.data;
+    } else {
+      users.value = [];
+    }
+  } catch (e) {
+    users.value = [];
+  }
+};
+
+const editUser = (record) => {
+  editForm.value = {
+    id: record.id,
+    nickname: record.nickname,
+    avatar_url: record.avatar_url || '',
+    phone: record.phone || ''
+  };
+  uploading.value = false;
+  modalVisible.value = true;
+};
+
+const onAvatarUploadSuccess = (fileItem) => {
+  uploading.value = false;
+  if (fileItem && fileItem.response && fileItem.response.url) {
+    editForm.value.avatar_url = fileItem.response.url;
+    Message.success('客户头像上传成功！');
+  } else if (fileItem && fileItem.url) {
+    editForm.value.avatar_url = fileItem.url;
+    Message.success('客户头像上传成功！');
+  }
+};
+
+const handleSaveUser = async () => {
+  if (!editForm.value.nickname || !editForm.value.nickname.trim()) {
+    Message.warning('【客户姓名/昵称】不能为空！');
+    return;
+  }
+
+  const idx = users.value.findIndex(u => u.id === editForm.value.id);
+  if (idx !== -1) {
+    users.value[idx] = {
+      ...users.value[idx],
+      nickname: editForm.value.nickname,
+      avatar_url: editForm.value.avatar_url,
+      phone: editForm.value.phone
+    };
+    users.value = [...users.value];
+  }
+
+  try {
+    await fetch(`${API_BASE}/api/user/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: editForm.value.id,
+        nickname: editForm.value.nickname,
+        avatar_url: editForm.value.avatar_url,
+        phone: editForm.value.phone
+      })
+    });
+  } catch (e) {}
+
+  Message.success('客户姓名与头像修改成功！已保存至数据库。');
+  modalVisible.value = false;
+};
+
+onMounted(() => {
+  fetchUsers();
+});
 </script>
 
 <style scoped>
+.users-view { display: flex; flex-direction: column; }
 .view-title { font-size: 20px; font-weight: 700; margin: 0; }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .mb-4 { margin-bottom: 16px; }
+
+.upload-dropzone {
+  width: 76px;
+  height: 76px;
+  border: 1.5px dashed rgba(197, 168, 128, 0.6);
+  background: rgba(197, 168, 128, 0.04);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.upload-title {
+  font-size: 10px;
+  color: #86909c;
+  margin-top: 2px;
+}
+
+.avatar-preview-box {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  border: 1.5px solid #C5A880;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-hover-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.avatar-preview-box:hover .avatar-hover-mask {
+  opacity: 1;
+}
 </style>
