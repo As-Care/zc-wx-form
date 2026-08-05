@@ -8,6 +8,48 @@
       </a-button>
     </div>
 
+    <!-- 搜索与多维度筛选面板 -->
+    <a-card class="search-panel mb-4">
+      <a-form :model="searchForm" layout="inline">
+        <a-form-item label="所属分类 (可多选)">
+          <a-select
+            v-model="searchForm.categories"
+            placeholder="请选择一个或多个分类"
+            multiple
+            allow-clear
+            style="width: 320px;"
+          >
+            <a-option v-for="cat in categories" :key="cat" :value="cat">
+              {{ cat }}
+            </a-option>
+          </a-select>
+        </a-form-item>
+
+        <a-form-item label="商品名称/描述">
+          <a-input
+            v-model="searchForm.name"
+            placeholder="输入名称或关键字模糊搜索"
+            allow-clear
+            style="width: 240px;"
+            @keyup.enter="handleSearch"
+          />
+        </a-form-item>
+
+        <a-form-item>
+          <a-space>
+            <a-button type="primary" @click="handleSearch">
+              <template #icon><icon-search /></template>
+              查询
+            </a-button>
+            <a-button @click="handleReset">
+              <template #icon><icon-refresh /></template>
+              重置
+            </a-button>
+          </a-space>
+        </a-form-item>
+      </a-form>
+    </a-card>
+
     <!-- 门窗商品数据表格 -->
     <a-table :data="products" :loading="tableLoading" :pagination="{ pageSize: 10 }" border row-key="id" class="no-wrap-header-table">
       <template #columns>
@@ -62,9 +104,17 @@
           </template>
         </a-table-column>
 
-        <a-table-column title="状态" :width="90">
+        <a-table-column title="状态" :width="130">
           <template #cell="{ record }">
-            <a-tag color="green">已上架</a-tag>
+            <a-switch
+              v-model="record.is_active"
+              :checked-value="1"
+              :unchecked-value="0"
+              @change="(val) => handleStatusChange(record, val)"
+            >
+              <template #checked>已上架</template>
+              <template #unchecked>已下架</template>
+            </a-switch>
           </template>
         </a-table-column>
 
@@ -87,6 +137,13 @@
           :rules="[{ required: true, message: '商品名称为必填项' }]"
         >
           <a-input v-model="form.name" placeholder="请输入商品全称（必填）" />
+        </a-form-item>
+
+        <a-form-item label="上下架状态" required>
+          <a-radio-group v-model="form.is_active" type="button">
+            <a-radio :value="1">上架售卖 (小程序展示)</a-radio>
+            <a-radio :value="0">下架隐藏 (小程序隐藏)</a-radio>
+          </a-radio-group>
         </a-form-item>
 
         <a-form-item
@@ -264,9 +321,14 @@ const categories = ref([
 ]);
 
 const DEFAULT_PRODUCTS = [
-  { id: 'prod_1', category_id: 'cat_1', category_name: '断桥铝系统窗', name: '110断桥铝系统平开窗', description: '壁厚1.8mm，配LOW-E双玻中空，德国好博/施格兰五金', cover_image: 'https://zc-oss.carelife.top/common/prod-110.png', base_price_sqm: 880, min_area: 1.5 },
-  { id: 'prod_2', category_id: 'cat_2', category_name: '极窄推拉门/平开门', name: '极窄边框推拉门 (磁吸静音)', description: '极简2.0cm极窄边框，高强度铝钛合金，静音缓冲滑轮', cover_image: 'https://zc-oss.carelife.top/common/prod-narrow-door.png', base_price_sqm: 750, min_area: 1.5 }
+  { id: 'prod_1', category_id: 'cat_1', category_name: '断桥铝系统窗', name: '110断桥铝系统平开窗', description: '壁厚1.8mm，配LOW-E双玻中空，德国好博/施格兰五金', cover_image: 'https://zc-oss.carelife.top/common/prod-110.png', base_price_sqm: 880, min_area: 1.5, is_active: 1 },
+  { id: 'prod_2', category_id: 'cat_2', category_name: '极窄推拉门/平开门', name: '极窄边框推拉门 (磁吸静音)', description: '极简2.0cm极窄边框，高强度铝钛合金，静音缓冲滑轮', cover_image: 'https://zc-oss.carelife.top/common/prod-narrow-door.png', base_price_sqm: 750, min_area: 1.5, is_active: 1 }
 ];
+
+const searchForm = ref({
+  categories: [],
+  name: ''
+});
 
 const products = ref([]);
 const tableLoading = ref(true);
@@ -283,16 +345,28 @@ const form = ref({
   cover_image: '',
   category_name: '断桥铝系统窗',
   base_price_sqm: 680,
-  min_area: 1.5
+  min_area: 1.5,
+  is_active: 1
 });
 
 const fetchProducts = async () => {
   tableLoading.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/products`);
+    const params = new URLSearchParams();
+    if (searchForm.value.name && searchForm.value.name.trim()) {
+      params.append('name', searchForm.value.name.trim());
+    }
+    if (searchForm.value.categories && searchForm.value.categories.length > 0) {
+      params.append('categories', searchForm.value.categories.join(','));
+    }
+
+    const res = await fetch(`${API_BASE}/api/admin/products?${params.toString()}`);
     const data = await res.json();
-    if (data.success && data.data && data.data.length > 0) {
-      products.value = data.data;
+    if (data.success && data.data) {
+      products.value = data.data.map(p => ({
+        ...p,
+        is_active: (p.is_active !== undefined && p.is_active !== null) ? Number(p.is_active) : 1
+      }));
     } else {
       products.value = DEFAULT_PRODUCTS;
     }
@@ -303,6 +377,18 @@ const fetchProducts = async () => {
   }
 };
 
+const handleSearch = () => {
+  fetchProducts();
+};
+
+const handleReset = () => {
+  searchForm.value = {
+    categories: [],
+    name: ''
+  };
+  fetchProducts();
+};
+
 const openProductModal = () => {
   form.value = {
     id: '',
@@ -311,16 +397,50 @@ const openProductModal = () => {
     cover_image: '',
     category_name: '断桥铝系统窗',
     base_price_sqm: 680,
-    min_area: 1.5
+    min_area: 1.5,
+    is_active: 1
   };
   uploading.value = false;
   modalVisible.value = true;
 };
 
 const editProduct = (record) => {
-  form.value = { ...record };
+  form.value = {
+    id: record.id,
+    name: record.name,
+    description: record.description || '',
+    cover_image: record.cover_image || '',
+    category_name: record.category_name || '断桥铝系统窗',
+    base_price_sqm: record.base_price_sqm || 680,
+    min_area: record.min_area || 1.5,
+    is_active: (record.is_active !== undefined && record.is_active !== null) ? Number(record.is_active) : 1
+  };
   uploading.value = false;
   modalVisible.value = true;
+};
+
+const handleStatusChange = async (record, val) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...record,
+        is_active: val
+      })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      Message.success(`已成功${val === 1 ? '上架' : '下架'}商品【${record.name}】`);
+      await fetchProducts();
+    } else {
+      Message.error('商品上下架状态保存失败');
+      record.is_active = val === 1 ? 0 : 1;
+    }
+  } catch (e) {
+    Message.error('无法连接后端服务');
+    record.is_active = val === 1 ? 0 : 1;
+  }
 };
 
 const openOptionsDrawer = async (record) => {

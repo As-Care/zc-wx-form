@@ -88,9 +88,9 @@
     </view>
   </view>
 
-  <!-- 联系客服与拨号 (修改为 电话联系展晨门窗) -->
+  <!-- 联系客服与拨号 (支持选择拨打或复制号码) -->
   <view class="bottom-action-bar flex-between">
-    <button class="call-store-btn" bindtap="makePhoneCall">📞 电话联系展晨门窗</button>
+    <button class="call-store-btn" bindtap="makePhoneCall">📞 拨打/复制联系电话</button>
     <button class="nav-back-btn btn-gold" bindtap="navBackOrders">返回订单列表</button>
   </view>
 

@@ -1004,7 +1004,56 @@ app.delete('/api/admin/categories/:id', async (c) => {
 });
 
 /**
- * 管理端 商品管理 CRUD
+ * 管理端 获取全量商品列表 (支持名称模糊搜索与分类多选筛选)
+ * GET /api/admin/products
+ */
+app.get('/api/admin/products', async (c) => {
+  const db = c.env.DB;
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS products (
+        id TEXT PRIMARY KEY,
+        category_id TEXT,
+        category_name TEXT,
+        name TEXT NOT NULL,
+        description TEXT,
+        cover_image TEXT,
+        base_price_sqm REAL DEFAULT 680,
+        min_area REAL DEFAULT 1.5,
+        sort_order INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (e) {}
+
+  const nameQuery = (c.req.query('name') || c.req.query('keyword') || '').trim().toLowerCase();
+  const categoryParam = c.req.query('categories') || c.req.query('category_name') || '';
+
+  const { results } = await db.prepare('SELECT * FROM products ORDER BY sort_order ASC, created_at DESC').all<any>();
+  let list = results || [];
+
+  if (nameQuery) {
+    list = list.filter((p: any) =>
+      (p.name && p.name.toLowerCase().includes(nameQuery)) ||
+      (p.description && p.description.toLowerCase().includes(nameQuery))
+    );
+  }
+
+  if (categoryParam) {
+    const selectedCats = categoryParam.split(',').map(s => s.trim()).filter(Boolean);
+    if (selectedCats.length > 0) {
+      list = list.filter((p: any) =>
+        selectedCats.includes(p.category_name) || selectedCats.includes(p.category_id)
+      );
+    }
+  }
+
+  return c.json({ success: true, data: list });
+});
+
+/**
+ * 管理端 商品管理 CRUD (支持上下架 is_active 设置)
  * POST /api/admin/products
  */
 app.post('/api/admin/products', async (c) => {
@@ -1035,11 +1084,12 @@ app.post('/api/admin/products', async (c) => {
 
   const id = body.id || `prod_${Date.now()}`;
   const name = body.name.trim();
+  const isActive = (body.is_active !== undefined && body.is_active !== null) ? Number(body.is_active) : 1;
 
   // UPSERT: ID 存在即覆盖修改原记录，不存在则新增，绝对零重复
   await db.prepare(`
     INSERT INTO products (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
     ON CONFLICT(id) DO UPDATE SET
       category_id = excluded.category_id,
       category_name = excluded.category_name,
@@ -1048,7 +1098,7 @@ app.post('/api/admin/products', async (c) => {
       cover_image = excluded.cover_image,
       base_price_sqm = excluded.base_price_sqm,
       min_area = excluded.min_area,
-      is_active = 1
+      is_active = excluded.is_active
   `).bind(
     id,
     body.category_id || '',
@@ -1057,7 +1107,8 @@ app.post('/api/admin/products', async (c) => {
     body.description || '',
     body.cover_image || '',
     body.base_price_sqm || 680,
-    body.min_area || 1.5
+    body.min_area || 1.5,
+    isActive
   ).run();
 
   return c.json({ success: true, id, message: '保存成功' });
@@ -1068,10 +1119,11 @@ app.put('/api/admin/products/:id', async (c) => {
   const id = c.req.param('id');
   const body = await c.req.json();
   const name = (body.name || '').trim();
+  const isActive = (body.is_active !== undefined && body.is_active !== null) ? Number(body.is_active) : 1;
 
   await db.prepare(`
     INSERT INTO products (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
     ON CONFLICT(id) DO UPDATE SET
       category_id = excluded.category_id,
       category_name = excluded.category_name,
@@ -1080,7 +1132,7 @@ app.put('/api/admin/products/:id', async (c) => {
       cover_image = excluded.cover_image,
       base_price_sqm = excluded.base_price_sqm,
       min_area = excluded.min_area,
-      is_active = 1
+      is_active = excluded.is_active
   `).bind(
     id,
     body.category_id || '',
@@ -1089,7 +1141,8 @@ app.put('/api/admin/products/:id', async (c) => {
     body.description || '',
     body.cover_image || '',
     body.base_price_sqm || 680,
-    body.min_area || 1.5
+    body.min_area || 1.5,
+    isActive
   ).run();
 
   return c.json({ success: true, message: '保存成功' });
@@ -1099,7 +1152,7 @@ app.delete('/api/admin/products/:id', async (c) => {
   const db = c.env.DB;
   const id = c.req.param('id');
   await db.prepare('UPDATE products SET is_active = 0 WHERE id = ?').bind(id).run();
-  return c.json({ success: true, message: '删除成功' });
+  return c.json({ success: true, message: '商品已下架' });
 });
 
 /**

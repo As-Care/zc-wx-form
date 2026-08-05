@@ -259,9 +259,27 @@ onMounted(() => {
 
 .layout-sider {
   border-radius: 16px !important;
-  overflow: hidden;
+  overflow: hidden !important;
   background: #ffffff !important;
   border: 1px solid #e5e6eb;
+}
+
+:deep(.arco-layout-sider-children),
+:deep(.arco-menu),
+:deep(.arco-menu-inner),
+.sidebar-menu {
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+}
+
+:deep(.arco-layout-sider-children::-webkit-scrollbar),
+:deep(.arco-menu::-webkit-scrollbar),
+:deep(.arco-menu-inner::-webkit-scrollbar),
+.sidebar-menu::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .sidebar-menu {

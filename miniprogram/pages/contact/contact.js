@@ -21,6 +21,8 @@ Page({
             name: res.data.name || '展晨门窗',
             phone: res.data.phone || '13545941637',
             address: res.data.address || '湖北省仙桃市恒迪建材市场2期14栋1-107',
+            latitude: res.data.latitude,
+            longitude: res.data.longitude,
             business_hours: res.data.business_hours || '08:30 - 18:30'
           }
         });
@@ -41,8 +43,24 @@ Page({
   },
 
   callStore() {
-    wx.makePhoneCall({
-      phoneNumber: this.data.storeInfo.phone || '13545941637'
+    const phoneNumber = (this.data.storeInfo && this.data.storeInfo.phone) ? this.data.storeInfo.phone : '13545941637';
+    wx.showActionSheet({
+      itemList: [`直接拨打 (${phoneNumber})`, `复制手机号 (${phoneNumber})`],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          wx.makePhoneCall({
+            phoneNumber,
+            fail: (err) => { console.warn('拨号取消/失败', err); }
+          });
+        } else if (res.tapIndex === 1) {
+          wx.setClipboardData({
+            data: phoneNumber,
+            success: () => {
+              wx.showToast({ title: '已复制手机号', icon: 'success', duration: 1500 });
+            }
+          });
+        }
+      }
     });
   },
 
@@ -82,7 +100,24 @@ Page({
   callReceiver(e) {
     const phone = e.currentTarget.dataset.phone;
     if (phone) {
-      wx.makePhoneCall({ phoneNumber: phone });
+      wx.showActionSheet({
+        itemList: [`拨打客服电话 (${phone})`, `复制客服手机号 (${phone})`],
+        success: (res) => {
+          if (res.tapIndex === 0) {
+            wx.makePhoneCall({
+              phoneNumber: phone,
+              fail: (err) => { console.warn('拨号取消/失败', err); }
+            });
+          } else if (res.tapIndex === 1) {
+            wx.setClipboardData({
+              data: phone,
+              success: () => {
+                wx.showToast({ title: '已复制手机号', icon: 'success', duration: 1500 });
+              }
+            });
+          }
+        }
+      });
     }
   },
 

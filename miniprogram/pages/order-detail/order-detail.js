@@ -113,7 +113,27 @@ Page({
   },
 
   makePhoneCall() {
-    wx.makePhoneCall({ phoneNumber: '13545941637' });
+    const phoneNumber = (this.data.order && this.data.order.store_phone) || '13545941637';
+    wx.showActionSheet({
+      itemList: [`拨打电话 (${phoneNumber})`, `复制号码 (${phoneNumber})`],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          wx.makePhoneCall({
+            phoneNumber,
+            fail: (err) => {
+              console.warn('拨号取消/失败', err);
+            }
+          });
+        } else if (res.tapIndex === 1) {
+          wx.setClipboardData({
+            data: phoneNumber,
+            success: () => {
+              wx.showToast({ title: '已复制手机号', icon: 'success', duration: 1500 });
+            }
+          });
+        }
+      }
+    });
   },
 
   navBackOrders() {

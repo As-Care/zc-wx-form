@@ -39,13 +39,13 @@
       </view>
 
       <view class="status-item flex-column" bindtap="navToOrders" data-status="installing">
-        <image class="status-img-icon" src="https://zc-oss.carelife.top/common/icon-pending-review.png" mode="aspectFit"></image>
+        <image class="status-img-icon" src="https://zc-oss.carelife.top/common/icon-ing-pickup.png" mode="aspectFit"></image>
         <view class="status-label">待提货</view>
         <view class="status-count-badge">{{orderCounts.installing || 0}} 笔</view>
       </view>
 
       <view class="status-item flex-column" bindtap="navToOrders" data-status="completed">
-        <image class="status-img-icon" src="https://zc-oss.carelife.top/common/icon-in-production.png" mode="aspectFit"></image>
+        <image class="status-img-icon" src="https://zc-oss.carelife.top/common/icon-completed.png" mode="aspectFit"></image>
         <view class="status-label">已完成</view>
         <view class="status-count-badge">{{orderCounts.completed || 0}} 笔</view>
       </view>

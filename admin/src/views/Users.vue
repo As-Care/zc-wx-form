@@ -71,7 +71,7 @@
     </a-table>
 
     <!-- 客户详细档案与地址列表 Drawer 抽屉 -->
-    <a-drawer v-model:visible="detailDrawerVisible" width="460" title="👤 客户详细档案与全部地址" unmount-on-close>
+    <a-drawer v-model:visible="detailDrawerVisible" width="40vw" title="👤 客户详细档案与全部地址" unmount-on-close>
       <div v-if="selectedUser" class="user-detail-container">
         <!-- 头部个人名片 -->
         <div class="user-card-header flex-row mb-4">
