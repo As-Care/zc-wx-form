@@ -1,0 +1,274 @@
+/* 展晨门窗 订单列表页 WXSS */
+
+.container {
+  padding: 16rpx 24rpx 120rpx 24rpx;
+}
+
+/* Status Tabs 胶囊风格 (粘性吸顶 + 紧凑间距) */
+.tabs-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #121316;
+  padding: 10rpx 0 14rpx 0;
+  margin-bottom: 12rpx;
+  box-shadow: 0 8rpx 20rpx rgba(18, 19, 22, 0.95);
+}
+
+.tabs-scroll {
+  display: flex;
+  flex-direction: row;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.tab-item-box {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 14rpx;
+  flex-shrink: 0;
+}
+
+.tab-pill {
+  padding: 12rpx 28rpx;
+  border-radius: 32rpx;
+  font-size: 25rpx;
+  font-weight: 600;
+  color: #9A9EA7;
+  background: rgba(26, 29, 36, 0.75);
+  border: 1rpx solid rgba(197, 168, 128, 0.18);
+  transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+  box-sizing: border-box;
+}
+
+.tab-item-box.active .tab-pill {
+  background: linear-gradient(135deg, #D4AF37 0%, #C5A880 100%);
+  color: #121316;
+  font-weight: 600;
+  border: 1rpx solid transparent;
+  box-shadow: 0 6rpx 20rpx rgba(197, 168, 128, 0.35);
+}
+
+/* 订单卡片 - 紧凑间距 */
+.order-card {
+  padding: 24rpx;
+  margin-bottom: 18rpx;
+}
+
+.order-header {
+  padding-bottom: 14rpx;
+  border-bottom: 1rpx solid rgba(154, 158, 167, 0.15);
+  margin-bottom: 18rpx;
+  align-items: center;
+}
+
+.order-no-box {
+  align-items: center;
+}
+
+.order-no {
+  font-size: 24rpx;
+  color: #C5A880;
+  font-weight: 600;
+}
+
+.copy-btn {
+  font-size: 20rpx;
+  color: #9A9EA7;
+  background: rgba(197, 168, 128, 0.12);
+  border: 1rpx solid rgba(197, 168, 128, 0.25);
+  padding: 2rpx 14rpx;
+  border-radius: 16rpx;
+  margin-left: 12rpx;
+}
+
+/* 订单状态 Tag 标签通用 */
+.status-badge {
+  font-size: 22rpx;
+  font-weight: 600;
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+}
+
+/* 1. 待复核: 灰白色 */
+.status-badge.status-pending {
+  color: #E2E8F0;
+  background: rgba(226, 232, 240, 0.12);
+  border: 1rpx solid rgba(226, 232, 240, 0.3);
+}
+
+/* 2. 生产中: 橙色 */
+.status-badge.status-producing {
+  color: #F97316;
+  background: rgba(249, 115, 22, 0.12);
+  border: 1rpx solid rgba(249, 115, 22, 0.35);
+}
+
+/* 3. 待提货: 黄色 */
+.status-badge.status-installing {
+  color: #EAB308;
+  background: rgba(234, 179, 8, 0.12);
+  border: 1rpx solid rgba(234, 179, 8, 0.35);
+}
+
+/* 4. 已完成: 绿色 */
+.status-badge.status-completed {
+  color: #10B981;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1rpx solid rgba(16, 185, 129, 0.35);
+}
+
+/* 订单商品: 左对齐 + 适中紧凑间距 */
+.order-body {
+  margin-bottom: 18rpx;
+  align-items: flex-start;
+}
+
+.item-cover {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 16rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+  border: 1rpx solid rgba(197, 168, 128, 0.2);
+}
+
+.item-meta {
+  flex: 1;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.item-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #F5F5F7;
+  line-height: 1.3;
+  text-align: left;
+  margin-bottom: 8rpx;
+}
+
+.item-spec {
+  font-size: 24rpx;
+  color: #9A9EA7;
+  text-align: left;
+  margin-bottom: 10rpx;
+}
+
+.price-box {
+  align-items: baseline;
+  justify-content: flex-start;
+}
+
+.price-label {
+  font-size: 24rpx;
+  color: #F5F5F7;
+  font-weight: 600;
+}
+
+.price-currency {
+  font-size: 24rpx;
+  color: #C5A880;
+  font-weight: 700;
+  margin-left: 8rpx;
+}
+
+.price-num {
+  font-size: 32rpx;
+  font-weight: 800;
+  color: #C5A880;
+}
+
+.special-charge-bar {
+  background: rgba(234, 179, 8, 0.1);
+  padding: 10rpx 16rpx;
+  border-radius: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.charge-label {
+  font-size: 22rpx;
+  color: #EAB308;
+}
+
+.charge-val {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #EAB308;
+}
+
+/* 下方时间单列，按钮单独一排 */
+.order-footer {
+  padding-top: 16rpx;
+  border-top: 1rpx solid rgba(154, 158, 167, 0.15);
+}
+
+.time-row {
+  margin-bottom: 16rpx;
+  width: 100%;
+}
+
+.time-label {
+  font-size: 22rpx;
+  color: #9A9EA7;
+}
+
+.order-time {
+  font-size: 24rpx;
+  color: #CBD5E1;
+  font-weight: 500;
+}
+
+.action-btn-row {
+  width: 100%;
+  gap: 16rpx;
+}
+
+.btn-sub {
+  flex: 1;
+  height: 76rpx;
+  line-height: 76rpx;
+  font-size: 26rpx;
+  color: #F5F5F7;
+  background: rgba(26, 29, 36, 0.85);
+  border: 1rpx solid rgba(197, 168, 128, 0.3);
+  border-radius: 38rpx;
+  text-align: center;
+  padding: 0;
+  margin: 0;
+}
+
+.btn-sub::after {
+  border: none;
+}
+
+.btn-main {
+  flex: 1;
+  height: 76rpx;
+  line-height: 76rpx;
+  font-size: 26rpx;
+  border-radius: 38rpx;
+  text-align: center;
+  padding: 0;
+  margin: 0;
+}
+
+.btn-main::after {
+  border: none;
+}
+
+.empty-box {
+  align-items: center;
+  padding: 100rpx 0;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 20rpx;
+}
+
+.empty-text {
+  font-size: 26rpx;
+  color: #9A9EA7;
+}

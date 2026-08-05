@@ -1,0 +1,50 @@
+<!-- 展晨门窗 极奢双栏产品页 WXML -->
+<view class="category-container flex-row">
+
+  <!-- 左侧高奢分类侧边栏 -->
+  <scroll-view class="category-sidebar" scroll-y show-scrollbar="{{false}}">
+    <view 
+      class="sidebar-item {{activeCatId === item.id ? 'active' : ''}}" 
+      wx:for="{{categories}}" 
+      wx:key="id"
+      bindtap="selectCategory" 
+      data-id="{{item.id}}"
+    >
+      <text class="sidebar-text">{{item.name}}</text>
+    </view>
+  </scroll-view>
+
+  <!-- 右侧高奢商品方案网格 -->
+  <scroll-view class="product-main" scroll-y show-scrollbar="{{false}}">
+    <!-- 分类头部 Header (共 x 款，删去系统方案) -->
+    <view class="cat-header flex-between">
+      <text class="cat-header-title">{{activeCatName}}</text>
+      <text class="cat-header-count">共 {{productList.length}} 款</text>
+    </view>
+
+    <!-- 商品方案卡片列表 -->
+    <view class="product-grid">
+      <view class="grid-card glass-card" wx:for="{{productList}}" wx:key="id" bindtap="navToDetail" data-id="{{item.id}}">
+        <image class="grid-card-img" src="{{item.cover_image}}" mode="aspectFill"></image>
+        <view class="grid-card-content flex-column">
+          <text class="grid-card-title">{{item.name}}</text>
+          <text class="grid-card-desc">{{item.description}}</text>
+          
+          <view class="tag-bar flex-row">
+            <text class="min-area-tag">起步 {{item.min_area || 1.5}} ㎡</text>
+          </view>
+
+          <view class="grid-card-bottom flex-between">
+            <view class="grid-price flex-row">
+              <text class="p-symbol">¥</text>
+              <text class="p-amount">{{item.base_price_sqm}}</text>
+              <text class="p-unit">/ ㎡起</text>
+            </view>
+            <view class="action-btn btn-gold">定制下单</view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+
+</view>

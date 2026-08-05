@@ -1,0 +1,166 @@
+<!-- 展晨门窗 多套门窗定制与算价器 WXML -->
+<view class="container">
+  <!-- 商品封面图 -->
+  <view class="cover-box">
+    <image class="cover-img" src="{{product.cover_image}}" mode="aspectFill"></image>
+    <view class="cover-overlay flex-between">
+      <text class="product-title">{{product.name}}</text>
+      <text class="base-tag">基础单价 ¥ {{product.base_price_sqm}} / ㎡</text>
+    </view>
+  </view>
+  <view class="glass-card desc-card">
+    <text class="desc-text">{{product.description}}</text>
+  </view>
+  <!-- 多套门窗配置 垂直卡片列表栏 (一套一行，允许换行) -->
+  <view class="glass-card sets-tab-card">
+    <view class="sets-header flex-between">
+      <text class="card-title">① 门窗定制套系 (已添加 {{customSets.length}} 套)</text>
+      <view class="add-set-btn flex-center" bindtap="addNewSet">+ 添加一套新配置</view>
+    </view>
+    <!-- 一套一行 垂直列表 -->
+    <view class="sets-vertical-list flex-column">
+      <view class="set-item-row flex-between {{activeSetIndex === index ? 'active' : ''}}" wx:for="{{customSets}}" wx:key="id" bindtap="switchSet" data-index="{{index}}">
+        <view class="set-row-left flex-row">
+          <text class="set-badge">套系{{index + 1}}</text>
+          <text class="set-label-text">{{item.label}}</text>
+        </view>
+        <view class="set-row-right flex-row">
+          <text class="active-tag" wx:if="{{activeSetIndex === index}}">编辑中</text>
+          <view class="set-del-btn flex-center" wx:if="{{customSets.length > 1}}" catchtap="deleteSet" data-index="{{index}}">
+            ✕
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+  <!-- 当前选中套系的详细尺寸与备注设置 -->
+  <view class="glass-card calc-card" wx:if="{{customSets[activeSetIndex]}}">
+    <view class="card-header flex-between">
+      <text class="card-title">② 编辑套系 {{activeSetIndex + 1}} 尺寸与备注</text>
+      <text class="min-area-tip" wx:if="{{customSets[activeSetIndex].calcResult.isMinAreaTriggered}}">
+        ⚠️ 不足 {{product.min_area}}㎡ 按起步计
+      </text>
+    </view>
+    <!-- 备注名 输入框 -->
+    <view class="full-input-row flex-between">
+      <text class="dim-label">备注名</text>
+      <view class="full-input-box flex-row">
+        <input class="full-dim-input left-align" value="{{customSets[activeSetIndex].label}}" placeholder="如【客厅主窗】、【卧室侧窗】" placeholder-style="color:#64748B;" bindinput="onLabelInput" />
+      </view>
+    </view>
+    <!-- 宽度 W 长条输入框 -->
+    <view class="full-input-row flex-between">
+      <text class="dim-label">宽度 (W)</text>
+      <view class="full-input-box flex-row">
+        <input class="full-dim-input" type="number" value="{{customSets[activeSetIndex].width_mm}}" placeholder="请输入宽度" placeholder-style="color:#64748B;" bindinput="onWidthInput" />
+        <text class="unit-text">mm</text>
+      </view>
+    </view>
+    <!-- 高度 H 长条输入框 -->
+    <view class="full-input-row flex-between">
+      <text class="dim-label">高度 (H)</text>
+      <view class="full-input-box flex-row">
+        <input class="full-dim-input" type="number" value="{{customSets[activeSetIndex].height_mm}}" placeholder="请输入高度" placeholder-style="color:#64748B;" bindinput="onHeightInput" />
+        <text class="unit-text">mm</text>
+      </view>
+    </view>
+    <!-- 针对当前套系的算价结果卡片 -->
+    <view class="area-summary-box flex-between">
+      <view class="area-item flex-column">
+        <text class="a-label">本套算得面积</text>
+        <text class="a-val">{{customSets[activeSetIndex].calcResult.actualArea}} ㎡</text>
+      </view>
+      <view class="area-line"></view>
+      <view class="area-item flex-column">
+        <text class="a-label">本套计费面积 (底线{{product.min_area}}㎡)</text>
+        <text class="a-val theme-gold-text">
+          {{customSets[activeSetIndex].calcResult.billedArea}} ㎡
+        </text>
+      </view>
+      <view class="area-line"></view>
+      <view class="area-item flex-column">
+        <text class="a-label">本套预估小计</text>
+        <text class="a-val theme-gold-text">
+          ¥ {{customSets[activeSetIndex].calcResult.totalPrice}}
+        </text>
+      </view>
+    </view>
+  </view>
+  <!-- 选配加价组 (绑定当前选中套系) -->
+  <view class="glass-card options-card" wx:for="{{optionGroups}}" wx:key="group_name" wx:for-item="grp">
+    <text class="card-title">③ 套系 {{activeSetIndex + 1}} - {{grp.groupTitle}}选配</text>
+    <view class="option-list">
+      <view class="option-item flex-between {{customSets[activeSetIndex].selected_options[grp.group_name] === opt.id ? 'active' : ''}}" wx:for="{{grp.options}}" wx:for-item="opt" wx:key="id" bindtap="toggleOption" data-group="{{grp.group_name}}" data-id="{{opt.id}}">
+        <view class="opt-left flex-row">
+          <view class="radio-circle {{customSets[activeSetIndex].selected_options[grp.group_name] === opt.id ? 'checked' : ''}}"></view>
+          <text class="opt-name">{{opt.option_name}}</text>
+        </view>
+        <text class="opt-price">{{opt.priceText}}</text>
+      </view>
+    </view>
+  </view>
+  <!-- 底部常驻悬浮报价条 (支持多套汇总) -->
+  <view class="floating-bar flex-between">
+    <view class="price-preview flex-column">
+      <text class="p-sub">合计 {{totalSummary.totalSets}} 套门窗预估总计</text>
+      <view class="p-main flex-row">
+        <text class="p-sym">¥</text>
+        <text class="p-val">{{totalSummary.totalPrice}}</text>
+      </view>
+    </view>
+    <view class="submit-btn btn-gold flex-center" bindtap="openPreviewModal">下单预览</view>
+  </view>
+  <!-- 高奢【下单预览】弹窗 (修复关闭Icon居中与底部总价不超界) -->
+  <view class="modal-mask {{showPreviewModal ? 'show' : ''}}" bindtap="closePreviewModal">
+    <view class="modal-card glass-card flex-column" catchtap="preventBubble">
+      <!-- 弹窗 Header -->
+      <view class="modal-header flex-between">
+        <text class="modal-title">📋 门窗定制下单预览 (共{{totalSummary.totalSets}}套)</text>
+        <view class="close-icon-btn flex-center" bindtap="closePreviewModal">✕</view>
+      </view>
+      <!-- 弹窗可滚动主体 (多套明细罗列) -->
+      <scroll-view class="modal-scroll-body" scroll-y show-scrollbar="{{false}}">
+        <view class="modal-scroll-body-box">
+          <view class="modal-section flex-column" wx:for="{{customSets}}" wx:key="id" wx:for-index="sIdx">
+            <view class="set-title-badge flex-between">
+              <text class="set-b-name">第 {{sIdx + 1}} 套：{{item.label}}</text>
+              <text class="set-b-price">小计: ¥ {{item.calcResult.totalPrice}}</text>
+            </view>
+            <view class="modal-row flex-between">
+              <text class="m-label">规格尺寸 (W×H)</text>
+              <text class="m-val gold-text">{{item.width_mm}} mm × {{item.height_mm}} mm</text>
+            </view>
+            <view class="modal-row flex-between">
+              <text class="m-label">算得面积</text>
+              <text class="m-val">
+                实际 {{item.calcResult.actualArea}} ㎡ (计费 {{item.calcResult.billedArea}} ㎡)
+              </text>
+            </view>
+            <!-- 该套已选选配 -->
+            <view class="m-opt-item flex-between" wx:for="{{item.selectedOptionsSummary}}" wx:for-item="opt" wx:key="id">
+              <text class="m-opt-name">• {{opt.groupTitle}}：{{opt.option_name}}</text>
+              <text class="m-opt-price">{{opt.priceText}}</text>
+            </view>
+            <view class="m-divider" wx:if="{{sIdx < customSets.length - 1}}"></view>
+          </view>
+        </view>
+      </scroll-view>
+      <!-- 弹窗底部固定区：预计总价与确认下单按钮 -->
+      <view class="modal-footer flex-column">
+        <view class="modal-section flex-between total-section">
+          <view class="flex-column">
+            <view class="m-total-label">全套合并预估总价</view>
+            <view class="m-sub-label">
+              共 {{totalSummary.totalSets}} 套 / 计费 {{totalSummary.totalBilledArea}} ㎡
+            </view>
+          </view>
+          <view class="m-total-price-box flex-row">
+            <text class="m-total-sym">¥</text>
+            <text class="m-total-num">{{totalSummary.totalPrice}}</text>
+          </view>
+        </view>
+        <button class="confirm-btn btn-gold" bindtap="confirmOrder">确认下单</button>
+      </view>
+    </view>
+  </view>
+</view>

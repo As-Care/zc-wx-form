@@ -1,0 +1,296 @@
+/* 展晨门窗 极奢首页 WXSS */
+
+.container {
+  padding: 24rpx 0rpx;
+  padding-bottom: 120rpx;
+}
+
+/* 顶部 Header & Flex1 搜索栏 */
+.header-section {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 20rpx;
+  margin-bottom: 24rpx;
+  padding: 0 24rpx;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.brand-logo-sq {
+  width: 76rpx;
+  height: 76rpx;
+  border-radius: 14rpx;
+  flex-shrink: 0;
+  border: 1rpx solid rgba(197, 168, 128, 0.35);
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.4);
+}
+
+.search-bar {
+  flex: 1;
+  height: 76rpx;
+  background: rgba(26, 29, 36, 0.85);
+  border: 1rpx solid rgba(197, 168, 128, 0.25);
+  border-radius: 38rpx;
+  padding: 0 24rpx;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  font-size: 24rpx;
+  margin-right: 12rpx;
+  opacity: 0.6;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 24rpx;
+  color: #F5F5F7;
+}
+
+/* 炫酷卡片 3D 缩放 Banner */
+.banner-swiper {
+  height: 390rpx;
+  margin-bottom: 12rpx;
+  width: 100%;
+}
+
+.swiper-card-box {
+  width: 100%;
+  height: 100%;
+  padding: 6rpx 6rpx;
+  box-sizing: border-box;
+  transform: scale(0.95);
+  opacity: 0.75;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.swiper-card-box.active {
+  transform: scale(1.0);
+  opacity: 1;
+}
+
+.swiper-card {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  border-radius: 28rpx;
+  overflow: hidden;
+  border: 1rpx solid rgba(197, 168, 128, 0.3);
+  box-shadow: 0 12rpx 36rpx rgba(0, 0, 0, 0.4);
+}
+
+.banner-img {
+  width: 100%;
+  height: 100%;
+}
+
+.banner-mask {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 28rpx;
+  background: linear-gradient(to top, rgba(18, 19, 22, 0.95) 0%, rgba(18, 19, 22, 0.4) 60%, transparent 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+.banner-title {
+  font-size: 32rpx;
+  font-weight: 800;
+  color: #F5F5F7;
+  letter-spacing: 1rpx;
+}
+
+.banner-subtitle {
+  font-size: 22rpx;
+  color: #C5A880;
+  margin-top: 6rpx;
+  font-weight: 500;
+}
+
+/* 指示器线框 */
+.indicator-bar {
+  justify-content: center;
+  gap: 12rpx;
+  margin-bottom: 28rpx;
+}
+
+.dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: rgba(154, 158, 167, 0.3);
+  transition: all 0.3s ease;
+}
+
+.dot.active {
+  width: 36rpx;
+  border-radius: 10rpx;
+  background: linear-gradient(90deg, #D4AF37, #C5A880);
+  box-shadow: 0 0 12rpx rgba(197, 168, 128, 0.6);
+}
+
+/* 金刚区与卡片 */
+.grid-section {
+  margin: 0 24rpx 28rpx 24rpx;
+  background: rgba(26, 29, 36, 0.65);
+  padding: 24rpx 16rpx;
+  border-radius: 24rpx;
+  border: 1rpx solid rgba(197, 168, 128, 0.18);
+}
+
+.grid-item {
+  align-items: center;
+  width: 20%;
+}
+
+.icon-circle {
+  width: 84rpx;
+  height: 84rpx;
+  border-radius: 50%;
+  background: rgba(197, 168, 128, 0.12);
+  border: 1rpx solid rgba(197, 168, 128, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12rpx;
+}
+
+.cat-icon {
+  width: 48rpx;
+  height: 48rpx;
+}
+
+.cat-name {
+  font-size: 20rpx;
+  color: #E2E8F0;
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120rpx;
+}
+
+.brand-badge-card {
+  margin: 0 24rpx 28rpx 24rpx;
+  padding: 20rpx 28rpx;
+}
+
+.badge-item {
+  align-items: center;
+}
+
+.badge-num {
+  font-size: 30rpx;
+  font-weight: 800;
+  color: #C5A880;
+}
+
+.badge-label {
+  font-size: 20rpx;
+  color: #9A9EA7;
+  margin-top: 4rpx;
+}
+
+.badge-line {
+  width: 1rpx;
+  height: 40rpx;
+  background: rgba(154, 158, 167, 0.2);
+}
+
+.section-header {
+  margin: 10rpx 24rpx 16rpx 24rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #F5F5F7;
+}
+
+.section-more {
+  font-size: 24rpx;
+  color: #C5A880;
+}
+
+.product-grid {
+  display: flex;
+  flex-direction: column;
+  padding: 0 24rpx;
+}
+
+.product-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.product-img {
+  width: 100%;
+  height: 300rpx;
+}
+
+.product-info {
+  padding: 20rpx;
+}
+
+.product-name {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #F5F5F7;
+  display: block;
+}
+
+.product-desc {
+  font-size: 22rpx;
+  color: #9A9EA7;
+  margin-top: 6rpx;
+  display: block;
+}
+
+.product-price-bar {
+  margin-top: 16rpx;
+}
+
+.currency {
+  font-size: 24rpx;
+  color: #C5A880;
+  font-weight: 700;
+}
+
+.price-val {
+  font-size: 36rpx;
+  font-weight: 800;
+  color: #C5A880;
+  margin: 0 4rpx;
+}
+
+.unit {
+  font-size: 22rpx;
+  color: #9A9EA7;
+}
+
+.calc-btn {
+  font-size: 24rpx;
+  padding: 10rpx 28rpx;
+}
+
+/* 纯粹单按钮：联系我们 */
+.contact-btn-wrapper {
+  margin: 32rpx 24rpx 0 24rpx;
+}
+
+.contact-big-btn {
+  width: 100% !important;
+  height: 88rpx;
+  line-height: 88rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  border-radius: 44rpx;
+  padding: 0;
+  box-shadow: 0 8rpx 28rpx rgba(197, 168, 128, 0.35);
+}

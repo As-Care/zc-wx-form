@@ -1,0 +1,125 @@
+/* 关于展晨门窗 品牌独立页面 WXSS */
+
+.container {
+  padding: 24rpx;
+  padding-bottom: 60rpx;
+}
+
+.brand-header-card {
+  align-items: center;
+  padding: 40rpx 24rpx;
+  margin-bottom: 24rpx;
+}
+
+.brand-logo-img {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 20rpx;
+  border: 2rpx solid #C5A880;
+  margin-bottom: 16rpx;
+}
+
+.brand-name {
+  font-size: 36rpx;
+  font-weight: 800;
+  color: #F5F5F7;
+}
+
+.brand-slogan {
+  font-size: 24rpx;
+  color: #C5A880;
+  margin-top: 8rpx;
+  letter-spacing: 1rpx;
+}
+
+.brand-stats-card {
+  padding: 24rpx 28rpx;
+  margin-bottom: 24rpx;
+}
+
+.stat-item {
+  align-items: center;
+  flex: 1;
+}
+
+.stat-num {
+  font-size: 32rpx;
+  font-weight: 800;
+  color: #C5A880;
+}
+
+.stat-label {
+  font-size: 20rpx;
+  color: #9A9EA7;
+  margin-top: 4rpx;
+}
+
+.stat-line {
+  width: 1rpx;
+  height: 44rpx;
+  background: rgba(154, 158, 167, 0.2);
+}
+
+.info-section {
+  padding: 28rpx;
+  margin-bottom: 24rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #C5A880;
+  margin-bottom: 16rpx;
+}
+
+.section-paragraph {
+  font-size: 26rpx;
+  color: #F5F5F7;
+  line-height: 1.7;
+  margin-bottom: 16rpx;
+  text-align: justify;
+}
+
+.promise-item {
+  margin-bottom: 16rpx;
+  align-items: flex-start;
+}
+
+.promise-dot {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  background: rgba(197, 168, 128, 0.2);
+  color: #C5A880;
+  font-size: 22rpx;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.promise-text {
+  font-size: 26rpx;
+  color: #F5F5F7;
+  line-height: 1.5;
+}
+
+.store-card {
+  padding: 28rpx;
+}
+
+.store-info-text {
+  font-size: 26rpx;
+  color: #F5F5F7;
+  line-height: 1.6;
+  margin-bottom: 8rpx;
+}
+
+.call-btn {
+  margin-top: 20rpx;
+  font-size: 26rpx;
+  padding: 14rpx 0;
+  width: 100% !important;
+}

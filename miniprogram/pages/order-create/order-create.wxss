@@ -1,0 +1,156 @@
+/* 展晨门窗 确认预约订单 WXSS */
+
+.container {
+  padding: 24rpx;
+  padding-bottom: 160rpx;
+}
+
+.card-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #F8FAFC;
+  margin-bottom: 20rpx;
+  display: block;
+}
+
+.item-preview-box {
+  background: rgba(15, 23, 42, 0.6);
+  padding: 20rpx;
+  border-radius: 16rpx;
+}
+
+.prod-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #F8FAFC;
+  margin-bottom: 16rpx;
+}
+
+.spec-row {
+  margin-bottom: 8rpx;
+}
+
+.s-label {
+  font-size: 24rpx;
+  color: #94A3B8;
+}
+
+.s-val {
+  font-size: 24rpx;
+  color: #CBD5E1;
+  font-weight: 600;
+}
+
+.divider {
+  height: 1rpx;
+  background: rgba(148, 163, 184, 0.15);
+  margin: 16rpx 0;
+}
+
+.sub-title {
+  font-size: 22rpx;
+  color: #94A3B8;
+}
+
+.opt-tag-list {
+  flex-wrap: wrap;
+  margin-top: 10rpx;
+}
+
+.opt-tag {
+  font-size: 20rpx;
+  color: #C5A880;
+  background: rgba(197, 168, 128, 0.12);
+  border: 1rpx solid rgba(197, 168, 128, 0.25);
+  padding: 4rpx 14rpx;
+  border-radius: 12rpx;
+  margin-right: 10rpx;
+  margin-bottom: 10rpx;
+}
+
+.form-group {
+  margin-bottom: 20rpx;
+}
+
+.field-label {
+  font-size: 24rpx;
+  color: #CBD5E1;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.field-input {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1rpx solid rgba(148, 163, 184, 0.2);
+  border-radius: 14rpx;
+  padding: 16rpx 20rpx;
+  font-size: 26rpx;
+  color: #F8FAFC;
+}
+
+.field-textarea {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1rpx solid rgba(148, 163, 184, 0.2);
+  border-radius: 14rpx;
+  padding: 16rpx 20rpx;
+  font-size: 26rpx;
+  color: #F8FAFC;
+  width: 100%;
+  height: 140rpx;
+  box-sizing: border-box;
+}
+
+.tip-box {
+  background: rgba(197, 168, 128, 0.1);
+  border: 1rpx solid rgba(197, 168, 128, 0.25);
+  padding: 16rpx 20rpx;
+  border-radius: 16rpx;
+  margin-top: 10rpx;
+}
+
+.tip-icon {
+  font-size: 26rpx;
+  margin-right: 12rpx;
+}
+
+.tip-text {
+  font-size: 22rpx;
+  color: #C5A880;
+  line-height: 1.5;
+}
+
+.floating-submit-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(13, 17, 23, 0.95);
+  border-top: 1rpx solid rgba(197, 168, 128, 0.25);
+  backdrop-filter: blur(16px);
+  padding: 20rpx 32rpx;
+  z-index: 100;
+}
+
+.t-sub {
+  font-size: 20rpx;
+  color: #94A3B8;
+}
+
+.t-sym {
+  font-size: 26rpx;
+  color: #C5A880;
+  font-weight: 700;
+}
+
+.t-val {
+  font-size: 40rpx;
+  font-weight: 900;
+  color: #C5A880;
+  margin-left: 6rpx;
+}
+
+.confirm-btn {
+  font-size: 28rpx;
+  padding: 16rpx 40rpx;
+  margin: 0;
+}

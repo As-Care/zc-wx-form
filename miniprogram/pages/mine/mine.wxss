@@ -1,0 +1,215 @@
+/* 展晨门窗 个人中心 WXSS */
+
+.container {
+  padding: 24rpx;
+  padding-bottom: 120rpx;
+}
+
+/* 用户信息卡片 */
+.user-card {
+  padding: 32rpx 28rpx;
+  margin-bottom: 24rpx;
+  align-items: center;
+}
+
+.user-info {
+  align-items: center;
+}
+
+.avatar-img-box {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  border: 2rpx solid #C5A880;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+  background: #1A1C23;
+}
+
+.avatar-text-box {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: rgba(197, 168, 128, 0.18);
+  border: 2rpx solid #C5A880;
+  font-size: 32rpx;
+  font-weight: 900;
+  color: #C5A880;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-meta {
+  justify-content: center;
+}
+
+.user-name {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #F5F5F7;
+}
+
+.user-role {
+  font-size: 22rpx;
+  color: #9A9EA7;
+  margin-top: 8rpx;
+}
+
+.edit-profile-btn {
+  font-size: 22rpx;
+  color: #C5A880;
+  background: rgba(197, 168, 128, 0.15);
+  border: 1rpx solid rgba(197, 168, 128, 0.35);
+  padding: 8rpx 20rpx;
+  border-radius: 30rpx;
+  flex-shrink: 0;
+}
+
+/* 订单进度卡片与头部分组 */
+.order-status-card {
+  padding: 28rpx;
+  margin-bottom: 24rpx;
+}
+
+.card-header-row {
+  width: 100%;
+  margin-bottom: 24rpx;
+  align-items: center;
+}
+
+.card-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #F5F5F7;
+  margin: 0;
+}
+
+.total-orders-text {
+  font-size: 22rpx;
+  color: #C5A880;
+  font-weight: 600;
+}
+
+.status-grid {
+  width: 100%;
+}
+
+.status-item {
+  align-items: center;
+  width: 25%;
+}
+
+/* 状态 Icon 图标元素 缩放 1.6 倍 */
+.status-img-icon {
+  width: 52rpx;
+  height: 52rpx;
+  margin-bottom: 14rpx;
+  transform: scale(1.6);
+  transform-origin: center center;
+}
+
+.status-label {
+  font-size: 24rpx;
+  color: #E2E8F0;
+}
+
+.status-count-badge {
+  font-size: 20rpx;
+  color: #C5A880;
+  font-weight: 700;
+  margin-top: 10rpx;
+  background: rgba(197, 168, 128, 0.12);
+  padding: 2rpx 14rpx;
+  border-radius: 14rpx;
+  border: 1rpx solid rgba(197, 168, 128, 0.25);
+}
+
+/* 官方门店卡片 */
+.store-card {
+  padding: 28rpx;
+  margin-bottom: 24rpx;
+}
+
+.store-row {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid rgba(154, 158, 167, 0.12);
+  align-items: center;
+}
+
+.store-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.row-left {
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.row-icon {
+  font-size: 28rpx;
+  margin-right: 14rpx;
+}
+
+.row-label {
+  font-size: 26rpx;
+  color: #E2E8F0;
+}
+
+.row-val {
+  font-size: 24rpx;
+  color: #9A9EA7;
+}
+
+.gold-text {
+  color: #C5A880;
+  font-weight: 700;
+}
+
+/* 门店地址单行不换行 */
+.address-val {
+  font-size: 22rpx;
+  color: #9A9EA7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 480rpx;
+  text-align: right;
+}
+
+/* 功能菜单卡片 */
+.menu-card {
+  padding: 10rpx 28rpx;
+}
+
+.menu-item {
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid rgba(154, 158, 167, 0.12);
+  align-items: center;
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-left {
+  align-items: center;
+}
+
+.menu-icon {
+  font-size: 32rpx;
+  margin-right: 18rpx;
+}
+
+.menu-title {
+  font-size: 26rpx;
+  color: #F5F5F7;
+}
+
+.menu-arrow {
+  font-size: 32rpx;
+  color: #C5A880;
+}

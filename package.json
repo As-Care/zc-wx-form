@@ -1,0 +1,23 @@
+{
+  "name": "zc-wx-form",
+  "version": "1.0.0",
+  "private": true,
+  "description": "展晨门窗 - 微信小程序尺寸下单及 Cloudflare Workers + Vue3 Admin 统一单仓项目",
+  "scripts": {
+    "dev:server": "cd server && npm run dev",
+    "deploy:server": "cd server && npm run deploy",
+    "dev:admin": "cd admin && npm run dev",
+    "build:admin": "cd admin && npm run build"
+  },
+  "keywords": [
+    "wechat-miniprogram",
+    "cloudflare-workers",
+    "vue3",
+    "arco-design",
+    "hono",
+    "d1",
+    "doors-windows"
+  ],
+  "author": "展晨门窗",
+  "license": "MIT"
+}

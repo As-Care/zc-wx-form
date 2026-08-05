@@ -1,0 +1,182 @@
+/* 展晨门窗 极奢双栏产品页 WXSS (黑曜石高奢风格) */
+
+page {
+  height: 100%;
+  background-color: #121316;
+}
+
+.category-container {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 左侧侧边栏 (适中高奢微光文本) */
+.category-sidebar {
+  width: 210rpx;
+  height: 100%;
+  background: #0E0F12;
+  border-right: 1rpx solid rgba(197, 168, 128, 0.15);
+  box-sizing: border-box;
+}
+
+.sidebar-item {
+  min-height: 116rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx 16rpx;
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-sizing: border-box;
+}
+
+.sidebar-text {
+  font-size: 26rpx;
+  color: #B8C2CC; /* 优雅柔和瓷灰，舒适不刺眼 */
+  text-align: center;
+  line-height: 1.35;
+  transition: color 0.25s ease;
+  font-weight: 500;
+}
+
+.sidebar-item.active {
+  background: linear-gradient(90deg, rgba(197, 168, 128, 0.22) 0%, rgba(197, 168, 128, 0.03) 100%);
+}
+
+.sidebar-item.active .sidebar-text {
+  color: #C5A880;
+  font-weight: 800;
+  font-size: 27rpx;
+}
+
+.sidebar-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 32rpx;
+  bottom: 32rpx;
+  width: 6rpx;
+  background: linear-gradient(180deg, #D4AF37 0%, #C5A880 100%);
+  border-radius: 0 4rpx 4rpx 0;
+  box-shadow: 0 0 14rpx rgba(197, 168, 128, 0.6);
+}
+
+/* 右侧产品区 */
+.product-main {
+  flex: 1;
+  height: 100%;
+  padding: 24rpx;
+  padding-bottom: 120rpx;
+  box-sizing: border-box;
+  background: #121316;
+}
+
+.cat-header {
+  margin-bottom: 24rpx;
+  align-items: center;
+}
+
+.cat-header-title {
+  font-size: 32rpx;
+  font-weight: 800;
+  color: #F5F5F7;
+  letter-spacing: 1rpx;
+}
+
+.cat-header-count {
+  font-size: 22rpx;
+  color: #C5A880;
+  background: rgba(197, 168, 128, 0.12);
+  border: 1rpx solid rgba(197, 168, 128, 0.25);
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+  font-weight: 500;
+}
+
+.product-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-card {
+  padding: 0;
+  overflow: hidden;
+  margin-bottom: 28rpx;
+  background: rgba(26, 29, 36, 0.75);
+  border: 1rpx solid rgba(197, 168, 128, 0.2);
+  border-radius: 24rpx;
+  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.45);
+}
+
+.grid-card-img {
+  width: 100%;
+  height: 280rpx;
+  border-bottom: 1rpx solid rgba(197, 168, 128, 0.12);
+}
+
+.grid-card-content {
+  padding: 20rpx 24rpx 24rpx 24rpx;
+}
+
+.grid-card-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #F5F5F7;
+  line-height: 1.3;
+}
+
+.grid-card-desc {
+  font-size: 22rpx;
+  color: #9A9EA7;
+  margin-top: 8rpx;
+  line-height: 1.4;
+}
+
+.tag-bar {
+  margin-top: 14rpx;
+}
+
+.min-area-tag {
+  font-size: 20rpx;
+  color: #C5A880;
+  background: rgba(197, 168, 128, 0.12);
+  padding: 4rpx 14rpx;
+  border-radius: 10rpx;
+  border: 1rpx solid rgba(197, 168, 128, 0.3);
+  font-weight: 500;
+}
+
+.grid-card-bottom {
+  margin-top: 18rpx;
+  align-items: center;
+}
+
+.grid-price {
+  align-items: baseline;
+}
+
+.p-symbol {
+  font-size: 24rpx;
+  color: #C5A880;
+  font-weight: 700;
+}
+
+.p-amount {
+  font-size: 36rpx;
+  font-weight: 800;
+  color: #C5A880;
+  margin: 0 4rpx;
+}
+
+.p-unit {
+  font-size: 20rpx;
+  color: #9A9EA7;
+}
+
+.action-btn {
+  font-size: 24rpx;
+  padding: 10rpx 28rpx;
+  border-radius: 28rpx;
+  font-weight: 700;
+  box-shadow: 0 4rpx 16rpx rgba(197, 168, 128, 0.35);
+}

@@ -1,0 +1,70 @@
+<!-- 关于展晨门窗 品牌独立页面 WXML -->
+<view class="container">
+
+  <!-- 品牌头部卡片 -->
+  <view class="glass-card brand-header-card flex-column">
+    <image class="brand-logo-img" src="https://zc-oss.carelife.top/common/zc-logo.jpg" mode="aspectFit"></image>
+    <text class="brand-name">展晨门窗 · ZHANCHEN</text>
+    <text class="brand-slogan">专业门窗定制 · 缔造品质生活</text>
+  </view>
+
+  <!-- 20年资质背书网格 -->
+  <view class="glass-card brand-stats-card flex-between">
+    <view class="stat-item flex-column">
+      <text class="stat-num">2005</text>
+      <text class="stat-label">创立年份</text>
+    </view>
+    <view class="stat-line"></view>
+    <view class="stat-item flex-column">
+      <text class="stat-num">50000+</text>
+      <text class="badge-label">成功定制案例</text>
+    </view>
+    <view class="stat-line"></view>
+    <view class="stat-item flex-column">
+      <text class="stat-num">ISO9001</text>
+      <text class="stat-label">质量体系认证</text>
+    </view>
+  </view>
+
+  <!-- 品牌故事与实力介绍 -->
+  <view class="glass-card info-section flex-column">
+    <text class="section-title">🏆 20年匠心沉淀 · 湖北本土门窗领跑者</text>
+    <text class="section-paragraph">
+      展晨门窗创立于 2005 年，总部与工厂坐落于湖北省仙桃市。20 年来专注高端断桥铝系统窗、极窄重型推拉门、系统封阳台及阳光房的研发、测量、制造与安装落地。
+    </text>
+    <text class="section-paragraph">
+      公司拥有现代化门窗生产基地与数十位经验丰富的专业测量工程师，全线采用高精度切割设备与原生铝钛合金型材，搭配 Low-E 中空/三玻两腔隔音玻璃与德国 Hoppe / Siegenia 原装五金系统。
+    </text>
+  </view>
+
+  <!-- 品质承诺 -->
+  <view class="glass-card info-section flex-column">
+    <text class="section-title">🔒 4 大核心品质保障承诺</text>
+    <view class="promise-item flex-row">
+      <text class="promise-dot">1</text>
+      <text class="promise-text">【精确测量】专业工程师免费上门精准量尺、设计放样。</text>
+    </view>
+    <view class="promise-item flex-row">
+      <text class="promise-dot">2</text>
+      <text class="promise-text">【透明算价】起步 1.5 ㎡底线，尺寸选配明细全透明拆解。</text>
+    </view>
+    <view class="promise-item flex-row">
+      <text class="promise-dot">3</text>
+      <text class="promise-text">【原厂保修】主型材长效质保，德国五金原装进口零配件。</text>
+    </view>
+    <view class="promise-item flex-row">
+      <text class="promise-dot">4</text>
+      <text class="promise-text">【专人接单】一对一接单员跟进排产、运输与安装工程。</text>
+    </view>
+  </view>
+
+  <!-- 门店地址与联系 -->
+  <view class="glass-card store-card flex-column">
+    <text class="section-title">📍 品牌旗舰店地址</text>
+    <text class="store-info-text">门店地址：湖北省仙桃市恒迪建材市场2期14栋1-107</text>
+    <text class="store-info-text">联系电话：13545941637</text>
+    <text class="store-info-text">营业时间：周一至周日 8:00 - 18:00</text>
+    <button class="call-btn btn-gold" bindtap="callStore">一键拨号联系</button>
+  </view>
+
+</view>

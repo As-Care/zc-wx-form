@@ -1,0 +1,58 @@
+/** 展晨门窗 暖灰玄武岩 (Warm Charcoal Obsidian) 极奢建筑风全局样式表 **/
+
+page {
+  background-color: #121316;
+  color: #F5F5F7;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 全局变量色调 */
+.theme-bg { background-color: #121316; }
+.theme-card-bg { background: rgba(26, 29, 36, 0.8); backdrop-filter: blur(14px); }
+.theme-gold-text { color: #C5A880; }
+.theme-gold-bg { background-color: #C5A880; color: #121316; }
+
+/* 玻璃态高奢卡片容器 */
+.glass-card {
+  background: rgba(26, 29, 36, 0.8);
+  border: 1rpx solid rgba(197, 168, 128, 0.22);
+  border-radius: 24rpx;
+  box-shadow: 0 10rpx 36rpx rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(16px);
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+}
+
+/* 耀金高光按钮 */
+.btn-gold {
+  background: linear-gradient(135deg, #D4AF37 0%, #C5A880 100%);
+  color: #121316;
+  font-weight: 700;
+  border-radius: 40rpx;
+  text-align: center;
+  box-shadow: 0 6rpx 24rpx rgba(197, 168, 128, 0.35);
+  transition: all 0.2s ease;
+}
+
+.btn-gold:active {
+  opacity: 0.85;
+  transform: scale(0.98);
+}
+
+/* 状态 Badge */
+.status-badge {
+  padding: 6rpx 18rpx;
+  border-radius: 20rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+.status-pending { background: rgba(234, 179, 8, 0.15); color: #EAB308; border: 1rpx solid rgba(234, 179, 8, 0.3); }
+.status-producing { background: rgba(59, 130, 246, 0.15); color: #60A5FA; border: 1rpx solid rgba(59, 130, 246, 0.3); }
+.status-completed { background: rgba(34, 197, 94, 0.15); color: #4ADE80; border: 1rpx solid rgba(34, 197, 94, 0.3); }
+
+/* 通用 flex 布局 */
+.flex-row { display: flex; flex-direction: row; align-items: center; }
+.flex-between { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
+.flex-column { display: flex; flex-direction: column; }

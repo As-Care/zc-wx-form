@@ -1,0 +1,36 @@
+<!-- 展晨门窗 联系我们与接单员列表 WXML -->
+<view class="container">
+
+  <!-- 第一行：门店官方地址卡片 -->
+  <view class="glass-card address-card flex-column">
+    <view class="card-header flex-row">
+      <text class="location-icon">📍</text>
+      <text class="card-title">展晨门窗 · 官方门店地址</text>
+    </view>
+    <view class="address-body flex-column">
+      <text class="address-text">{{storeInfo.address}}</text>
+      <text class="hours-text">营业时间：周一至周日 8:00 - 18:00</text>
+    </view>
+  </view>
+
+  <!-- 接单员列表 (顶行姓名+电话，下方80%宽二维码) -->
+  <view class="receivers-list">
+    <view class="receiver-card glass-card flex-column" wx:for="{{receivers}}" wx:key="id">
+      <!-- 顶行：姓名与电话 -->
+      <view class="receiver-header-row flex-between">
+        <text class="receiver-name">{{item.name}}</text>
+        <view class="receiver-phone-box flex-row" bindtap="callReceiver" data-phone="{{item.phone}}">
+          <text class="phone-icon">📞</text>
+          <text class="receiver-phone">{{item.phone}}</text>
+        </view>
+      </view>
+
+      <!-- 下方：宽度80%居中二维码 -->
+      <view class="receiver-qr-box flex-column" bindtap="previewQR" data-url="{{item.qr_code_url}}">
+        <image class="qr-img-large" src="{{item.qr_code_url}}" mode="widthFix" show-menu-by-longpress="true"></image>
+        <text class="qr-label">长按识别二维码加好友</text>
+      </view>
+    </view>
+  </view>
+
+</view>

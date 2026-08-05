@@ -1,0 +1,63 @@
+<!-- 展晨门窗 完善个人资料与登录 WXML -->
+<view class="container flex-column">
+
+  <!-- 头部 Slogan 说明 -->
+  <view class="logo-section flex-column">
+    <text class="app-title">完善个人资料</text>
+    <text class="app-subtitle">设置您的专属姓名与手机号，获取展晨定制服务</text>
+  </view>
+
+  <!-- Form 区域：正圆形头像、姓名(必填)、手机号(必填) -->
+  <view class="profile-section flex-column">
+    <!-- 1. 中间正圆形头像 -->
+    <view class="avatar-box flex-column flex-center">
+      <button class="avatar-wrapper flex-center" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+        <image wx:if="{{avatarUrl}}" class="avatar-img" src="{{avatarUrl}}" mode="aspectFill"></image>
+        <view wx:else class="avatar-placeholder flex-column flex-center">
+          <text class="camera-icon">📷</text>
+          <text class="placeholder-tip">点击上传头像</text>
+        </view>
+      </button>
+      <text class="avatar-tip">点击设置/更换头像</text>
+    </view>
+
+    <!-- 2. 姓名输入 (必填) -->
+    <view class="nickname-form flex-column">
+      <text class="form-label">姓名 <text class="required-star">*</text></text>
+      <view class="nickname-input-wrap flex-row">
+        <input 
+          type="nickname" 
+          class="nickname-input" 
+          placeholder="请输入或点此选择姓名" 
+          placeholder-style="color:#9A9EA7;"
+          value="{{nickname}}" 
+          bindblur="onNicknameBlur" 
+          bindinput="onNicknameInput" 
+        />
+      </view>
+    </view>
+
+    <!-- 3. 手机号输入 (必填) -->
+    <view class="nickname-form flex-column" style="margin-top: 28rpx;">
+      <text class="form-label">手机号 <text class="required-star">*</text></text>
+      <view class="nickname-input-wrap flex-row">
+        <input 
+          type="number" 
+          maxlength="11"
+          class="nickname-input" 
+          placeholder="请输入11位手机号码" 
+          placeholder-style="color:#9A9EA7;"
+          value="{{phone}}" 
+          bindinput="onPhoneInput" 
+        />
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部保存按钮与编辑模式温情提示文案 -->
+  <view class="action-section flex-column">
+    <button class="save-btn btn-gold" bindtap="saveProfile">保存并更新资料</button>
+    <text class="edit-notice-tip" wx:if="{{isEditMode}}">💡 历史订单无法更新信息，更新后的信息将应用于之后的订单</text>
+  </view>
+
+</view>

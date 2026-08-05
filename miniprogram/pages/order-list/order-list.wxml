@@ -1,0 +1,76 @@
+<!-- 展晨门窗 订单列表页 WXML -->
+<view class="container">
+
+  <!-- 胶囊 Status Tabs (带 (x) 动态数量统计) -->
+  <view class="tabs-wrapper">
+    <scroll-view class="tabs-scroll" scroll-x enable-flex show-scrollbar="{{false}}">
+      <view 
+        class="tab-item-box {{activeStatus === item.key ? 'active' : ''}}" 
+        wx:for="{{statusTabs}}" 
+        wx:key="key" 
+        bindtap="switchTab" 
+        data-status="{{item.key}}"
+      >
+        <view class="tab-pill">{{item.title}}({{item.count !== undefined ? item.count : 0}})</view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 订单列表内容 -->
+  <view class="order-list">
+    <view class="order-card glass-card" wx:for="{{filteredOrders}}" wx:key="id" bindtap="navToOrderDetail" data-id="{{item.id}}">
+      
+      <!-- 1. 订单头: 订单号 + 复制按钮 + 状态 -->
+      <view class="order-header flex-between">
+        <view class="order-no-box flex-row">
+          <text class="order-no">订单号：{{item.order_no}}</text>
+          <text class="copy-btn" catchtap="copyOrderNo" data-no="{{item.order_no}}">📋 复制</text>
+        </view>
+        <text class="status-badge {{item.statusClass}}">{{item.statusText}}</text>
+      </view>
+
+      <!-- 2. 订单商品 (靠左对齐 + 舒展间距) -->
+      <view class="order-body flex-row" wx:for="{{item.items}}" wx:for-item="sub" wx:key="product_name">
+        <image class="item-cover" src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=300&q=80" mode="aspectFill"></image>
+        <view class="item-meta flex-column flex-between">
+          <text class="item-title">{{sub.product_name}}</text>
+          <text class="item-spec">宽{{sub.width_mm}} x 高{{sub.height_mm}} mm ({{sub.billed_area}} ㎡)</text>
+          <view class="price-box flex-row">
+            <text class="price-label">合计: </text>
+            <text class="price-currency">¥ </text>
+            <text class="price-num">{{item.final_amount}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 3. 商家调价说明 (如果有) -->
+      <view class="special-charge-bar flex-between" wx:if="{{item.special_charges_amount > 0}}">
+        <text class="charge-label">已包含商家复核追加费用：</text>
+        <text class="charge-val">+ ¥ {{item.special_charges_amount}}</text>
+      </view>
+
+      <!-- 4. 订单底栏: 时间单独一行，按钮组并排一行 -->
+      <view class="order-footer flex-column">
+        <!-- 上一行: 订单时间 -->
+        <view class="time-row flex-between">
+          <text class="time-label">下单时间：</text>
+          <text class="order-time">{{item.created_at || '2026-08-04 18:00'}}</text>
+        </view>
+
+        <!-- 下一行: 按钮组 (联系客服与查看详情并排) -->
+        <view class="action-btn-row flex-between">
+          <button class="btn-sub" catchtap="makePhoneCall">联系客服</button>
+          <button class="btn-main btn-gold" catchtap="navToOrderDetail" data-id="{{item.id}}">查看详情</button>
+        </view>
+      </view>
+
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty-box flex-column" wx:if="{{filteredOrders.length === 0}}">
+      <text class="empty-icon">📋</text>
+      <text class="empty-text">暂无此类状态的门窗订单</text>
+    </view>
+  </view>
+
+</view>

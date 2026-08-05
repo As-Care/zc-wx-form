@@ -1,0 +1,97 @@
+<!-- 展晨门窗 订单详情与流转时间轴 WXML -->
+<view class="container">
+
+  <!-- 顶部状态提示 (黑曜石高奢卡片，移除原锤子Icon) -->
+  <view class="glass-card status-banner-card flex-between">
+    <view class="s-text-box flex-column">
+      <view class="s-header-row flex-row">
+        <text class="s-badge-dot"></text>
+        <text class="s-title">当前状态：{{order.statusText}}</text>
+      </view>
+      <text class="s-subtitle">{{order.statusDesc}}</text>
+    </view>
+  </view>
+
+  <!-- 可视化进度时间轴 -->
+  <view class="glass-card timeline-card">
+    <text class="card-title">① 订单排产与提货进度时间轴</text>
+
+    <view class="timeline flex-between">
+      <view class="step-item flex-column {{step.active ? 'active' : ''}}" wx:for="{{steps}}" wx:key="name" wx:for-item="step">
+        <view class="node-circle flex-row">
+          <text class="node-dot"></text>
+        </view>
+        <text class="step-name">{{step.name}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 特殊费用核算通知 (如果有) -->
+  <view class="glass-card special-charge-card" wx:if="{{order.special_charges_amount > 0 || order.admin_remark}}">
+    <text class="card-title">⚠️ 商家复核说明与补充收费</text>
+    <view class="special-content flex-column">
+      <text class="remark-text" wx:if="{{order.admin_remark}}">商家复核备注：{{order.admin_remark}}</text>
+      <view class="charge-row flex-between" wx:if="{{order.special_charges_amount > 0}}">
+        <text class="c-label">复核追加特殊费用（如高楼吊装/异形开孔）</text>
+        <text class="c-val">+ ¥ {{order.special_charges_amount}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 门窗多套定制规格明细拆解 -->
+  <view class="glass-card items-card">
+    <text class="card-title">② 门窗多套定制规格明细拆解 (共{{order.items.length}}套)</text>
+
+    <!-- 逐套展示明细 -->
+    <view class="item-card" wx:for="{{order.items}}" wx:key="label" wx:for-index="idx">
+      <view class="item-header flex-between">
+        <view class="set-label-box flex-row">
+          <text class="set-idx-badge">套系{{idx + 1}}</text>
+          <text class="p-name">{{item.label}}</text>
+        </view>
+        <text class="p-subtotal">小计 ¥ {{item.item_subtotal}}</text>
+      </view>
+
+      <view class="p-prod-title">{{item.product_name}}</view>
+
+      <view class="item-detail-grid">
+        <text class="d-text">规格尺寸：{{item.width_mm}} × {{item.height_mm}} mm</text>
+        <text class="d-text">实际面积：{{item.actual_area}} ㎡</text>
+        <text class="d-text">计费面积：{{item.billed_area}} ㎡</text>
+      </view>
+
+      <!-- 选配项明细 -->
+      <view class="opt-breakdown-box flex-column" wx:if="{{item.options_summary && item.options_summary.length > 0}}">
+        <text class="opt-b-title">选配配置明细：</text>
+        <text class="opt-b-line" wx:for="{{item.options_summary}}" wx:for-item="opt" wx:key="groupTitle">• {{opt.groupTitle}}：{{opt.option_name}}</text>
+      </view>
+    </view>
+
+    <!-- 汇总金额拆解 -->
+    <view class="summary-breakdown flex-column">
+      <view class="b-row flex-between">
+        <text class="b-label">基础平米总费用</text>
+        <text class="b-val">¥ {{order.base_amount}}</text>
+      </view>
+      <view class="b-row flex-between">
+        <text class="b-label">选配升级加价</text>
+        <text class="b-val">¥ {{order.extra_amount}}</text>
+      </view>
+      <view class="b-row flex-between" wx:if="{{order.special_charges_amount > 0}}">
+        <text class="b-label">商家补充特殊费用</text>
+        <text class="b-val">¥ {{order.special_charges_amount}}</text>
+      </view>
+      <view class="b-total-row flex-between">
+        <text class="bt-label">订单总金额</text>
+        <text class="bt-val theme-gold-text">¥ {{order.final_amount}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 联系客服与拨号 (修改为 电话联系展晨门窗) -->
+  <view class="bottom-action-bar flex-between">
+    <button class="call-store-btn" bindtap="makePhoneCall">📞 电话联系展晨门窗</button>
+    <button class="nav-back-btn btn-gold" bindtap="navBackOrders">返回订单列表</button>
+  </view>
+
+</view>
