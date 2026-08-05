@@ -11,15 +11,14 @@
     >
       <view class="card-header flex-between mb-2">
         <view class="user-info flex-row">
-          <text class="name-text">{{item.name}}</text>
-          <text class="phone-text">{{item.phone}}</text>
+          <view class="name-text">{{item.name}}</view>
+          <view class="phone-text">{{item.phone}}</view>
         </view>
-        <text class="default-badge" wx:if="{{item.is_default}}">默认安装地址</text>
+        <view class="default-badge" wx:if="{{item.is_default}}">默认安装地址</view>
       </view>
 
       <view class="address-detail-text flex-row">
-        <text class="loc-icon">📍</text>
-        <text class="detail-str">{{item.province || ''}}{{item.city || ''}}{{item.district || ''}}{{item.detail_address}}</text>
+        <view class="detail-str">{{item.province || ''}}{{item.city || ''}}{{item.district || ''}}{{item.detail_address}}</view>
       </view>
 
       <view class="divider"></view>
@@ -29,7 +28,7 @@
           <view class="radio-circle {{item.is_default ? 'checked' : ''}}">
             <view class="inner-dot" wx:if="{{item.is_default}}"></view>
           </view>
-          <text class="radio-label {{item.is_default ? 'gold' : ''}}">{{item.is_default ? '已设为默认' : '设为默认'}}</text>
+          <view class="radio-label {{item.is_default ? 'gold' : ''}}">{{item.is_default ? '已设为默认' : '设为默认'}}</view>
         </view>
 
         <view class="action-btns flex-row">
@@ -40,18 +39,15 @@
     </view>
   </view>
 
-  <!-- 精美高奢空状态 -->
+  <!-- 简洁清爽无图标空状态 -->
   <view class="empty-box flex-column" wx:else>
-    <view class="empty-icon-circle flex-center">
-      <text class="gold-pin-icon">📍</text>
-    </view>
-    <text class="empty-title">暂无保存的安装/收货地址</text>
-    <text class="empty-sub">添加常用地址后，可在下单时快捷一键选中导入</text>
+    <view class="empty-title">暂无保存的安装/收货地址</view>
+    <view class="empty-sub">添加常用地址后，可在下单时快捷一键选中导入</view>
   </view>
 
-  <!-- 底部固定添加地址按钮 -->
+  <!-- 底部无缝固定添加地址按钮 (使用 view 标签 + flex 居中) -->
   <view class="floating-btn-bar">
-    <button class="add-btn btn-gold" bindtap="navToAddAddress">+ 新增安装/收货地址</button>
+    <view class="add-btn btn-gold flex-center" bindtap="navToAddAddress">+ 新增安装/收货地址</view>
   </view>
 
 </view>

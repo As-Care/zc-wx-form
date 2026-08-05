@@ -159,20 +159,36 @@ const receiverForm = ref({
   qr_code_url: ''
 });
 
-const fetchReceivers = async () => {
+const fetchStoreConfig = async () => {
   try {
-    const res = await fetch(`${API_BASE}/api/receivers`);
+    const res = await fetch(`${API_BASE}/api/config/store`);
     const data = await res.json();
     if (data.success && data.data) {
-      receivers.value = data.data;
+      storeForm.value = {
+        name: data.data.name || '展晨门窗',
+        phone: data.data.phone || '13545941637',
+        address: data.data.address || '湖北省仙桃市恒迪建材市场2期14栋1-107'
+      };
     }
-  } catch (e) {
-    receivers.value = [];
-  }
+  } catch (e) {}
 };
 
-const saveStoreConfig = () => {
-  Message.success('门店信息与客服电话保存成功！');
+const saveStoreConfig = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/config/store`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(storeForm.value)
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      Message.success('门店信息与客服电话成功保存至数据库！已实时同步至小程序。');
+    } else {
+      Message.error(data.message || `门店配置保存失败 (HTTP ${res.status})`);
+    }
+  } catch (e) {
+    Message.error('无法连接后端服务，请检查网络！');
+  }
 };
 
 const openReceiverModal = () => {
@@ -282,8 +298,22 @@ const deleteReceiver = async (id) => {
     Message.error('删除操作失败，网络连接错误');
   }
 };
+const fetchReceivers = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/api/receivers`);
+    const data = await res.json();
+    if (data.success && data.data) {
+      receivers.value = data.data;
+    } else {
+      receivers.value = [];
+    }
+  } catch (e) {
+    receivers.value = [];
+  }
+};
 
 onMounted(() => {
+  fetchStoreConfig();
   fetchReceivers();
 });
 </script>

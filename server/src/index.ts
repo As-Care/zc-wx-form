@@ -1012,4 +1012,78 @@ app.delete('/api/admin/receivers/:id', async (c) => {
   return c.json({ success: true, message: '接单员已移出列表' });
 });
 
+/**
+ * 获取门店配置信息 (小程序及管理后台使用)
+ * GET /api/config/store
+ */
+app.get('/api/config/store', async (c) => {
+  const db = c.env.DB;
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS store_config (
+        id TEXT PRIMARY KEY DEFAULT 'default',
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        address TEXT NOT NULL,
+        business_hours TEXT DEFAULT '08:30 - 18:30',
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (e) {}
+
+  const config = await db.prepare('SELECT * FROM store_config WHERE id = ?').bind('default').first<any>();
+  if (config) {
+    return c.json({ success: true, data: config });
+  }
+
+  const defaultConfig = {
+    id: 'default',
+    name: '展晨门窗',
+    phone: '13545941637',
+    address: '湖北省仙桃市恒迪建材市场2期14栋1-107',
+    business_hours: '08:30 - 18:30'
+  };
+  return c.json({ success: true, data: defaultConfig });
+});
+
+/**
+ * 修改保存门店配置信息
+ * POST /api/admin/config/store
+ */
+app.post('/api/admin/config/store', async (c) => {
+  const db = c.env.DB;
+  const body = await c.req.json();
+  const { name, phone, address, business_hours } = body;
+
+  if (!name || !phone || !address) {
+    return c.json({ success: false, message: '【门店名称】、【客服电话】与【详细地址】为必填项' }, 400);
+  }
+
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS store_config (
+        id TEXT PRIMARY KEY DEFAULT 'default',
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        address TEXT NOT NULL,
+        business_hours TEXT DEFAULT '08:30 - 18:30',
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (e) {}
+
+  await db.prepare(`
+    INSERT INTO store_config (id, name, phone, address, business_hours, updated_at)
+    VALUES ('default', ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(id) DO UPDATE SET
+      name = excluded.name,
+      phone = excluded.phone,
+      address = excluded.address,
+      business_hours = excluded.business_hours,
+      updated_at = CURRENT_TIMESTAMP
+  `).bind(name, phone, address, business_hours || '08:30 - 18:30').run();
+
+  return c.json({ success: true, message: '门店信息与客服电话保存成功' });
+});
+
 export default app;
