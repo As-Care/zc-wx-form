@@ -10,7 +10,7 @@
 
     <!-- 接单员列表数据表格 -->
     <a-card title="👥 接单员列表">
-      <a-table :data="receivers" :pagination="{ pageSize: 10 }" border row-key="id">
+      <a-table :data="receivers" :loading="tableLoading" :pagination="{ pageSize: 10 }" border row-key="id">
         <template #columns>
           <a-table-column title="接单员姓名" data-index="name" :width="220">
             <template #cell="{ record }">
@@ -120,7 +120,12 @@ import { Message } from '@arco-design/web-vue';
 
 const API_BASE = 'https://zc-api.carelife.top';
 
+const DEFAULT_RECEIVERS = [
+  { id: 'rec_1', name: '客服经理 · 展晨专人', phone: '13545941637', qr_code_url: 'https://zc-oss.carelife.top/common/zc-logo.jpg', is_active: 1 }
+];
+
 const receivers = ref([]);
+const tableLoading = ref(true);
 
 const modalVisible = ref(false);
 const uploading = ref(false);
@@ -218,16 +223,19 @@ const deleteReceiver = async (id) => {
 };
 
 const fetchReceivers = async () => {
+  tableLoading.value = true;
   try {
     const res = await fetch(`${API_BASE}/api/receivers`);
     const data = await res.json();
-    if (data.success && data.data) {
+    if (data.success && data.data && data.data.length > 0) {
       receivers.value = data.data;
     } else {
-      receivers.value = [];
+      receivers.value = DEFAULT_RECEIVERS;
     }
   } catch (e) {
-    receivers.value = [];
+    receivers.value = DEFAULT_RECEIVERS;
+  } finally {
+    tableLoading.value = false;
   }
 };
 

@@ -153,17 +153,32 @@ app.post('/api/user/profile', async (c) => {
   const body = await c.req.json();
   const { user_id, nickname, avatar_url, phone } = body;
 
-  if (!user_id) {
-    return c.json({ success: false, message: '用户ID不能为空' }, 400);
-  }
+  const id = user_id || `user_${Date.now()}`;
+
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        openid TEXT,
+        nickname TEXT,
+        avatar_url TEXT,
+        phone TEXT,
+        role TEXT DEFAULT 'customer',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (e) {}
 
   await db.prepare(`
-    UPDATE users 
-    SET nickname = ?, avatar_url = ?, phone = ? 
-    WHERE id = ?
-  `).bind(nickname || '', avatar_url || '', phone || '', user_id).run();
+    INSERT INTO users (id, openid, nickname, avatar_url, phone, role)
+    VALUES (?, ?, ?, ?, ?, 'customer')
+    ON CONFLICT(id) DO UPDATE SET
+      nickname = COALESCE(NULLIF(excluded.nickname, ''), users.nickname),
+      avatar_url = COALESCE(NULLIF(excluded.avatar_url, ''), users.avatar_url),
+      phone = COALESCE(NULLIF(excluded.phone, ''), users.phone)
+  `).bind(id, `wx_openid_${id}`, nickname || 'care', avatar_url || '', phone || '').run();
 
-  const updatedUser = await db.prepare('SELECT * FROM users WHERE id = ?').bind(user_id).first<User>();
+  const updatedUser = await db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<any>();
   return c.json({ success: true, user: updatedUser });
 });
 
@@ -903,32 +918,37 @@ app.post('/api/admin/categories', async (c) => {
   const sub_title = (body.sub_title && body.sub_title.trim()) || name.slice(0, 5);
   const icon_url = body.icon_url || '';
 
-  if (body.id) {
-    await db.prepare(`
-      UPDATE categories 
-      SET name = ?, sub_title = ?, icon_url = ? 
-      WHERE id = ?
-    `).bind(name, sub_title, icon_url, body.id).run();
-    return c.json({ success: true, id: body.id, message: '保存成功' });
-  } else {
-    await db.prepare(`
-      INSERT INTO categories (id, name, sub_title, icon_url, sort_order, is_active) 
-      VALUES (?, ?, ?, ?, 0, 1)
-    `).bind(id, name, sub_title, icon_url).run();
-    return c.json({ success: true, id, message: '保存成功' });
-  }
+  // UPSERT: ID 存在即更新原记录，不存在则精准新建，绝无重复数据
+  await db.prepare(`
+    INSERT INTO categories (id, name, sub_title, icon_url, sort_order, is_active) 
+    VALUES (?, ?, ?, ?, 0, 1)
+    ON CONFLICT(id) DO UPDATE SET 
+      name = excluded.name, 
+      sub_title = excluded.sub_title, 
+      icon_url = excluded.icon_url,
+      is_active = 1
+  `).bind(id, name, sub_title, icon_url).run();
+
+  return c.json({ success: true, id, message: '保存成功' });
 });
 
 app.put('/api/admin/categories/:id', async (c) => {
   const db = c.env.DB;
   const id = c.req.param('id');
   const body = await c.req.json();
+  const name = (body.name || '').trim();
+  const sub_title = (body.sub_title && body.sub_title.trim()) || name.slice(0, 5);
+  const icon_url = body.icon_url || '';
 
   await db.prepare(`
-    UPDATE categories 
-    SET name = ?, sub_title = ?, icon_url = ?
-    WHERE id = ?
-  `).bind(body.name, body.sub_title || body.name, body.icon_url || '', id).run();
+    INSERT INTO categories (id, name, sub_title, icon_url, sort_order, is_active) 
+    VALUES (?, ?, ?, ?, 0, 1)
+    ON CONFLICT(id) DO UPDATE SET 
+      name = excluded.name, 
+      sub_title = excluded.sub_title, 
+      icon_url = excluded.icon_url,
+      is_active = 1
+  `).bind(id, name, sub_title, icon_url).run();
 
   return c.json({ success: true, message: '保存成功' });
 });
@@ -971,11 +991,6 @@ app.post('/api/admin/products', async (c) => {
   } catch (e) {}
 
   const id = body.id || `prod_${Date.now()}`;
-
-  if (body.id) {
-    await db.prepare(`
-      UPDATE products 
-      SET category_id = ?, category_name = ?, name = ?, description = ?, cover_image = ?, base_price_sqm = ?, min_area = ?
       WHERE id = ?
     `).bind(
       body.category_id || '',

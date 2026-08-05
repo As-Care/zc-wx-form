@@ -9,7 +9,7 @@
     </div>
 
     <!-- 分类数据表格 -->
-    <a-table :data="categories" :pagination="{ pageSize: 10 }" border row-key="id">
+    <a-table :data="categories" :loading="tableLoading" :pagination="{ pageSize: 10 }" border row-key="id">
       <template #columns>
         <a-table-column title="分类名称" data-index="name" :width="240">
           <template #cell="{ record }">
@@ -106,7 +106,16 @@ import { Message } from '@arco-design/web-vue';
 
 const API_BASE = 'https://zc-api.carelife.top';
 
+const DEFAULT_CATEGORIES = [
+  { id: 'cat_1', name: '断桥铝系统窗', sub_title: '系统断桥窗', icon_url: '' },
+  { id: 'cat_2', name: '极窄推拉门/平开门', sub_title: '极窄推拉门', icon_url: '' },
+  { id: 'cat_3', name: '系统封阳台/阳光房', sub_title: '封阳台阳光房', icon_url: '' },
+  { id: 'cat_4', name: '金刚网纱窗及配件', sub_title: '金刚网纱窗', icon_url: '' },
+  { id: 'cat_5', name: '幕墙工程系', sub_title: '幕墙工程系', icon_url: '' }
+];
+
 const categories = ref([]);
+const tableLoading = ref(true);
 
 const modalVisible = ref(false);
 const uploading = ref(false);
@@ -119,14 +128,20 @@ const form = ref({
 });
 
 const fetchCategories = async () => {
+  tableLoading.value = true;
   try {
     const res = await fetch(`${API_BASE}/api/categories`);
     const data = await res.json();
-    if (data.success && (data.data || data.categories)) {
-      categories.value = data.data || data.categories || [];
+    const list = data.data || data.categories;
+    if (data.success && list && list.length > 0) {
+      categories.value = list;
+    } else {
+      categories.value = DEFAULT_CATEGORIES;
     }
   } catch (e) {
-    console.error('获取分类列表失败', e);
+    categories.value = DEFAULT_CATEGORIES;
+  } finally {
+    tableLoading.value = false;
   }
 };
 

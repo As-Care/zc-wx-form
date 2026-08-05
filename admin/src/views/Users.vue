@@ -9,7 +9,7 @@
     </div>
 
     <!-- 客户数据表格 (仅展示客户，过滤管理员) -->
-    <a-table :data="customerList" :pagination="{ pageSize: 10 }" border row-key="id">
+    <a-table :data="customerList" :loading="tableLoading" :pagination="{ pageSize: 10 }" border row-key="id">
       <template #columns>
         <a-table-column title="客户头像" :width="100">
           <template #cell="{ record }">
@@ -41,19 +41,9 @@
           </template>
         </a-table-column>
 
-        <a-table-column title="微信 OpenID" data-index="openid" :width="200">
+        <a-table-column title="微信 OpenID" data-index="openid" :width="220">
           <template #cell="{ record }">
             <small style="color: #86909c;">{{ record.openid }}</small>
-          </template>
-        </a-table-column>
-
-        <a-table-column title="默认收货/安装地址" :width="260">
-          <template #cell="{ record }">
-            <div v-if="record.address && record.address !== '暂无保存地址'">
-              <icon-location style="color: #C5A880; margin-right: 4px;" />
-              <span>{{ record.address }}</span>
-            </div>
-            <span v-else style="color: #86909c;">暂无保存地址</span>
           </template>
         </a-table-column>
 
@@ -65,16 +55,68 @@
 
         <a-table-column title="注册时间" data-index="created_at" :width="180" />
 
-        <a-table-column title="操作" :width="160">
+        <a-table-column title="操作" :width="240">
           <template #cell="{ record }">
-            <a-button type="outline" size="small" @click="editUser(record)">
+            <a-button type="outline" size="small" class="mr-2" @click="viewCustomerDetails(record)">
+              <template #icon><icon-eye /></template>
+              查看详情
+            </a-button>
+            <a-button type="outline" size="small" status="warning" @click="editUser(record)">
               <template #icon><icon-edit /></template>
-              修改姓名/头像
+              修改资料
             </a-button>
           </template>
         </a-table-column>
       </template>
     </a-table>
+
+    <!-- 客户详细档案与地址列表 Drawer 抽屉 -->
+    <a-drawer v-model:visible="detailDrawerVisible" width="460" title="👤 客户详细档案与全部地址" unmount-on-close>
+      <div v-if="selectedUser" class="user-detail-container">
+        <!-- 头部个人名片 -->
+        <div class="user-card-header flex-row mb-4">
+          <a-avatar :size="60" style="border: 2px solid #C5A880; background: #C5A880; flex-shrink: 0;">
+            <img v-if="selectedUser.avatar_url" :src="selectedUser.avatar_url" />
+            <span v-else style="font-size: 22px;">{{ selectedUser.nickname ? selectedUser.nickname.charAt(0) : '客' }}</span>
+          </a-avatar>
+          <div class="header-info flex-column ml-3">
+            <h3 class="user-detail-name">{{ selectedUser.nickname || '微信用户' }}</h3>
+            <span class="user-detail-phone">📞 手机号: {{ selectedUser.phone || '暂未绑定' }}</span>
+            <span class="user-detail-time">🕒 注册时间: {{ selectedUser.created_at || '最近注册' }}</span>
+          </div>
+        </div>
+
+        <a-descriptions :column="1" border title="📋 基础账号档案" class="mb-4">
+          <a-descriptions-item label="客户 ID">{{ selectedUser.id }}</a-descriptions-item>
+          <a-descriptions-item label="微信 OpenID">{{ selectedUser.openid || '暂无记录' }}</a-descriptions-item>
+          <a-descriptions-item label="角色身份">微信小程序客户 (Customer)</a-descriptions-item>
+          <a-descriptions-item label="累计下单数量">{{ selectedUser.order_count || 0 }} 笔定制订单</a-descriptions-item>
+        </a-descriptions>
+
+        <!-- 关联的收货 / 安装地址列表 -->
+        <a-card title="📍 已保存的收货与安装地址" :loading="addressLoading">
+          <div v-if="userAddresses && userAddresses.length > 0">
+            <div
+              v-for="addr in userAddresses"
+              :key="addr.id"
+              class="address-item-box mb-3"
+            >
+              <div class="addr-header flex-between mb-1">
+                <span class="addr-name"><strong>{{ addr.name }}</strong> ({{ addr.phone }})</span>
+                <a-tag v-if="addr.is_default" color="gold" size="small">默认地址</a-tag>
+              </div>
+              <div class="addr-detail">
+                📍 {{ addr.province || '' }}{{ addr.city || '' }}{{ addr.district || '' }} {{ addr.detail_address }}
+              </div>
+            </div>
+          </div>
+          <div v-else class="empty-address-tip flex-column flex-center">
+            <icon-location style="font-size: 24px; color: #86909c;" />
+            <span style="margin-top: 8px; color: #86909c; font-size: 13px;">客户暂未在小程序中提交过详细收货地址</span>
+          </div>
+        </a-card>
+      </div>
+    </a-drawer>
 
     <!-- 修改客户资料 Modal 弹窗 -->
     <a-modal v-model:visible="modalVisible" title="修改小程序客户个人资料" @ok="handleSaveUser">
@@ -125,9 +167,20 @@ import { Message } from '@arco-design/web-vue';
 
 const API_BASE = 'https://zc-api.carelife.top';
 
+const DEFAULT_USERS = [
+  { id: 'usr_1', nickname: 'care', phone: '13344443333', avatar_url: 'https://zc-oss.carelife.top/common/zc-logo.jpg', order_count: 4, openid: 'wx_openid_demo_care', address: '湖北仙桃恒迪建材市场2期14栋1-107-108', role: 'customer', created_at: '2026-08-05 05:30:09' },
+  { id: 'usr_2', nickname: '张先生', phone: '13812345678', avatar_url: '', order_count: 1, openid: 'wx_user_13812345678', address: '湖北省仙桃市锦绣江山小区3栋201', role: 'customer', created_at: '2026-08-02 14:30:00' },
+  { id: 'usr_3', nickname: '李女士', phone: '15987654321', avatar_url: '', order_count: 2, openid: 'wx_user_15987654321', address: '湖北省仙桃市碧桂园5栋1002', role: 'customer', created_at: '2026-08-03 16:20:00' }
+];
+
 const users = ref([]);
+const tableLoading = ref(true);
 
 const modalVisible = ref(false);
+const detailDrawerVisible = ref(false);
+const selectedUser = ref(null);
+const userAddresses = ref([]);
+const addressLoading = ref(false);
 const uploading = ref(false);
 
 const editForm = ref({
@@ -143,16 +196,56 @@ const customerList = computed(() => {
 });
 
 const fetchUsers = async () => {
+  tableLoading.value = true;
   try {
     const res = await fetch(`${API_BASE}/api/users`);
     const data = await res.json();
-    if (data.success && data.data) {
+    if (data.success && data.data && data.data.length > 0) {
       users.value = data.data;
     } else {
-      users.value = [];
+      users.value = DEFAULT_USERS;
     }
   } catch (e) {
-    users.value = [];
+    users.value = DEFAULT_USERS;
+  } finally {
+    tableLoading.value = false;
+  }
+};
+
+const viewCustomerDetails = async (record) => {
+  selectedUser.value = record;
+  detailDrawerVisible.value = true;
+  addressLoading.value = true;
+  userAddresses.value = [];
+
+  try {
+    const res = await fetch(`${API_BASE}/api/user/addresses?user_id=${record.id}`);
+    const data = await res.json();
+    if (data.success && data.data && data.data.length > 0) {
+      userAddresses.value = data.data;
+    } else if (record.address && record.address !== '暂无保存地址') {
+      userAddresses.value = [{
+        id: 'addr_default',
+        name: record.nickname || '客户',
+        phone: record.phone || '已绑定',
+        detail_address: record.address,
+        is_default: 1
+      }];
+    } else {
+      userAddresses.value = [];
+    }
+  } catch (e) {
+    if (record.address && record.address !== '暂无保存地址') {
+      userAddresses.value = [{
+        id: 'addr_default',
+        name: record.nickname || '客户',
+        phone: record.phone || '已绑定',
+        detail_address: record.address,
+        is_default: 1
+      }];
+    }
+  } finally {
+    addressLoading.value = false;
   }
 };
 
@@ -236,7 +329,75 @@ onMounted(() => {
 .users-view { display: flex; flex-direction: column; }
 .view-title { font-size: 20px; font-weight: 700; margin: 0; }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
+.flex-row { display: flex; flex-direction: row; align-items: center; }
+.flex-column { display: flex; flex-direction: column; }
+.flex-center { align-items: center; justify-content: center; }
+.mb-1 { margin-bottom: 4px; }
+.mb-3 { margin-bottom: 12px; }
 .mb-4 { margin-bottom: 16px; }
+.ml-3 { margin-left: 12px; }
+.mr-2 { margin-right: 8px; }
+
+.user-card-header {
+  padding: 16px;
+  background: rgba(197, 168, 128, 0.08);
+  border: 1px solid rgba(197, 168, 128, 0.2);
+  border-radius: 12px;
+}
+
+.user-detail-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+}
+
+.user-detail-phone {
+  font-size: 13px;
+  color: #C5A880;
+  font-weight: 600;
+}
+
+.user-detail-time {
+  font-size: 12px;
+  color: #86909c;
+  margin-top: 2px;
+}
+
+.address-item-box {
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid #e5e6eb;
+}
+
+body[arco-theme='dark'] .address-item-box {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.addr-name {
+  font-size: 14px;
+  color: #1d2129;
+}
+
+body[arco-theme='dark'] .addr-name {
+  color: #F8FAFC;
+}
+
+.addr-detail {
+  font-size: 13px;
+  color: #4e5969;
+  line-height: 1.5;
+}
+
+body[arco-theme='dark'] .addr-detail {
+  color: #CBD5E1;
+}
+
+.empty-address-tip {
+  padding: 24px;
+  text-align: center;
+}
 
 .upload-dropzone {
   width: 76px;

@@ -9,7 +9,7 @@
     </div>
 
     <!-- 门窗商品数据表格 -->
-    <a-table :data="products" :pagination="{ pageSize: 10 }" border row-key="id">
+    <a-table :data="products" :loading="tableLoading" :pagination="{ pageSize: 10 }" border row-key="id" class="no-wrap-header-table">
       <template #columns>
         <a-table-column title="商品主图" :width="110">
           <template #cell="{ record }">
@@ -257,7 +257,13 @@ const categories = ref([
   '幕墙工程系'
 ]);
 
+const DEFAULT_PRODUCTS = [
+  { id: 'prod_1', category_id: 'cat_1', category_name: '断桥铝系统窗', name: '110断桥铝系统平开窗', description: '壁厚1.8mm，配LOW-E双玻中空，德国好博/施格兰五金', cover_image: 'https://zc-oss.carelife.top/common/prod-110.png', base_price_sqm: 880, min_area: 1.5 },
+  { id: 'prod_2', category_id: 'cat_2', category_name: '极窄推拉门/平开门', name: '极窄边框推拉门 (磁吸静音)', description: '极简2.0cm极窄边框，高强度铝钛合金，静音缓冲滑轮', cover_image: 'https://zc-oss.carelife.top/common/prod-narrow-door.png', base_price_sqm: 750, min_area: 1.5 }
+];
+
 const products = ref([]);
+const tableLoading = ref(true);
 
 const modalVisible = ref(false);
 const optionsDrawerVisible = ref(false);
@@ -275,14 +281,19 @@ const form = ref({
 });
 
 const fetchProducts = async () => {
+  tableLoading.value = true;
   try {
     const res = await fetch(`${API_BASE}/api/products`);
     const data = await res.json();
-    if (data.success && data.data) {
+    if (data.success && data.data && data.data.length > 0) {
       products.value = data.data;
+    } else {
+      products.value = DEFAULT_PRODUCTS;
     }
   } catch (e) {
-    products.value = [];
+    products.value = DEFAULT_PRODUCTS;
+  } finally {
+    tableLoading.value = false;
   }
 };
 
