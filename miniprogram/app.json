@@ -9,7 +9,9 @@
     "pages/login/login",
     "pages/product-detail/product-detail",
     "pages/order-create/order-create",
-    "pages/order-detail/order-detail"
+    "pages/order-detail/order-detail",
+    "pages/address-list/address-list",
+    "pages/address-edit/address-edit"
   ],
   "window": {
     "backgroundTextStyle": "light",

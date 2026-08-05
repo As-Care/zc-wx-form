@@ -41,9 +41,19 @@
           </template>
         </a-table-column>
 
-        <a-table-column title="微信 OpenID" data-index="openid" :width="220">
+        <a-table-column title="微信 OpenID" data-index="openid" :width="200">
           <template #cell="{ record }">
             <small style="color: #86909c;">{{ record.openid }}</small>
+          </template>
+        </a-table-column>
+
+        <a-table-column title="默认收货/安装地址" :width="260">
+          <template #cell="{ record }">
+            <div v-if="record.address && record.address !== '暂无保存地址'">
+              <icon-location style="color: #C5A880; margin-right: 4px;" />
+              <span>{{ record.address }}</span>
+            </div>
+            <span v-else style="color: #86909c;">暂无保存地址</span>
           </template>
         </a-table-column>
 
@@ -77,16 +87,16 @@
           <a-input v-model="editForm.phone" placeholder="请输入手机号" />
         </a-form-item>
 
-        <!-- 客户微信头像上传 (带 Spinner Loading) -->
-        <a-form-item label="客户微信头像">
+        <!-- 客户微信头像上传 (直存 Cloudflare R2) -->
+        <a-form-item label="客户微信头像 (直存 Cloudflare R2)">
           <div class="luxury-upload-card">
-            <a-spin :loading="uploading" tip="头像上传中...">
+            <a-spin :loading="uploading" tip="头像上传至 R2 中...">
               <a-upload
                 action="https://zc-api.carelife.top/api/upload"
                 :show-file-list="false"
-                @before-upload="uploading = true"
+                @before-upload="onBeforeUpload"
                 @success="onAvatarUploadSuccess"
-                @error="uploading = false"
+                @error="onAvatarUploadError"
               >
                 <template #upload-button>
                   <div v-if="editForm.avatar_url" class="avatar-preview-box">
@@ -97,7 +107,7 @@
                   </div>
                   <div v-else class="upload-dropzone">
                     <icon-plus style="font-size: 20px; color: #C5A880;" />
-                    <span class="upload-title">上传头像</span>
+                    <span class="upload-title">上传至 R2</span>
                   </div>
                 </template>
               </a-upload>
@@ -115,7 +125,6 @@ import { Message } from '@arco-design/web-vue';
 
 const API_BASE = 'https://zc-api.carelife.top';
 
-// 清空所有静态 mock 假数据
 const users = ref([]);
 
 const modalVisible = ref(false);
@@ -158,15 +167,25 @@ const editUser = (record) => {
   modalVisible.value = true;
 };
 
+const onBeforeUpload = () => {
+  uploading.value = true;
+  return true;
+};
+
 const onAvatarUploadSuccess = (fileItem) => {
   uploading.value = false;
   if (fileItem && fileItem.response && fileItem.response.url) {
     editForm.value.avatar_url = fileItem.response.url;
-    Message.success('客户头像上传成功！');
+    Message.success('客户头像成功上传至 Cloudflare R2 存储桶！');
   } else if (fileItem && fileItem.url) {
     editForm.value.avatar_url = fileItem.url;
-    Message.success('客户头像上传成功！');
+    Message.success('客户头像成功上传至 Cloudflare R2 存储桶！');
   }
+};
+
+const onAvatarUploadError = () => {
+  uploading.value = false;
+  Message.error('客户头像上传至 Cloudflare R2 失败！');
 };
 
 const handleSaveUser = async () => {

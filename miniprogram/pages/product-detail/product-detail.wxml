@@ -73,16 +73,12 @@
       <view class="area-line"></view>
       <view class="area-item flex-column">
         <text class="a-label">本套计费面积</text>
-        <text class="a-val theme-gold-text">
-          {{customSets[activeSetIndex].calcResult.billedArea}} ㎡
-        </text>
+        <text class="a-val theme-gold-text">{{customSets[activeSetIndex].calcResult.billedArea}} ㎡</text>
       </view>
       <view class="area-line"></view>
       <view class="area-item flex-column">
         <text class="a-label">本套预估小计</text>
-        <text class="a-val theme-gold-text">
-          ¥ {{customSets[activeSetIndex].calcResult.totalPrice}}
-        </text>
+        <text class="a-val theme-gold-text">¥ {{customSets[activeSetIndex].calcResult.totalPrice}}</text>
       </view>
     </view>
   </view>

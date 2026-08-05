@@ -58,6 +58,11 @@
   margin-top: 8rpx;
 }
 
+.user-action-btns {
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
 .edit-profile-btn {
   font-size: 22rpx;
   color: #C5A880;
@@ -66,7 +71,21 @@
   padding: 8rpx 20rpx;
   border-radius: 30rpx;
   flex-shrink: 0;
+  text-align: center;
 }
+
+.address-manage-btn {
+  font-size: 22rpx;
+  color: #F8FAFC;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1rpx solid rgba(255, 255, 255, 0.2);
+  padding: 8rpx 20rpx;
+  border-radius: 30rpx;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.mb-1 { margin-bottom: 10rpx; }
 
 /* 订单进度卡片与头部分组 */
 .order-status-card {

@@ -88,10 +88,10 @@
           <a-input v-model="receiverForm.phone" placeholder="请输入接单手机号" />
         </a-form-item>
 
-        <!-- 高奢品质二维码图片上传区域 (带 Spinner Loading) -->
-        <a-form-item label="微信二维码图片">
+        <!-- 高奢品质二维码图片上传区域 (直存 Cloudflare R2) -->
+        <a-form-item label="微信二维码图片 (直存 Cloudflare R2)">
           <div class="luxury-upload-card">
-            <a-spin :loading="uploading" tip="二维码上传中...">
+            <a-spin :loading="uploading" tip="二维码上传至 R2 中...">
               <a-upload
                 action="https://zc-api.carelife.top/api/upload"
                 :show-file-list="false"
@@ -111,7 +111,7 @@
                     <div class="upload-icon-circle">
                       <icon-plus style="font-size: 22px; color: #C5A880;" />
                     </div>
-                    <span class="upload-title">点击上传二维码</span>
+                    <span class="upload-title">点击上传至 R2</span>
                     <span class="upload-sub">支持 PNG / JPG 格式</span>
                   </div>
                 </template>
@@ -197,29 +197,25 @@ const editReceiver = (record) => {
   modalVisible.value = true;
 };
 
-const onBeforeUpload = (file) => {
+const onBeforeUpload = () => {
   uploading.value = true;
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      receiverForm.value.qr_code_url = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
   return true;
 };
 
 const onQrUploadSuccess = (fileItem) => {
   uploading.value = false;
-  if (fileItem && fileItem.response && fileItem.response.url && !fileItem.response.url.includes('zc-logo.jpg')) {
+  if (fileItem && fileItem.response && fileItem.response.url) {
     receiverForm.value.qr_code_url = fileItem.response.url;
+    Message.success('客服微信二维码成功保存至 Cloudflare R2 存储桶！');
+  } else if (fileItem && fileItem.url) {
+    receiverForm.value.qr_code_url = fileItem.url;
+    Message.success('客服微信二维码成功保存至 Cloudflare R2 存储桶！');
   }
-  Message.success('客服微信二维码上传成功！');
 };
 
 const onQrUploadError = () => {
   uploading.value = false;
-  Message.error('二维码图片上传失败！');
+  Message.error('二维码图片上传至 Cloudflare R2 失败！');
 };
 
 const handleSaveReceiver = async () => {
@@ -254,20 +250,37 @@ const handleSaveReceiver = async () => {
   }
 
   try {
-    await fetch(`${API_BASE}/api/admin/receivers`, {
+    const res = await fetch(`${API_BASE}/api/admin/receivers`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(receiverForm.value)
     });
-  } catch (e) {}
-
-  Message.success('接单员配置保存成功！已同步至小程序联系客服。');
-  modalVisible.value = false;
+    const data = await res.json();
+    if (res.ok && data.success) {
+      Message.success('接单员配置保存成功！已同步至线上数据库。');
+      modalVisible.value = false;
+      fetchReceivers();
+    } else {
+      Message.error(data.message || `接口响应失败 (HTTP ${res.status})`);
+    }
+  } catch (e) {
+    Message.error('无法连接后端 API 服务，请检查网络设置');
+  }
 };
 
-const deleteReceiver = (id) => {
-  receivers.value = receivers.value.filter(r => r.id !== id);
-  Message.success('接单员信息已从小程序移除');
+const deleteReceiver = async (id) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/receivers/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      Message.success('接单员信息已从数据库移除');
+      fetchReceivers();
+    } else {
+      Message.error(data.message || `操作失败 (HTTP ${res.status})`);
+    }
+  } catch (e) {
+    Message.error('删除操作失败，网络连接错误');
+  }
 };
 
 onMounted(() => {

@@ -11,4 +11,8 @@ WX_APP_SECRET = "9087e85db61a697b6a3b2ef7a9906d25"
 [[d1_databases]]
 binding = "DB"
 database_name = "zc-db"
-database_id = "fa0ee2ed-2492-402e-bb27-98e7f4a8e7b3" # 请在 Cloudflare 后台创建 D1 数据库后填入真实 UUID
+database_id = "fa0ee2ed-2492-402e-bb27-98e7f4a8e7b3"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "zc-oss"

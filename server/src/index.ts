@@ -41,30 +41,19 @@ app.post('/api/upload', async (c) => {
     const ext = file.name ? file.name.split('.').pop() : 'jpg';
     const fileName = `uploads/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
 
-    // 1. 如果绑定了 Cloudflare R2 对象存储桶
+    // 1. 如果绑定了 Cloudflare R2 对象存储桶 (Cloudflare Worker 环境)
     if (c.env.BUCKET) {
       const buffer = await file.arrayBuffer();
       await c.env.BUCKET.put(fileName, buffer, {
         httpMetadata: { contentType: file.type || 'image/jpeg' }
       });
-      const url = `https://zc-oss.carelife.top/${fileName}`;
-      return c.json({ success: true, url, name: fileName });
     }
 
-    // 2. 未配置 R2 存储桶或本地开发环境：将上传的图片文件实时转为 Base64 Data URL
-    const buffer = await file.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    const base64 = btoa(binary);
-    const mimeType = file.type || 'image/jpeg';
-    const dataUrl = `data:${mimeType};base64,${base64}`;
-
-    return c.json({ success: true, url: dataUrl, name: fileName, message: '图片上传接收成功' });
+    // 2. 返回标准的 Cloudflare R2 对象存储 CDN 唯一 URL
+    const url = `https://zc-oss.carelife.top/${fileName}`;
+    return c.json({ success: true, url, name: fileName, message: '成功保存至 Cloudflare R2 对象存储' });
   } catch (e) {
-    return c.json({ success: false, message: '图片上传失败', error: String(e) }, 500);
+    return c.json({ success: false, message: '图片上传至 R2 存储失败', error: String(e) }, 500);
   }
 });
 
@@ -176,6 +165,176 @@ app.post('/api/user/profile', async (c) => {
 
   const updatedUser = await db.prepare('SELECT * FROM users WHERE id = ?').bind(user_id).first<User>();
   return c.json({ success: true, user: updatedUser });
+});
+
+/**
+ * 获取全量微信客户列表 (供管理后台 Users.vue 包含订单数与默认安装地址)
+ * GET /api/users
+ */
+app.get('/api/users', async (c) => {
+  const db = c.env.DB;
+  const { results: users } = await db.prepare('SELECT * FROM users ORDER BY created_at DESC').all<any>();
+
+  // 动态建表容错
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS user_addresses (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        province TEXT,
+        city TEXT,
+        district TEXT,
+        detail_address TEXT NOT NULL,
+        is_default INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (e) {}
+
+  for (const user of users || []) {
+    // 统计订单数量
+    try {
+      const countRes = await db.prepare('SELECT COUNT(*) as count FROM orders WHERE user_id = ?').bind(user.id).first<{ count: number }>();
+      user.order_count = countRes ? countRes.count : 0;
+    } catch (e) {
+      user.order_count = 0;
+    }
+
+    // 查询该客户的默认/最新地址
+    try {
+      const addressRes = await db.prepare('SELECT * FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC, created_at DESC LIMIT 1').bind(user.id).first<any>();
+      if (addressRes) {
+        user.address = `${addressRes.province || ''}${addressRes.city || ''}${addressRes.district || ''}${addressRes.detail_address || ''}`;
+        user.address_detail = addressRes;
+      } else {
+        user.address = '暂无保存地址';
+      }
+    } catch (e) {
+      user.address = '暂无保存地址';
+    }
+  }
+
+  return c.json({ success: true, data: users || [] });
+});
+
+/**
+ * 获取用户的收货/安装地址列表
+ * GET /api/user/addresses?user_id=xxx
+ */
+app.get('/api/user/addresses', async (c) => {
+  const db = c.env.DB;
+  const userId = c.req.query('user_id');
+  if (!userId) {
+    return c.json({ success: false, message: '用户ID不能为空' }, 400);
+  }
+
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS user_addresses (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        province TEXT,
+        city TEXT,
+        district TEXT,
+        detail_address TEXT NOT NULL,
+        is_default INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (e) {}
+
+  const { results } = await db.prepare('SELECT * FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC, created_at DESC').bind(userId).all();
+  return c.json({ success: true, data: results || [] });
+});
+
+/**
+ * 新增或编辑用户收货地址
+ * POST /api/user/addresses
+ */
+app.post('/api/user/addresses', async (c) => {
+  const db = c.env.DB;
+  const body = await c.req.json();
+  const { id, user_id, name, phone, province, city, district, detail_address, is_default } = body;
+
+  if (!user_id || !name || !phone || !detail_address) {
+    return c.json({ success: false, message: '请填写完整的联系人、电话及详细地址' }, 400);
+  }
+
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS user_addresses (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        province TEXT,
+        city TEXT,
+        district TEXT,
+        detail_address TEXT NOT NULL,
+        is_default INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (e) {}
+
+  if (is_default) {
+    await db.prepare('UPDATE user_addresses SET is_default = 0 WHERE user_id = ?').bind(user_id).run();
+  }
+
+  const defaultVal = is_default ? 1 : 0;
+
+  if (id) {
+    await db.prepare(`
+      UPDATE user_addresses 
+      SET name = ?, phone = ?, province = ?, city = ?, district = ?, detail_address = ?, is_default = ? 
+      WHERE id = ? AND user_id = ?
+    `).bind(name, phone, province || '', city || '', district || '', detail_address, defaultVal, id, user_id).run();
+
+    return c.json({ success: true, id, message: '地址修改成功' });
+  } else {
+    const newId = `addr_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
+    await db.prepare(`
+      INSERT INTO user_addresses (id, user_id, name, phone, province, city, district, detail_address, is_default) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(newId, user_id, name, phone, province || '', city || '', district || '', detail_address, defaultVal).run();
+
+    return c.json({ success: true, id: newId, message: '地址添加成功' });
+  }
+});
+
+/**
+ * 删除指定地址
+ * DELETE /api/user/addresses/:id
+ */
+app.delete('/api/user/addresses/:id', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  await db.prepare('DELETE FROM user_addresses WHERE id = ?').bind(id).run();
+  return c.json({ success: true, message: '地址已删除' });
+});
+
+/**
+ * 设置为默认地址
+ * PATCH /api/user/addresses/:id/default
+ */
+app.patch('/api/user/addresses/:id/default', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  const body = await c.req.json();
+  const userId = body.user_id || c.req.query('user_id');
+
+  if (!userId) {
+    return c.json({ success: false, message: '用户ID不能为空' }, 400);
+  }
+
+  await db.prepare('UPDATE user_addresses SET is_default = 0 WHERE user_id = ?').bind(userId).run();
+  await db.prepare('UPDATE user_addresses SET is_default = 1 WHERE id = ? AND user_id = ?').bind(id, userId).run();
+
+  return c.json({ success: true, message: '默认地址设置成功' });
 });
 
 // ----------------------------------------------------
@@ -772,6 +931,85 @@ app.delete('/api/admin/products/:id', async (c) => {
   const id = c.req.param('id');
   await db.prepare('UPDATE products SET is_active = 0 WHERE id = ?').bind(id).run();
   return c.json({ success: true });
+});
+
+/**
+ * 获取接单员列表 (小程序及管理后台使用)
+ * GET /api/receivers
+ */
+app.get('/api/receivers', async (c) => {
+  const db = c.env.DB;
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS receivers (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        qr_code_url TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (e) {}
+
+  const { results } = await db.prepare('SELECT * FROM receivers WHERE is_active = 1 ORDER BY created_at ASC').all<any>();
+  return c.json({ success: true, data: results || [] });
+});
+
+/**
+ * 新增或修改接单员
+ * POST /api/admin/receivers
+ */
+app.post('/api/admin/receivers', async (c) => {
+  const db = c.env.DB;
+  const body = await c.req.json();
+  const { id, name, phone, qr_code_url } = body;
+
+  if (!name || !phone) {
+    return c.json({ success: false, message: '【姓名】与【手机号】为必填项' }, 400);
+  }
+
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS receivers (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        qr_code_url TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (e) {}
+
+  if (id) {
+    await db.prepare(`
+      UPDATE receivers 
+      SET name = ?, phone = ?, qr_code_url = ? 
+      WHERE id = ?
+    `).bind(name, phone, qr_code_url || '', id).run();
+
+    return c.json({ success: true, id, message: '接单员更新成功' });
+  } else {
+    const newId = `rec_${Date.now()}`;
+    await db.prepare(`
+      INSERT INTO receivers (id, name, phone, qr_code_url, is_active) 
+      VALUES (?, ?, ?, ?, 1)
+    `).bind(newId, name, phone, qr_code_url || '').run();
+
+    return c.json({ success: true, id: newId, message: '接单员添加成功' });
+  }
+});
+
+/**
+ * 删除 (停用) 接单员
+ * DELETE /api/admin/receivers/:id
+ */
+app.delete('/api/admin/receivers/:id', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  await db.prepare('UPDATE receivers SET is_active = 0 WHERE id = ?').bind(id).run();
+  return c.json({ success: true, message: '接单员已移出列表' });
 });
 
 export default app;

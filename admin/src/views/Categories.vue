@@ -71,16 +71,16 @@
           <a-input v-model="form.sub_title" maxlength="5" show-word-limit placeholder="最多5字，适合首页导航显示" />
         </a-form-item>
 
-        <!-- 分类图标上传 -->
-        <a-form-item label="首页导航区分类图标">
+        <!-- 分类图标上传至 Cloudflare R2 对象存储桶 -->
+        <a-form-item label="首页导航区分类图标 (存储于 Cloudflare R2)">
           <div class="luxury-upload-card">
-            <a-spin :loading="uploading" tip="图标上传中...">
+            <a-spin :loading="uploading" tip="正在上传至 Cloudflare R2...">
               <a-upload
                 action="https://zc-api.carelife.top/api/upload"
                 :show-file-list="false"
                 @before-upload="onBeforeUpload"
                 @success="onIconUploadSuccess"
-                @error="uploading = false"
+                @error="onIconUploadError"
               >
                 <template #upload-button>
                   <div v-if="form.icon_url" class="icon-preview-box">
@@ -88,7 +88,7 @@
                   </div>
                   <div v-else class="upload-dropzone">
                     <icon-plus style="font-size: 20px; color: #C5A880;" />
-                    <span class="upload-title">上传图标</span>
+                    <span class="upload-title">上传至 R2</span>
                   </div>
                 </template>
               </a-upload>
@@ -134,32 +134,35 @@ const fetchCategories = async () => {
 
 const openModal = () => {
   form.value = { id: '', name: '', sub_title: '', icon_url: '' };
+  uploading.value = false;
   modalVisible.value = true;
 };
 
 const editCategory = (record) => {
   form.value = { ...record };
+  uploading.value = false;
   modalVisible.value = true;
 };
 
-const onBeforeUpload = (file) => {
+const onBeforeUpload = () => {
   uploading.value = true;
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      form.value.icon_url = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
   return true;
 };
 
 const onIconUploadSuccess = (fileItem) => {
   uploading.value = false;
-  if (fileItem && fileItem.response && fileItem.response.url && !fileItem.response.url.includes('zc-logo.jpg')) {
+  if (fileItem && fileItem.response && fileItem.response.url) {
     form.value.icon_url = fileItem.response.url;
+    Message.success('图标成功上传至 Cloudflare R2 存储桶！');
+  } else if (fileItem && fileItem.url) {
+    form.value.icon_url = fileItem.url;
+    Message.success('图标成功上传至 Cloudflare R2 存储桶！');
   }
-  Message.success('分类图标上传成功！');
+};
+
+const onIconUploadError = () => {
+  uploading.value = false;
+  Message.error('图片上传至 Cloudflare R2 失败，请重试');
 };
 
 const handleSaveCategory = async () => {
@@ -185,20 +188,42 @@ const handleSaveCategory = async () => {
   }
 
   try {
-    await fetch(`${API_BASE}/api/categories`, {
-      method: 'POST',
+    const isUpdate = Boolean(form.value.id);
+    const url = isUpdate ? `${API_BASE}/api/admin/categories/${form.value.id}` : `${API_BASE}/api/admin/categories`;
+    const method = isUpdate ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
     });
-  } catch (e) {}
+    const data = await res.json();
 
-  Message.success('门窗分类保存成功！');
-  modalVisible.value = false;
+    if (res.ok && data.success) {
+      Message.success('门窗分类保存成功！已同步至数据库。');
+      modalVisible.value = false;
+      fetchCategories();
+    } else {
+      Message.error(data.message || `接口处理失败 (HTTP ${res.status})`);
+    }
+  } catch (e) {
+    Message.error('网络错误，无法保存分类');
+  }
 };
 
-const deleteCategory = (id) => {
-  categories.value = categories.value.filter(c => c.id !== id);
-  Message.success('分类已成功移除');
+const deleteCategory = async (id) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/categories/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      Message.success('分类已成功从数据库移除');
+      fetchCategories();
+    } else {
+      Message.error(data.message || `删除失败 (HTTP ${res.status})`);
+    }
+  } catch (e) {
+    Message.error('无法连接后端服务');
+  }
 };
 
 onMounted(() => {

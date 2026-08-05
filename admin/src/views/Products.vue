@@ -77,7 +77,7 @@
       </template>
     </a-table>
 
-    <!-- 新建/修改商品 Modal (带必填校验项与 Loading 指示器) -->
+    <!-- 新建/修改商品 Modal -->
     <a-modal v-model:visible="modalVisible" title="配置门窗商品与主图" @ok="handleSaveProduct">
       <a-form :model="form" layout="vertical">
         <a-form-item
@@ -91,12 +91,12 @@
 
         <a-form-item
           field="cover_image"
-          label="商品封面主图"
+          label="商品封面主图 (直存 Cloudflare R2 对象存储)"
           required
           :rules="[{ required: true, message: '请上传商品封面主图' }]"
         >
           <div class="luxury-upload-card">
-            <a-spin :loading="uploading" tip="图片上传中...">
+            <a-spin :loading="uploading" tip="图片上传至 R2 中...">
               <a-upload
                 action="https://zc-api.carelife.top/api/upload"
                 :show-file-list="false"
@@ -116,7 +116,7 @@
                     <div class="upload-icon-circle">
                       <icon-plus style="font-size: 22px; color: #C5A880;" />
                     </div>
-                    <span class="upload-title">点击上传商品主图</span>
+                    <span class="upload-title">点击上传至 R2 存储桶</span>
                     <span class="upload-sub">支持 PNG / JPG / WEBP 格式</span>
                   </div>
                 </template>
@@ -162,7 +162,7 @@
       </a-form>
     </a-modal>
 
-    <!-- 超级宽屏侧滑抽屉 (width=1100px)：选配加价规则配置中心 -->
+    <!-- 侧滑抽屉 (width=1100px)：选配加价规则配置 -->
     <a-drawer
       v-model:visible="optionsDrawerVisible"
       title="配置加价选配规则 (玻璃/五金/颜色)"
@@ -353,29 +353,25 @@ const saveOptions = () => {
   }
 };
 
-const onBeforeUpload = (file) => {
+const onBeforeUpload = () => {
   uploading.value = true;
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      form.value.cover_image = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
   return true;
 };
 
 const onCoverUploadSuccess = (fileItem) => {
   uploading.value = false;
-  if (fileItem && fileItem.response && fileItem.response.url && !fileItem.response.url.includes('zc-logo.jpg')) {
+  if (fileItem && fileItem.response && fileItem.response.url) {
     form.value.cover_image = fileItem.response.url;
+    Message.success('商品主图已成功上传至 Cloudflare R2 对象存储！');
+  } else if (fileItem && fileItem.url) {
+    form.value.cover_image = fileItem.url;
+    Message.success('商品主图已成功上传至 Cloudflare R2 对象存储！');
   }
-  Message.success('商品主图上传成功！');
 };
 
 const onCoverUploadError = () => {
   uploading.value = false;
-  Message.error('图片上传失败，请重试！');
+  Message.error('图片上传至 Cloudflare R2 失败，请重试！');
 };
 
 const handleSaveProduct = async () => {
@@ -405,7 +401,7 @@ const handleSaveProduct = async () => {
       id: `prod_${Date.now()}`,
       name: form.value.name,
       description: form.value.description || '',
-      cover_image: form.value.cover_image || '',
+      cover_image: form.value.cover_image,
       category_name: form.value.category_name,
       base_price_sqm: form.value.base_price_sqm || 680,
       min_area: form.value.min_area || 1.5,
@@ -415,15 +411,26 @@ const handleSaveProduct = async () => {
   }
 
   try {
-    await fetch(`${API_BASE}/api/admin/products`, {
-      method: 'POST',
+    const isUpdate = Boolean(form.value.id);
+    const url = isUpdate ? `${API_BASE}/api/admin/products/${form.value.id}` : `${API_BASE}/api/admin/products`;
+    const method = isUpdate ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
     });
-  } catch (e) {}
-
-  Message.success('门窗商品方案保存成功！');
-  modalVisible.value = false;
+    const data = await res.json();
+    if (res.ok && data.success) {
+      Message.success('门窗商品方案保存成功！已同步至线上数据库。');
+      modalVisible.value = false;
+      fetchProducts();
+    } else {
+      Message.error(data.message || `接口处理失败 (HTTP ${res.status})`);
+    }
+  } catch (e) {
+    Message.error('网络连接异常，保存失败');
+  }
 };
 
 onMounted(() => {

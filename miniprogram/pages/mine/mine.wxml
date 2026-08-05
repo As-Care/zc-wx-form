@@ -1,5 +1,6 @@
 <!-- 展晨门窗 个人中心 WXML -->
 <view class="container">
+
   <!-- 用户信息头部卡片 -->
   <view class="glass-card user-card flex-between">
     <view class="user-info flex-row">
@@ -11,30 +12,38 @@
         <text class="user-role" wx:else>点击右侧编辑个人信息</text>
       </view>
     </view>
-    <view class="edit-profile-btn" bindtap="navToLogin">编辑个人信息</view>
+    <view class="user-action-btns flex-column">
+      <view class="edit-profile-btn mb-1" bindtap="navToLogin">编辑个人信息</view>
+      <view class="address-manage-btn" bindtap="navToAddressList">地址管理</view>
+    </view>
   </view>
+
   <!-- 订单进度快捷入口 (使用专属图片 Icon) -->
   <view class="glass-card order-status-card flex-column">
     <view class="card-header-row flex-between">
       <view class="card-title">我的订单进度</view>
       <view class="total-orders-text">合计：{{orderCounts.total || 0}} 笔订单</view>
     </view>
+
     <view class="status-grid flex-between">
       <view class="status-item flex-column" bindtap="navToOrders" data-status="pending_review">
         <image class="status-img-icon" src="https://zc-oss.carelife.top/common/icon-pending-review.png" mode="aspectFit"></image>
         <view class="status-label">待复核</view>
         <view class="status-count-badge">{{orderCounts.pending_review || 0}} 笔</view>
       </view>
+
       <view class="status-item flex-column" bindtap="navToOrders" data-status="producing">
         <image class="status-img-icon" src="https://zc-oss.carelife.top/common/icon-in-production.png" mode="aspectFit"></image>
         <view class="status-label">生产中</view>
         <view class="status-count-badge">{{orderCounts.producing || 0}} 笔</view>
       </view>
+
       <view class="status-item flex-column" bindtap="navToOrders" data-status="installing">
         <image class="status-img-icon" src="https://zc-oss.carelife.top/common/icon-pending-review.png" mode="aspectFit"></image>
         <view class="status-label">待提货</view>
         <view class="status-count-badge">{{orderCounts.installing || 0}} 笔</view>
       </view>
+
       <view class="status-item flex-column" bindtap="navToOrders" data-status="completed">
         <image class="status-img-icon" src="https://zc-oss.carelife.top/common/icon-in-production.png" mode="aspectFit"></image>
         <view class="status-label">已完成</view>
@@ -42,9 +51,11 @@
       </view>
     </view>
   </view>
+
   <!-- 官方门店联络卡片 -->
   <view class="glass-card store-card flex-column">
     <text class="card-title">联系展晨官方店铺</text>
+
     <view class="store-row flex-between" bindtap="makePhoneCall">
       <view class="row-left flex-row">
         <text class="row-icon">📞</text>
@@ -52,6 +63,7 @@
       </view>
       <text class="row-val gold-text">{{storeInfo.phone}} (点击拨打)</text>
     </view>
+
     <view class="store-row flex-between">
       <view class="row-left flex-row">
         <text class="row-icon">📍</text>
@@ -59,29 +71,33 @@
       </view>
       <text class="row-val address-val">{{storeInfo.address}}</text>
     </view>
+
     <view class="store-row flex-between">
       <view class="row-left flex-row">
-        <text class="row-icon">🕒</text>
+        <text class="row-icon">⏰</text>
         <text class="row-label">营业时间</text>
       </view>
-      <text class="row-val">8:00 - 18:00</text>
+      <text class="row-val">{{storeInfo.businessHours}}</text>
     </view>
   </view>
-  <!-- 功能菜单栏 -->
-  <view class="glass-card menu-card flex-column">
-    <view class="menu-item flex-between" bindtap="navToAbout">
-      <view class="menu-left flex-row">
-        <text class="menu-icon">🏆</text>
-        <text class="menu-title">关于展晨门窗 (20年品牌资质)</text>
+
+  <!-- 品牌服务列表 -->
+  <view class="glass-card nav-list-card">
+    <view class="nav-row flex-between" bindtap="navToAbout">
+      <view class="row-left flex-row">
+        <text class="row-icon">🏆</text>
+        <text class="row-text">关于展晨门窗 (20年品牌资质)</text>
       </view>
-      <text class="menu-arrow">›</text>
+      <text class="row-arrow">›</text>
     </view>
-    <view class="menu-item flex-between" bindtap="navToContact">
-      <view class="menu-left flex-row">
-        <text class="menu-icon">💬</text>
-        <text class="menu-title">联系我们</text>
+
+    <view class="nav-row flex-between" bindtap="navToContact">
+      <view class="row-left flex-row">
+        <text class="row-icon">💬</text>
+        <text class="row-text">联系我们</text>
       </view>
-      <text class="menu-arrow">›</text>
+      <text class="row-arrow">›</text>
     </view>
   </view>
+
 </view>

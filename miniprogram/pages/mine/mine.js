@@ -90,5 +90,11 @@ Page({
     wx.navigateTo({
       url: '/pages/login/login'
     });
+  },
+
+  navToAddressList() {
+    wx.navigateTo({
+      url: '/pages/address-list/address-list'
+    });
   }
 });

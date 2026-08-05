@@ -443,17 +443,8 @@ const openModal = (record) => {
 };
 
 const handleSaveOrder = async () => {
-  const target = orders.value.find(o => o.id === editForm.value.id);
-  if (target) {
-    target.status = editForm.value.status;
-    target.special_charges_amount = editForm.value.special_charges_amount;
-    target.final_amount = target.base_amount + (target.extra_amount || 0) + editForm.value.special_charges_amount;
-    target.admin_remark = editForm.value.admin_remark;
-    orders.value = [...orders.value];
-  }
-
   try {
-    await fetch(`${API_BASE}/api/admin/orders/${editForm.value.id}/status`, {
+    const res = await fetch(`${API_BASE}/api/admin/orders/${editForm.value.id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -463,10 +454,17 @@ const handleSaveOrder = async () => {
         operator_name: '展晨总管理'
       })
     });
-  } catch (e) {}
-
-  Message.success('订单状态及备注更新成功！');
-  modalVisible.value = false;
+    const data = await res.json();
+    if (res.ok && data.success) {
+      Message.success('订单状态及备注更新成功！已保存至数据库。');
+      modalVisible.value = false;
+      fetchOrders();
+    } else {
+      Message.error(data.message || `订单状态修改失败 (HTTP ${res.status})`);
+    }
+  } catch (e) {
+    Message.error('无法连接后端服务，更新失败');
+  }
 };
 
 onMounted(() => {
