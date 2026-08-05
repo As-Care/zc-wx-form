@@ -991,81 +991,72 @@ app.post('/api/admin/products', async (c) => {
   } catch (e) {}
 
   const id = body.id || `prod_${Date.now()}`;
-      WHERE id = ?
-    `).bind(
-      body.category_id || '',
-      body.category_name || '',
-      body.name,
-      body.description || '',
-      body.cover_image || '',
-      body.base_price_sqm || 680,
-      body.min_area || 1.5,
-      body.id
-    ).run();
-    return c.json({ success: true, id: body.id, message: '保存成功' });
-  } else {
-    await db.prepare(`
-      INSERT INTO products (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1)
-    `).bind(
-      id,
-      body.category_id || '',
-      body.category_name || '',
-      body.name,
-      body.description || '',
-      body.cover_image || '',
-      body.base_price_sqm || 680,
-      body.min_area || 1.5
-    ).run();
-    return c.json({ success: true, id, message: '保存成功' });
-  }
-});
+  const name = body.name.trim();
 
+  // UPSERT: ID 存在即覆盖修改原记录，不存在则新增，绝对零重复
   await db.prepare(`
-    INSERT INTO products (id, category_id, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+    INSERT INTO products (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1)
+    ON CONFLICT(id) DO UPDATE SET
+      category_id = excluded.category_id,
+      category_name = excluded.category_name,
+      name = excluded.name,
+      description = excluded.description,
+      cover_image = excluded.cover_image,
+      base_price_sqm = excluded.base_price_sqm,
+      min_area = excluded.min_area,
+      is_active = 1
   `).bind(
     id,
-    body.category_id,
-    body.name,
+    body.category_id || '',
+    body.category_name || '',
+    name,
     body.description || '',
     body.cover_image || '',
     body.base_price_sqm || 680,
-    body.min_area || 1.5,
-    body.sort_order || 0
+    body.min_area || 1.5
   ).run();
 
-  return c.json({ success: true, id });
+  return c.json({ success: true, id, message: '保存成功' });
 });
 
 app.put('/api/admin/products/:id', async (c) => {
   const db = c.env.DB;
   const id = c.req.param('id');
   const body = await c.req.json();
+  const name = (body.name || '').trim();
 
   await db.prepare(`
-    UPDATE products 
-    SET category_id = ?, name = ?, description = ?, cover_image = ?, base_price_sqm = ?, min_area = ?, sort_order = ? 
-    WHERE id = ?
+    INSERT INTO products (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1)
+    ON CONFLICT(id) DO UPDATE SET
+      category_id = excluded.category_id,
+      category_name = excluded.category_name,
+      name = excluded.name,
+      description = excluded.description,
+      cover_image = excluded.cover_image,
+      base_price_sqm = excluded.base_price_sqm,
+      min_area = excluded.min_area,
+      is_active = 1
   `).bind(
-    body.category_id,
-    body.name,
+    id,
+    body.category_id || '',
+    body.category_name || '',
+    name,
     body.description || '',
     body.cover_image || '',
     body.base_price_sqm || 680,
-    body.min_area || 1.5,
-    body.sort_order || 0,
-    id
+    body.min_area || 1.5
   ).run();
 
-  return c.json({ success: true });
+  return c.json({ success: true, message: '保存成功' });
 });
 
 app.delete('/api/admin/products/:id', async (c) => {
   const db = c.env.DB;
   const id = c.req.param('id');
   await db.prepare('UPDATE products SET is_active = 0 WHERE id = ?').bind(id).run();
-  return c.json({ success: true });
+  return c.json({ success: true, message: '删除成功' });
 });
 
 /**
