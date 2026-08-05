@@ -180,3 +180,28 @@ page {
   font-weight: 700;
   box-shadow: 0 4rpx 16rpx rgba(197, 168, 128, 0.35);
 }
+
+/* 暂无商品空状态 */
+.empty-product-box {
+  padding: 140rpx 40rpx;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 20rpx;
+}
+
+.empty-title {
+  font-size: 28rpx;
+  color: #B8C2CC;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.empty-sub {
+  font-size: 22rpx;
+  color: #6C727F;
+}

@@ -85,6 +85,39 @@ Page({
     });
   },
 
+  openStoreLocation() {
+    const lat = (this.data.storeInfo && this.data.storeInfo.latitude) ? Number(this.data.storeInfo.latitude) : null;
+    const lng = (this.data.storeInfo && this.data.storeInfo.longitude) ? Number(this.data.storeInfo.longitude) : null;
+
+    if (!lat || !lng) {
+      wx.showToast({
+        title: '商家暂未在后台配置定位坐标',
+        icon: 'none',
+        duration: 2500
+      });
+      return;
+    }
+
+    const name = this.data.storeInfo.name || '展晨门窗官方旗舰店';
+    const address = this.data.storeInfo.address || '湖北省仙桃市恒迪建材市场2期14栋1-107';
+
+    wx.openLocation({
+      latitude: lat,
+      longitude: lng,
+      name,
+      address,
+      scale: 16,
+      fail: (err) => {
+        console.warn('调起地图失败 (模拟器环境提示):', err);
+        wx.showToast({
+          title: '请在手机端微信扫码预览地图导航',
+          icon: 'none',
+          duration: 2500
+        });
+      }
+    });
+  },
+
   navToOrders(e) {
     wx.switchTab({
       url: '/pages/order-list/order-list'

@@ -35,6 +35,16 @@ Page({
     this.fetchProducts();
   },
 
+  onPullDownRefresh() {
+    Promise.all([
+      this.fetchCategories(),
+      this.fetchProducts()
+    ]).finally(() => {
+      wx.stopPullDownRefresh();
+      wx.showToast({ title: '已刷新数据', icon: 'success', duration: 1000 });
+    });
+  },
+
   onBannerChange(e) {
     this.setData({
       bannerIndex: e.detail.current
@@ -42,7 +52,7 @@ Page({
   },
 
   fetchCategories() {
-    request({ url: '/api/categories' }).then(res => {
+    return request({ url: '/api/categories' }).then(res => {
       if (res.success && res.data && res.data.length > 0) {
         this.setData({ categories: res.data });
       } else {
@@ -56,7 +66,7 @@ Page({
   },
 
   fetchProducts() {
-    request({ url: '/api/products' }).then(res => {
+    return request({ url: '/api/products' }).then(res => {
       if (res.success && res.data && res.data.length > 0) {
         this.setData({ products: res.data });
       } else {

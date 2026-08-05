@@ -1164,6 +1164,8 @@ app.get('/api/config/store', async (c) => {
         name TEXT NOT NULL,
         phone TEXT NOT NULL,
         address TEXT NOT NULL,
+        latitude REAL,
+        longitude REAL,
         business_hours TEXT DEFAULT '08:30 - 18:30',
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -1180,6 +1182,8 @@ app.get('/api/config/store', async (c) => {
     name: '展晨门窗',
     phone: '13545941637',
     address: '湖北省仙桃市恒迪建材市场2期14栋1-107',
+    latitude: null,
+    longitude: null,
     business_hours: '08:30 - 18:30'
   };
   return c.json({ success: true, data: defaultConfig });
@@ -1192,7 +1196,7 @@ app.get('/api/config/store', async (c) => {
 app.post('/api/admin/config/store', async (c) => {
   const db = c.env.DB;
   const body = await c.req.json();
-  const { name, phone, address, business_hours } = body;
+  const { name, phone, address, latitude, longitude, business_hours } = body;
 
   if (!name || !phone || !address) {
     return c.json({ success: false, message: '【门店名称】、【客服电话】与【详细地址】为必填项' }, 400);
@@ -1205,24 +1209,31 @@ app.post('/api/admin/config/store', async (c) => {
         name TEXT NOT NULL,
         phone TEXT NOT NULL,
         address TEXT NOT NULL,
+        latitude REAL,
+        longitude REAL,
         business_hours TEXT DEFAULT '08:30 - 18:30',
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `).run();
   } catch (e) {}
 
+  const lat = (latitude !== undefined && latitude !== null && latitude !== '') ? parseFloat(latitude) : null;
+  const lng = (longitude !== undefined && longitude !== null && longitude !== '') ? parseFloat(longitude) : null;
+
   await db.prepare(`
-    INSERT INTO store_config (id, name, phone, address, business_hours, updated_at)
-    VALUES ('default', ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    INSERT INTO store_config (id, name, phone, address, latitude, longitude, business_hours, updated_at)
+    VALUES ('default', ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
       phone = excluded.phone,
       address = excluded.address,
+      latitude = excluded.latitude,
+      longitude = excluded.longitude,
       business_hours = excluded.business_hours,
       updated_at = CURRENT_TIMESTAMP
-  `).bind(name, phone, address, business_hours || '08:30 - 18:30').run();
+  `).bind(name, phone, address, lat, lng, business_hours || '08:30 - 18:30').run();
 
-  return c.json({ success: true, message: '门店信息与客服电话保存成功' });
+  return c.json({ success: true, message: '门店信息与地图坐标保存成功' });
 });
 
 export default app;

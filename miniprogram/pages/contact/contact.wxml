@@ -1,14 +1,17 @@
 <!-- 展晨门窗 联系我们与接单员列表 WXML -->
 <view class="container">
 
-  <!-- 第一行：门店官方地址卡片 (动态渲染后台数据) -->
-  <view class="glass-card address-card flex-column">
+  <!-- 第一行：门店官方地址卡片 (点击调用腾讯地图导航) -->
+  <view class="glass-card address-card flex-column" bindtap="openStoreLocation">
     <view class="card-header flex-row">
       <view class="location-icon">📍</view>
       <view class="card-title">{{storeInfo.name || '展晨门窗'}} · 官方门店地址</view>
     </view>
     <view class="address-body flex-column">
-      <view class="address-text">{{storeInfo.address}}</view>
+      <view class="address-text flex-row" style="align-items: center; white-space: nowrap; overflow: hidden;">
+        <text class="addr-detail-str" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{storeInfo.address}}</text>
+        <text class="hand-nav-icon" style="font-size: 26rpx; color: #C5A880; margin-left: 4rpx; flex-shrink: 0;">👈</text>
+      </view>
       <view class="hours-text">营业时间：{{storeInfo.business_hours || '08:30 - 18:30'}}</view>
     </view>
   </view>

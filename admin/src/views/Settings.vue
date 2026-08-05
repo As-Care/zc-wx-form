@@ -33,6 +33,19 @@
           </a-col>
         </a-row>
 
+        <a-row :gutter="24">
+          <a-col :span="12">
+            <a-form-item label="腾讯地图纬度 (Latitude)" extra="用于小程序精准地图定位，如: 30.3621">
+              <a-input-number v-model="storeForm.latitude" placeholder="如: 30.3621" :precision="6" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="腾讯地图经度 (Longitude)" extra="用于小程序精准地图定位，如: 113.4532">
+              <a-input-number v-model="storeForm.longitude" placeholder="如: 113.4532" :precision="6" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
         <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
           <a-button type="primary" html-type="submit" size="medium">
             <template #icon><icon-save /></template>
@@ -54,6 +67,8 @@ const storeForm = ref({
   name: '展晨门窗',
   phone: '13545941637',
   address: '湖北仙桃恒迪建材市场2期14栋1-107',
+  latitude: undefined,
+  longitude: undefined,
   business_hours: '08:30 - 18:30 (周一至周日)'
 });
 
@@ -66,6 +81,8 @@ const fetchStoreConfig = async () => {
         name: data.data.name || '展晨门窗',
         phone: data.data.phone || '13545941637',
         address: data.data.address || '湖北省仙桃市恒迪建材市场2期14栋1-107',
+        latitude: (data.data.latitude !== undefined && data.data.latitude !== null) ? Number(data.data.latitude) : undefined,
+        longitude: (data.data.longitude !== undefined && data.data.longitude !== null) ? Number(data.data.longitude) : undefined,
         business_hours: data.data.business_hours || '08:30 - 18:30 (周一至周日)'
       };
     }

@@ -23,7 +23,7 @@
     </view>
 
     <!-- 商品方案卡片列表 -->
-    <view class="product-grid">
+    <view class="product-grid" wx:if="{{productList && productList.length > 0}}">
       <view class="grid-card glass-card" wx:for="{{productList}}" wx:key="id" bindtap="navToDetail" data-id="{{item.id}}">
         <image class="grid-card-img" src="{{item.cover_image}}" mode="aspectFill"></image>
         <view class="grid-card-content flex-column">
@@ -44,6 +44,13 @@
           </view>
         </view>
       </view>
+    </view>
+
+    <!-- 暂无商品空状态提示 -->
+    <view class="empty-product-box flex-column" wx:else>
+      <text class="empty-icon">📦</text>
+      <text class="empty-title">该分类暂无定制商品方案</text>
+      <text class="empty-sub">商家正在为您陆续配置上架中，敬请期待</text>
     </view>
   </scroll-view>
 

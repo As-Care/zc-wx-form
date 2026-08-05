@@ -1,4 +1,6 @@
 {
   "usingComponents": {},
-  "navigationBarTitleText": "展晨门窗"
+  "navigationBarTitleText": "展晨门窗",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
 }

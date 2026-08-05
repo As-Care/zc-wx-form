@@ -60,18 +60,17 @@ Page({
   fetchProducts(catId, catName) {
     const queryParam = catId || catName || '';
     request({ url: `/api/products?category_id=${encodeURIComponent(queryParam)}` }).then(res => {
-      if (res.success && res.data && res.data.length > 0) {
+      if (res.success && Array.isArray(res.data)) {
         this.setData({ productList: res.data });
       } else {
-        // 如果后端当前分类下商品为空或在建，保底使用标准商品列表并做前端软过滤
         const allMock = mockData.products || [];
         const filtered = allMock.filter(p => p.category_id === catId || p.category_name === catName || (p.name && catName && p.name.includes(catName)));
-        this.setData({ productList: filtered.length > 0 ? filtered : allMock });
+        this.setData({ productList: filtered });
       }
     }).catch(() => {
       const allMock = mockData.products || [];
       const filtered = allMock.filter(p => p.category_id === catId || p.category_name === catName || (p.name && catName && p.name.includes(catName)));
-      this.setData({ productList: filtered.length > 0 ? filtered : allMock });
+      this.setData({ productList: filtered });
     });
   },
 
