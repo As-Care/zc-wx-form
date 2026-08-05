@@ -537,9 +537,35 @@ app.post('/api/orders', async (c) => {
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const orderNo = `ZC${dateStr}${Math.floor(1000 + Math.random() * 9000)}`;
 
+  // 外键安全校验与容错: 防止 invalid user_id / product_id 触发 SQLite 外键约束异常
+  let validUserId: string | null = null;
+  const rawUserId = (user_id || '').trim();
+  if (rawUserId) {
+    try {
+      const u = await db.prepare('SELECT id FROM users WHERE id = ?').bind(rawUserId).first<{ id: string }>();
+      if (u) validUserId = u.id;
+    } catch (e) {}
+  }
+
+  let validProductId: string | null = null;
+  const rawProdId = (product_id || '').trim();
+  if (rawProdId) {
+    try {
+      const p = await db.prepare('SELECT id FROM products WHERE id = ?').bind(rawProdId).first<{ id: string }>();
+      if (p) validProductId = p.id;
+    } catch (e) {}
+  }
+
   // 获取产品及其选配规则用于精确算价
-  const product = await db.prepare('SELECT * FROM products WHERE id = ?').bind(product_id || 'prod_1').first<Product>();
-  const { results: options } = await db.prepare('SELECT * FROM product_options WHERE product_id = ?').bind(product_id || 'prod_1').all<ProductOption>();
+  const product = validProductId
+    ? await db.prepare('SELECT * FROM products WHERE id = ?').bind(validProductId).first<Product>()
+    : await db.prepare('SELECT * FROM products LIMIT 1').first<Product>();
+
+  const targetProdId = validProductId || (product ? product.id : null);
+  const { results: options } = targetProdId
+    ? await db.prepare('SELECT * FROM product_options WHERE product_id = ?').bind(targetProdId).all<ProductOption>()
+    : { results: [] };
+
   const optionMap = new Map<string, ProductOption>();
   (options || []).forEach(o => optionMap.set(o.id, o));
 
@@ -557,7 +583,7 @@ app.post('/api/orders', async (c) => {
   `).bind(
     orderId,
     orderNo,
-    user_id || 'user_demo_1',
+    validUserId,
     customer_name || 'care',
     customer_phone || '13344443333',
     totalSets
@@ -618,7 +644,7 @@ app.post('/api/orders', async (c) => {
     `).bind(
       itemId,
       orderId,
-      product_id || 'prod_1',
+      validProductId,
       product_name || product?.name || '展晨108热桥级系统断桥铝窗',
       label,
       width,
@@ -1086,6 +1112,22 @@ app.post('/api/admin/products', async (c) => {
   const name = body.name.trim();
   const isActive = (body.is_active !== undefined && body.is_active !== null) ? Number(body.is_active) : 1;
 
+  let validCategoryId: string | null = null;
+  const rawCatId = (body.category_id || '').trim();
+  const rawCatName = (body.category_name || '').trim();
+
+  if (rawCatId || rawCatName) {
+    try {
+      const existingCat = await db.prepare(
+        'SELECT id FROM categories WHERE id = ? OR name = ?'
+      ).bind(rawCatId, rawCatName).first<{ id: string }>();
+
+      if (existingCat) {
+        validCategoryId = existingCat.id;
+      }
+    } catch (e) {}
+  }
+
   // UPSERT: ID 存在即覆盖修改原记录，不存在则新增，绝对零重复
   await db.prepare(`
     INSERT INTO products (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active)
@@ -1101,8 +1143,8 @@ app.post('/api/admin/products', async (c) => {
       is_active = excluded.is_active
   `).bind(
     id,
-    body.category_id || '',
-    body.category_name || '',
+    validCategoryId,
+    rawCatName,
     name,
     body.description || '',
     body.cover_image || '',
@@ -1121,6 +1163,22 @@ app.put('/api/admin/products/:id', async (c) => {
   const name = (body.name || '').trim();
   const isActive = (body.is_active !== undefined && body.is_active !== null) ? Number(body.is_active) : 1;
 
+  let validCategoryId: string | null = null;
+  const rawCatId = (body.category_id || '').trim();
+  const rawCatName = (body.category_name || '').trim();
+
+  if (rawCatId || rawCatName) {
+    try {
+      const existingCat = await db.prepare(
+        'SELECT id FROM categories WHERE id = ? OR name = ?'
+      ).bind(rawCatId, rawCatName).first<{ id: string }>();
+
+      if (existingCat) {
+        validCategoryId = existingCat.id;
+      }
+    } catch (e) {}
+  }
+
   await db.prepare(`
     INSERT INTO products (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
@@ -1135,8 +1193,8 @@ app.put('/api/admin/products/:id', async (c) => {
       is_active = excluded.is_active
   `).bind(
     id,
-    body.category_id || '',
-    body.category_name || '',
+    validCategoryId,
+    rawCatName,
     name,
     body.description || '',
     body.cover_image || '',
