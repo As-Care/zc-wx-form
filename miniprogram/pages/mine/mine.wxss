@@ -199,36 +199,30 @@
   text-align: right;
 }
 
-/* 功能菜单卡片 */
-.menu-card {
+/* 品牌服务列表卡片 */
+.nav-list-card {
   padding: 10rpx 28rpx;
+  margin-bottom: 24rpx;
 }
 
-.menu-item {
-  padding: 24rpx 0;
+.nav-row {
+  padding: 26rpx 0;
   border-bottom: 1rpx solid rgba(154, 158, 167, 0.12);
   align-items: center;
 }
 
-.menu-item:last-child {
+.nav-row:last-child {
   border-bottom: none;
 }
 
-.menu-left {
-  align-items: center;
-}
-
-.menu-icon {
-  font-size: 32rpx;
-  margin-right: 18rpx;
-}
-
-.menu-title {
+.row-text {
   font-size: 26rpx;
-  color: #F5F5F7;
+  color: #E2E8F0;
+  font-weight: 500;
 }
 
-.menu-arrow {
+.row-arrow {
   font-size: 32rpx;
-  color: #C5A880;
+  color: #9A9EA7;
+  font-weight: 300;
 }

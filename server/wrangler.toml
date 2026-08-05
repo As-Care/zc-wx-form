@@ -15,4 +15,4 @@ database_id = "fa0ee2ed-2492-402e-bb27-98e7f4a8e7b3"
 
 [[r2_buckets]]
 binding = "BUCKET"
-bucket_name = "zc-oss"
+bucket_name = "zc-wx-app"

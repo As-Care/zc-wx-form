@@ -1,17 +1,21 @@
-/* 展晨门窗 地址管理 WXSS */
+/* 展晨门窗 极奢地址管理 WXSS */
 
 .container {
   padding: 24rpx;
-  padding-bottom: 180rpx;
+  padding-bottom: calc(180rpx + env(safe-area-inset-bottom));
+  padding-bottom: calc(180rpx + constant(safe-area-inset-bottom));
 }
 
 .address-card {
-  padding: 24rpx;
-  border-radius: 20rpx;
+  padding: 28rpx;
+  border-radius: 24rpx;
+  background: rgba(26, 29, 36, 0.85);
+  border: 1rpx solid rgba(197, 168, 128, 0.3);
+  box-shadow: 0 12rpx 36rpx rgba(0, 0, 0, 0.35);
 }
 
 .name-text {
-  font-size: 30rpx;
+  font-size: 32rpx;
   font-weight: 700;
   color: #F8FAFC;
   margin-right: 16rpx;
@@ -25,24 +29,36 @@
 
 .default-badge {
   font-size: 20rpx;
-  color: #C5A880;
-  background: rgba(197, 168, 128, 0.15);
-  border: 1rpx solid rgba(197, 168, 128, 0.35);
-  padding: 2rpx 14rpx;
-  border-radius: 12rpx;
+  color: #121316;
+  background: linear-gradient(135deg, #D4AF37 0%, #C5A880 100%);
+  font-weight: 700;
+  padding: 4rpx 16rpx;
+  border-radius: 14rpx;
 }
 
 .address-detail-text {
   font-size: 26rpx;
-  color: #94A3B8;
+  color: #CBD5E1;
   line-height: 1.6;
-  margin-top: 8rpx;
+  margin-top: 14rpx;
+  align-items: flex-start;
+}
+
+.loc-icon {
+  font-size: 26rpx;
+  margin-right: 10rpx;
+  margin-top: 2rpx;
+  flex-shrink: 0;
+}
+
+.detail-str {
+  flex: 1;
 }
 
 .divider {
   height: 1rpx;
   background: rgba(148, 163, 184, 0.15);
-  margin: 20rpx 0 16rpx 0;
+  margin: 24rpx 0 20rpx 0;
 }
 
 .card-action-bar {
@@ -51,26 +67,42 @@
 
 .default-radio {
   align-items: center;
+  padding: 6rpx 0;
 }
 
 .radio-circle {
-  width: 28rpx;
-  height: 28rpx;
+  width: 32rpx;
+  height: 32rpx;
   border-radius: 50%;
-  border: 2rpx solid rgba(148, 163, 184, 0.4);
+  border: 2rpx solid rgba(197, 168, 128, 0.4);
   margin-right: 12rpx;
   box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.2s ease;
 }
 
 .radio-circle.checked {
   border-color: #C5A880;
+  background: rgba(197, 168, 128, 0.15);
+}
+
+.inner-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
   background: #C5A880;
 }
 
 .radio-label {
-  font-size: 22rpx;
+  font-size: 24rpx;
   color: #94A3B8;
+}
+
+.radio-label.gold {
+  color: #C5A880;
+  font-weight: 600;
 }
 
 .action-btns {
@@ -78,67 +110,85 @@
 }
 
 .action-btn {
-  font-size: 22rpx;
-  padding: 6rpx 20rpx;
-  border-radius: 20rpx;
-  margin-left: 12rpx;
+  font-size: 24rpx;
+  padding: 8rpx 24rpx;
+  border-radius: 24rpx;
+  margin-left: 16rpx;
+  font-weight: 500;
 }
 
 .edit-btn {
-  color: #CBD5E1;
+  color: #E2E8F0;
   background: rgba(255, 255, 255, 0.08);
-  border: 1rpx solid rgba(255, 255, 255, 0.15);
+  border: 1rpx solid rgba(255, 255, 255, 0.2);
 }
 
 .del-btn {
-  color: #EF4444;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1rpx solid rgba(239, 68, 68, 0.25);
+  color: #F87171;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1rpx solid rgba(239, 68, 68, 0.3);
 }
 
+/* 极奢空状态 UI 表现 */
 .empty-box {
   align-items: center;
   justify-content: center;
-  padding: 120rpx 0;
+  padding: 160rpx 40rpx;
 }
 
-.empty-icon {
-  font-size: 72rpx;
-  margin-bottom: 20rpx;
+.empty-icon-circle {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 50%;
+  background: rgba(197, 168, 128, 0.08);
+  border: 2rpx solid rgba(197, 168, 128, 0.3);
+  box-shadow: 0 8rpx 32rpx rgba(197, 168, 128, 0.15);
+  margin-bottom: 32rpx;
+}
+
+.gold-pin-icon {
+  font-size: 64rpx;
 }
 
 .empty-title {
-  font-size: 30rpx;
+  font-size: 32rpx;
   font-weight: 700;
   color: #F8FAFC;
-  margin-bottom: 8rpx;
+  margin-bottom: 12rpx;
 }
 
 .empty-sub {
   font-size: 24rpx;
   color: #94A3B8;
+  text-align: center;
+  line-height: 1.5;
 }
 
+/* 底部固定浮动栏 */
 .floating-btn-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(12px);
-  padding: 20rpx 30rpx calc(20rpx + env(safe-area-inset-bottom));
-  padding: 20rpx 30rpx calc(20rpx + constant(safe-area-inset-bottom));
+  background: rgba(18, 19, 22, 0.95);
+  backdrop-filter: blur(20px);
+  border-top: 1rpx solid rgba(197, 168, 128, 0.25);
+  padding: 24rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  padding: 24rpx 32rpx calc(24rpx + constant(safe-area-inset-bottom));
   z-index: 100;
+  box-sizing: border-box;
 }
 
 .add-btn {
-  width: 100%;
+  width: 100% !important;
   font-size: 30rpx;
   font-weight: 700;
-  height: 84rpx;
-  line-height: 84rpx;
-  border-radius: 42rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 44rpx;
+  box-shadow: 0 8rpx 28rpx rgba(197, 168, 128, 0.35);
+  margin: 0;
 }
 
-.mb-3 { margin-bottom: 20rpx; }
-.mb-2 { margin-bottom: 12rpx; }
+.mb-3 { margin-bottom: 24rpx; }
+.mb-2 { margin-bottom: 14rpx; }

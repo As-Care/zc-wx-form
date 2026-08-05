@@ -74,18 +74,21 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(12px);
-  padding: 20rpx 30rpx calc(20rpx + env(safe-area-inset-bottom));
-  padding: 20rpx 30rpx calc(20rpx + constant(safe-area-inset-bottom));
+  background: rgba(18, 19, 22, 0.95);
+  backdrop-filter: blur(20px);
+  border-top: 1rpx solid rgba(197, 168, 128, 0.25);
+  padding: 24rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  padding: 24rpx 32rpx calc(24rpx + constant(safe-area-inset-bottom));
   z-index: 100;
+  box-sizing: border-box;
 }
 
 .save-btn {
-  width: 100%;
+  width: 100% !important;
   font-size: 30rpx;
   font-weight: 700;
-  height: 84rpx;
-  line-height: 84rpx;
-  border-radius: 42rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 44rpx;
+  margin: 0;
 }

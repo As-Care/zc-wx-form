@@ -39,9 +39,9 @@ app.post('/api/upload', async (c) => {
     }
 
     const ext = file.name ? file.name.split('.').pop() : 'jpg';
-    const fileName = `uploads/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+    const fileName = `upload/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
 
-    // 1. 如果绑定了 Cloudflare R2 对象存储桶 (Cloudflare Worker 环境)
+    // 1. 保存至 Cloudflare R2 对象存储桶 (zc-wx-app / upload 目录)
     if (c.env.BUCKET) {
       const buffer = await file.arrayBuffer();
       await c.env.BUCKET.put(fileName, buffer, {
@@ -49,9 +49,9 @@ app.post('/api/upload', async (c) => {
       });
     }
 
-    // 2. 返回标准的 Cloudflare R2 对象存储 CDN 唯一 URL
+    // 2. 返回标准的 Cloudflare R2 对象存储 CDN 唯一 URL (如: https://zc-oss.carelife.top/upload/1785900000_abc.jpg)
     const url = `https://zc-oss.carelife.top/${fileName}`;
-    return c.json({ success: true, url, name: fileName, message: '成功保存至 Cloudflare R2 对象存储' });
+    return c.json({ success: true, url, name: fileName, message: '成功保存至 Cloudflare R2 对象存储 (zc-wx-app/upload)' });
   } catch (e) {
     return c.json({ success: false, message: '图片上传至 R2 存储失败', error: String(e) }, 500);
   }
