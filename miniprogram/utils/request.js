@@ -108,6 +108,15 @@ const mockData = {
 };
 
 function request(options) {
+  // 小程序侧保持干净沉浸体验，不自动触发全局 Loading 弹窗
+  const showLoading = options.showLoading === true;
+  if (showLoading) {
+    wx.showLoading({
+      title: options.loadingText || '正在加载...',
+      mask: true
+    });
+  }
+
   if (!USE_MOCK) {
     return new Promise((resolve, reject) => {
       const token = wx.getStorageSync('zc_token') || '';
@@ -121,6 +130,7 @@ function request(options) {
           ...(options.header || {})
         },
         success: (res) => {
+          if (showLoading) wx.hideLoading();
           if (res.statusCode >= 200 && res.statusCode < 300) {
             resolve(res.data);
           } else {
@@ -132,7 +142,8 @@ function request(options) {
           }
         },
         fail: (err) => {
-          // 优雅降级到 mockData 避免网络断连时打断体验
+          if (showLoading) wx.hideLoading();
+          // 优雅降级到 mockData 避免网络断联时打断体验
           if (options.url.includes('/api/categories')) {
             resolve({ success: true, data: mockData.categories });
           } else if (options.url.includes('/api/products/prod_1')) {
@@ -152,6 +163,7 @@ function request(options) {
   // 纯本地 Mock 回退机制
   return new Promise((resolve) => {
     setTimeout(() => {
+      if (showLoading) wx.hideLoading();
       if (options.url.includes('/api/categories')) {
         resolve({ success: true, data: mockData.categories });
       } else if (options.url.includes('/api/products/prod_1')) {

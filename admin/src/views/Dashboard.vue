@@ -3,7 +3,7 @@
     <!-- Header -->
     <a-layout-header class="layout-header glass-panel">
       <div class="header-logo">
-        <span class="logo-icon">🏠</span>
+        <img src="https://zc-oss.carelife.top/common/zc-logo.jpg" class="header-logo-img" alt="展晨门窗 Logo" />
         <span class="logo-text">展晨门窗 - 商家后台管理系统</span>
       </div>
       <div class="header-user">
@@ -39,6 +39,7 @@
         <a-layout-sider class="layout-sider glass-panel" :width="220" collapsible>
           <a-menu
             :selected-keys="[activeKey]"
+            :theme="isDark ? 'dark' : 'light'"
             class="sidebar-menu"
             @menu-item-click="handleMenuClick"
           >
@@ -52,7 +53,11 @@
             </a-menu-item>
             <a-menu-item key="Products">
               <template #icon><IconApps /></template>
-              商品与选配
+              门窗商品
+            </a-menu-item>
+            <a-menu-item key="Categories">
+              <template #icon><IconFolder /></template>
+              门窗分类
             </a-menu-item>
             <a-menu-item key="StaffConfig">
               <template #icon><IconPhone /></template>
@@ -65,10 +70,12 @@
           </a-menu>
         </a-layout-sider>
 
-        <!-- Main Workspace -->
+        <!-- Main Workspace (含全局 Spinner 加载器) -->
         <a-layout-content class="layout-main">
           <div class="main-card glass-panel">
-            <router-view />
+            <a-spin :loading="loading" tip="正在同步加载数据..." style="width: 100%; min-height: 100%; display: block;">
+              <router-view />
+            </a-spin>
           </div>
         </a-layout-content>
       </a-layout>
@@ -80,11 +87,13 @@
 import { computed, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Message } from '@arco-design/web-vue';
+import { isPageLoading } from '../router';
 
 const route = useRoute();
 const router = useRouter();
 
 const isDark = ref(localStorage.getItem('theme') === 'dark');
+const loading = computed(() => isPageLoading.value);
 
 const activeKey = computed(() => {
   return route.name || 'Overview';
@@ -125,9 +134,10 @@ onMounted(() => {
   width: 100vw;
   box-sizing: border-box;
   padding: 16px;
-  background: #121316;
+  background: #f4f7f6;
   gap: 16px;
   overflow: hidden;
+  transition: background-color 0.3s ease;
 }
 
 .layout-header {
@@ -139,7 +149,8 @@ onMounted(() => {
   align-items: center;
   flex-shrink: 0;
   border-radius: 16px !important;
-  background: rgba(26, 29, 36, 0.8) !important;
+  background: #ffffff !important;
+  border: 1px solid #e5e6eb;
 }
 
 .header-logo {
@@ -147,13 +158,18 @@ onMounted(() => {
   align-items: center;
   font-size: 18px;
   font-weight: 700;
-  color: #C5A880;
+  color: #1d2129;
   letter-spacing: 0.5px;
 }
 
-.logo-icon {
-  font-size: 24px;
-  margin-right: 8px;
+.header-logo-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  margin-right: 10px;
+  object-fit: cover;
+  border: 1px solid rgba(197, 168, 128, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .header-user {
@@ -164,7 +180,7 @@ onMounted(() => {
 .username {
   font-weight: 600;
   font-size: 14px;
-  color: #F5F5F7;
+  color: #1d2129;
 }
 
 .logout-btn {
@@ -191,7 +207,8 @@ onMounted(() => {
 .layout-sider {
   border-radius: 16px !important;
   overflow: hidden;
-  background: rgba(26, 29, 36, 0.8) !important;
+  background: #ffffff !important;
+  border: 1px solid #e5e6eb;
 }
 
 .sidebar-menu {
@@ -204,21 +221,30 @@ onMounted(() => {
   padding: 8px;
 }
 
+/* 基础菜单项：预留透明边框，固定盒模型，防止切换选中时产生 1px 抖动 */
 :deep(.arco-menu-item) {
   border-radius: 10px !important;
   margin-bottom: 6px !important;
   font-weight: 500;
   font-size: 14px;
+  color: #4e5969;
+  border: 1px solid transparent !important;
+  box-sizing: border-box !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease !important;
 }
 
+/* 亮色模式选中 */
 :deep(.arco-menu-selected) {
-  background: linear-gradient(135deg, rgba(197, 168, 128, 0.15) 0%, rgba(212, 175, 55, 0.1) 100%) !important;
-  color: #C5A880 !important;
+  background: #C5A880 !important;
+  color: #ffffff !important;
   font-weight: 600;
+  border-color: #C5A880 !important;
 }
 
-:deep(.arco-menu-selected .arco-icon) {
-  color: #C5A880 !important;
+:deep(.arco-menu-selected .arco-icon),
+:deep(.arco-menu-selected .arco-menu-item-inner),
+:deep(.arco-menu-selected *) {
+  color: #ffffff !important;
 }
 
 .layout-main {
@@ -232,7 +258,71 @@ onMounted(() => {
   box-sizing: border-box;
   padding: 24px;
   overflow-y: auto;
-  background: rgba(26, 29, 36, 0.85) !important;
+  background: #ffffff !important;
+  border: 1px solid #e5e6eb;
+}
+
+/* 暗色模式下清爽纯净的白灰文字菜单样式 */
+body[arco-theme='dark'] .layout-container {
+  background: #121316 !important;
+}
+
+body[arco-theme='dark'] .layout-header {
+  background: rgba(26, 29, 36, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body[arco-theme='dark'] .header-logo {
+  color: #C5A880 !important;
+}
+
+body[arco-theme='dark'] .username {
+  color: #F5F5F7 !important;
+}
+
+body[arco-theme='dark'] .layout-sider {
+  background: rgba(26, 29, 36, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* 未选中菜单项：柔和中浅灰 (#A0AEC0) */
+body[arco-theme='dark'] .sidebar-menu :deep(.arco-menu-item) {
+  background: transparent !important;
+  color: #a0aec0 !important;
+  border: 1px solid transparent !important;
+}
+
+body[arco-theme='dark'] .sidebar-menu :deep(.arco-menu-item .arco-icon),
+body[arco-theme='dark'] .sidebar-menu :deep(.arco-menu-item-inner),
+body[arco-theme='dark'] .sidebar-menu :deep(.arco-menu-item *) {
+  color: #a0aec0 !important;
+  opacity: 1 !important;
+}
+
+body[arco-theme='dark'] .sidebar-menu :deep(.arco-menu-item:hover) {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+/* 暗色模式选中项：清透亮暗高光背景 + 纯粹白灰色文字 (#FFFFFF) */
+body[arco-theme='dark'] .sidebar-menu :deep(.arco-menu-selected) {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+}
+
+body[arco-theme='dark'] .sidebar-menu :deep(.arco-menu-selected),
+body[arco-theme='dark'] .sidebar-menu :deep(.arco-menu-selected .arco-menu-item-inner),
+body[arco-theme='dark'] .sidebar-menu :deep(.arco-menu-selected .arco-icon),
+body[arco-theme='dark'] .sidebar-menu :deep(.arco-menu-selected *) {
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+body[arco-theme='dark'] .main-card {
+  background: rgba(26, 29, 36, 0.95) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 /* Custom theme switcher styles */
@@ -258,7 +348,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #3a3a3a;
+  background-color: #e5e6eb;
   transition: .4s;
   border-radius: 300px;
 }
@@ -272,7 +362,8 @@ onMounted(() => {
   left: 3px;
   bottom: 3px;
   z-index: 2;
-  background-color: #212121;
+  background-color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
   transition: .4s;
 }
 
@@ -291,15 +382,15 @@ onMounted(() => {
 }
 
 .custom-switch .input:checked+.slider {
-  background-color: #cecece;
+  background-color: #2a2d35;
 }
 
 .custom-switch .input:focus+.slider {
-  box-shadow: 0 0 1px #cecece;
+  box-shadow: 0 0 1px #2a2d35;
 }
 
 .custom-switch .input:checked+.slider:before {
   transform: translate(29px);
-  background: #fafafa;
+  background: #17171a;
 }
 </style>

@@ -1,8 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { ref } from 'vue';
 import Login from '../views/Login.vue';
 import Dashboard from '../views/Dashboard.vue';
 import Orders from '../views/Orders.vue';
 import Products from '../views/Products.vue';
+import Categories from '../views/Categories.vue';
 import Users from '../views/Users.vue';
 import Overview from '../views/Overview.vue';
 import StaffConfig from '../views/StaffConfig.vue';
@@ -39,6 +41,11 @@ const routes = [
         component: Products
       },
       {
+        path: 'categories',
+        name: 'Categories',
+        component: Categories
+      },
+      {
         path: 'users',
         name: 'Users',
         component: Users
@@ -61,7 +68,11 @@ const router = createRouter({
   routes
 });
 
+// 全局路由加载 Loading (响应式 ref)
+export const isPageLoading = ref(false);
+
 router.beforeEach((to, from, next) => {
+  isPageLoading.value = true;
   const token = localStorage.getItem('admin_token');
 
   if (to.matched.some(record => record.meta.requiresAuth)) {
@@ -80,6 +91,12 @@ router.beforeEach((to, from, next) => {
   } else {
     next();
   }
+});
+
+router.afterEach(() => {
+  setTimeout(() => {
+    isPageLoading.value = false;
+  }, 200);
 });
 
 export default router;

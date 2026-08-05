@@ -31,7 +31,7 @@
 
     <!-- 接单员列表数据表格 -->
     <a-card title="👥 接单员列表 (小程序专人接单展示)">
-      <a-table :data="receivers" :pagination="{ pageSize: 10 }" border>
+      <a-table :data="receivers" :pagination="{ pageSize: 10 }" border row-key="id">
         <template #columns>
           <a-table-column title="接单员姓名" data-index="name" :width="220">
             <template #cell="{ record }">
@@ -47,7 +47,15 @@
 
           <a-table-column title="个人微信二维码" :width="200">
             <template #cell="{ record }">
-              <img :src="record.qr_code_url" style="width: 60px; height: 60px; border-radius: 8px; border: 1px solid #C5A880;" />
+              <a-image
+                v-if="record.qr_code_url"
+                :src="record.qr_code_url"
+                width="60"
+                height="60"
+                fit="cover"
+                style="border-radius: 8px; border: 1px solid #C5A880; cursor: pointer;"
+              />
+              <span v-else style="color: #c9cdd4; font-size: 12px;">暂无二维码</span>
             </template>
           </a-table-column>
 
@@ -59,7 +67,7 @@
 
           <a-table-column title="操作" :width="180">
             <template #cell="{ record }">
-              <a-button type="text" size="small" class="mr-2" @click="editReceiver(record)">编辑信息</a-button>
+              <a-button type="text" size="small" class="mr-2" @click="editReceiver(record)">编辑信息/二维码</a-button>
               <a-popconfirm content="确定删除此接单员吗？" type="warning" @ok="deleteReceiver(record.id)">
                 <a-button type="text" status="danger" size="small">删除</a-button>
               </a-popconfirm>
@@ -70,18 +78,57 @@
     </a-card>
 
     <!-- 新建/编辑接单员 Modal -->
-    <a-modal v-model:visible="modalVisible" title="配置接单员信息" @ok="handleSaveReceiver">
+    <a-modal v-model:visible="modalVisible" title="配置接单员信息与二维码" @ok="handleSaveReceiver">
       <a-form :model="receiverForm" layout="vertical">
-        <a-form-item label="接单员姓名">
+        <a-form-item label="接单员姓名" required>
           <a-input v-model="receiverForm.name" placeholder="如：张经理" />
         </a-form-item>
 
-        <a-form-item label="联系手机号">
+        <a-form-item label="联系手机号" required>
           <a-input v-model="receiverForm.phone" placeholder="请输入接单手机号" />
         </a-form-item>
 
-        <a-form-item label="个人微信二维码图片 URL" help="输入二维码图片网络地址，或直接使用客服微信二维码">
-          <a-input v-model="receiverForm.qr_code_url" placeholder="https://zc-oss.carelife.top/test/test-qrcode.png" />
+        <!-- 高奢品质二维码图片上传区域 (带 Spinner Loading) -->
+        <a-form-item label="微信二维码图片">
+          <div class="luxury-upload-card">
+            <a-spin :loading="uploading" tip="二维码上传中...">
+              <a-upload
+                action="https://zc-api.carelife.top/api/upload"
+                :show-file-list="false"
+                @before-upload="onBeforeUpload"
+                @progress="uploading = true"
+                @success="onQrUploadSuccess"
+                @error="onQrUploadError"
+              >
+                <template #upload-button>
+                  <div v-if="receiverForm.qr_code_url" class="cover-preview-box">
+                    <img :src="receiverForm.qr_code_url" class="cover-img" />
+                    <div class="cover-hover-mask">
+                      <icon-camera style="font-size: 24px; color: #ffffff;" />
+                      <span style="font-size: 12px; color: #ffffff; margin-top: 4px;">点击更换二维码</span>
+                    </div>
+                  </div>
+                  <div v-else class="upload-dropzone">
+                    <div class="upload-icon-circle">
+                      <icon-plus style="font-size: 22px; color: #C5A880;" />
+                    </div>
+                    <span class="upload-title">点击上传二维码</span>
+                    <span class="upload-sub">支持 PNG / JPG 格式</span>
+                  </div>
+                </template>
+              </a-upload>
+            </a-spin>
+            <a-button
+              v-if="receiverForm.qr_code_url"
+              type="text"
+              status="danger"
+              size="small"
+              style="margin-top: 6px;"
+              @click="receiverForm.qr_code_url = ''"
+            >
+              移除二维码
+            </a-button>
+          </div>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -93,28 +140,29 @@
 import { ref } from 'vue';
 import { Message } from '@arco-design/web-vue';
 
-const modalVisible = ref(false);
-
 const storeForm = ref({
-  name: '展晨门窗旗舰店',
+  name: '展晨门窗',
   phone: '13545941637',
-  address: '湖北省仙桃市恒迪建材市场2期14栋1-107'
+  address: '湖北仙桃恒迪建材市场2期14栋1-107'
 });
 
 const receivers = ref([
   {
-    id: 'staff_1',
-    name: '张经理',
+    id: 'rec_1',
+    name: '张经理 (展晨总店算价核算组)',
     phone: '13545941637',
-    qr_code_url: 'https://zc-oss.carelife.top/test/test-qrcode.png'
+    qr_code_url: ''
   },
   {
-    id: 'staff_2',
-    name: '李主管',
+    id: 'rec_2',
+    name: '李主管 (现场复核勘测组)',
     phone: '13971234567',
-    qr_code_url: 'https://zc-oss.carelife.top/test/test-qrcode.png'
+    qr_code_url: ''
   }
 ]);
+
+const modalVisible = ref(false);
+const uploading = ref(false);
 
 const receiverForm = ref({
   id: '',
@@ -123,53 +171,193 @@ const receiverForm = ref({
   qr_code_url: ''
 });
 
+const saveStoreConfig = () => {
+  Message.success('门店信息与客服电话保存成功！');
+};
+
 const openReceiverModal = () => {
-  receiverForm.value = { id: '', name: '', phone: '', qr_code_url: 'https://zc-oss.carelife.top/test/test-qrcode.png' };
+  receiverForm.value = {
+    id: '',
+    name: '',
+    phone: '',
+    qr_code_url: ''
+  };
+  uploading.value = false;
   modalVisible.value = true;
 };
 
 const editReceiver = (record) => {
-  receiverForm.value = { ...record };
+  receiverForm.value = {
+    id: record.id,
+    name: record.name,
+    phone: record.phone,
+    qr_code_url: record.qr_code_url || ''
+  };
+  uploading.value = false;
   modalVisible.value = true;
+};
+
+const onBeforeUpload = () => {
+  uploading.value = true;
+  return true;
+};
+
+const onQrUploadSuccess = (fileItem) => {
+  uploading.value = false;
+  if (fileItem && fileItem.response && fileItem.response.url) {
+    receiverForm.value.qr_code_url = fileItem.response.url;
+    Message.success('客服微信二维码上传成功！');
+  } else if (fileItem && fileItem.url) {
+    receiverForm.value.qr_code_url = fileItem.url;
+    Message.success('客服微信二维码上传成功！');
+  }
+};
+
+const onQrUploadError = () => {
+  uploading.value = false;
+  Message.error('二维码图片上传失败！');
+};
+
+const handleSaveReceiver = () => {
+  if (!receiverForm.value.name || !receiverForm.value.name.trim()) {
+    Message.warning('【接单员姓名】为必填项，请输入后再保存！');
+    return;
+  }
+  if (!receiverForm.value.phone || !receiverForm.value.phone.trim()) {
+    Message.warning('【联系手机号】为必填项，请输入后再保存！');
+    return;
+  }
+
+  if (receiverForm.value.id) {
+    const idx = receivers.value.findIndex(r => r.id === receiverForm.value.id);
+    if (idx !== -1) {
+      receivers.value[idx] = {
+        id: receiverForm.value.id,
+        name: receiverForm.value.name,
+        phone: receiverForm.value.phone,
+        qr_code_url: receiverForm.value.qr_code_url
+      };
+      // 强制触发 Vue 3 数组响应式更新
+      receivers.value = [...receivers.value];
+    }
+  } else {
+    receivers.value.push({
+      id: `rec_${Date.now()}`,
+      name: receiverForm.value.name,
+      phone: receiverForm.value.phone,
+      qr_code_url: receiverForm.value.qr_code_url || ''
+    });
+    receivers.value = [...receivers.value];
+  }
+
+  Message.success('接单员配置保存成功！已同步至小程序联系客服。');
+  modalVisible.value = false;
 };
 
 const deleteReceiver = (id) => {
   receivers.value = receivers.value.filter(r => r.id !== id);
-  Message.success('接单员已移除');
-};
-
-const saveStoreConfig = () => {
-  Message.success('门店地址与联系电话保存成功！');
-};
-
-const handleSaveReceiver = () => {
-  if (!receiverForm.value.name || !receiverForm.value.phone) {
-    Message.error('请填写接单员姓名与手机号！');
-    return;
-  }
-  if (receiverForm.value.id) {
-    const target = receivers.value.find(r => r.id === receiverForm.value.id);
-    if (target) {
-      target.name = receiverForm.value.name;
-      target.phone = receiverForm.value.phone;
-      target.qr_code_url = receiverForm.value.qr_code_url;
-    }
-  } else {
-    receivers.value.push({
-      id: `staff_${Date.now()}`,
-      name: receiverForm.value.name,
-      phone: receiverForm.value.phone,
-      qr_code_url: receiverForm.value.qr_code_url || 'https://zc-oss.carelife.top/test/test-qrcode.png'
-    });
-  }
-  Message.success('接单员配置保存成功！');
-  modalVisible.value = false;
+  Message.success('接单员信息已从小程序移除');
 };
 </script>
 
 <style scoped>
+.staff-config-view { display: flex; flex-direction: column; }
 .view-title { font-size: 20px; font-weight: 700; margin: 0; }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .mb-4 { margin-bottom: 16px; }
 .mr-2 { margin-right: 8px; }
+
+/* 奢华精致上传控件样式 */
+.luxury-upload-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.upload-dropzone {
+  width: 156px;
+  height: 140px;
+  border: 1.5px dashed rgba(197, 168, 128, 0.6);
+  background: rgba(197, 168, 128, 0.04);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-sizing: border-box;
+  padding: 6px;
+}
+
+.upload-dropzone:hover {
+  border-color: #C5A880;
+  background: rgba(197, 168, 128, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(197, 168, 128, 0.15);
+}
+
+.upload-icon-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(197, 168, 128, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.upload-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d2129;
+  white-space: nowrap;
+}
+
+body[arco-theme='dark'] .upload-title {
+  color: #E2E8F0;
+}
+
+.upload-sub {
+  font-size: 10.5px;
+  color: #86909c;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+.cover-preview-box {
+  width: 156px;
+  height: 140px;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  border: 1.5px solid #C5A880;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
+
+.cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cover-hover-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.cover-preview-box:hover .cover-hover-mask {
+  opacity: 1;
+}
 </style>

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@arco-design/web-vue": "^2.53.0",
+    "echarts": "^6.1.0",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0"
   },

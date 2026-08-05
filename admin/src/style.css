@@ -5,16 +5,15 @@
 
   color-scheme: light dark;
   background-color: #f4f7f6;
-  color: #1a202c;
+  color: #1d2129;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Custom variables for theme switcher */
-  --dark: #212121;
-  --offwhite: #fafafa;
+  --dark: #121316;
+  --offwhite: #ffffff;
 }
 
 body {
@@ -23,7 +22,9 @@ body {
   place-content: center;
   min-width: 320px;
   min-height: 100vh;
-  background: radial-gradient(circle at 10% 20%, rgba(216, 241, 230, 0.46) 0.1%, rgba(233, 226, 226, 0.28) 90.1%);
+  background: #f4f7f6;
+  color: #1d2129;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 #app {
@@ -33,14 +34,27 @@ body {
   flex-direction: column;
 }
 
-/* Glassmorphism base cards */
+/* 玻璃质感基础卡片 - 日间亮色 */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: #ffffff;
+  border: 1px solid #e5e6eb;
   border-radius: 16px;
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+}
+
+/* 全局柔和精致分类 Tag */
+.soft-cat-tag {
+  background: #f2f3f5 !important;
+  color: #4e5969 !important;
+  border: 1px solid #e5e6eb !important;
+  font-weight: 500;
+  border-radius: 6px !important;
+}
+
+.soft-cat-tag .sub-text {
+  color: #86909c !important;
+  margin-left: 4px;
 }
 
 /* Custom Scrollbar */
@@ -52,39 +66,39 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(11, 155, 119, 0.15);
+  background: rgba(197, 168, 128, 0.3);
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(11, 155, 119, 0.3);
+  background: rgba(197, 168, 128, 0.5);
 }
 
-/* Dark Mode overrides for layout components */
+/* 夜间黑曜石暗色模式 (Dark Mode Overrides) */
 body[arco-theme='dark'] {
-  background: #17171a !important;
+  background: #121316 !important;
   color: #f5f5f5 !important;
 }
 
 body[arco-theme='dark'] .layout-container {
-  background: #17171a !important;
+  background: #121316 !important;
 }
 
 body[arco-theme='dark'] .glass-panel {
-  background: rgba(30, 30, 35, 0.6) !important;
-  border-color: rgba(255, 255, 255, 0.05) !important;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2) !important;
+  background: rgba(26, 29, 36, 0.85) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
 }
 
 body[arco-theme='dark'] .layout-header {
-  background: rgba(30, 30, 35, 0.7) !important;
+  background: rgba(26, 29, 36, 0.9) !important;
 }
 
 body[arco-theme='dark'] .layout-sider {
-  background: rgba(30, 30, 35, 0.7) !important;
+  background: rgba(26, 29, 36, 0.9) !important;
 }
 
 body[arco-theme='dark'] .main-card {
-  background: rgba(30, 30, 35, 0.8) !important;
+  background: rgba(26, 29, 36, 0.95) !important;
 }
 
 body[arco-theme='dark'] .view-title {
@@ -95,3 +109,12 @@ body[arco-theme='dark'] .username {
   color: #e2e8f0 !important;
 }
 
+body[arco-theme='dark'] .soft-cat-tag {
+  background: rgba(197, 168, 128, 0.15) !important;
+  color: #C5A880 !important;
+  border-color: rgba(197, 168, 128, 0.3) !important;
+}
+
+body[arco-theme='dark'] .soft-cat-tag .sub-text {
+  color: #d4af37 !important;
+}

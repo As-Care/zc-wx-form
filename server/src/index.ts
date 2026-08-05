@@ -510,4 +510,217 @@ app.get('/api/orders/:id', async (c) => {
   });
 });
 
+// ----------------------------------------------------
+// 5. 管理端后台专属 API (Admin Dashboard APIs)
+// ----------------------------------------------------
+
+/**
+ * 管理员登录接口
+ * POST /api/admin/login
+ */
+app.post('/api/admin/login', async (c) => {
+  const body = await c.req.json();
+  const { username, password } = body;
+
+  if (username === 'admin' && (password === 'zhanchen888' || password === 'admin123')) {
+    return c.json({
+      success: true,
+      user: {
+        id: 'admin_1',
+        nickname: '展晨总管理',
+        role: 'admin',
+        phone: '13545941637'
+      },
+      token: 'zc_admin_token_2026'
+    });
+  }
+
+  return c.json({ success: false, message: '管理员账号或密码不正确' }, 401);
+});
+
+/**
+ * 管理端仪表盘统计概览
+ * GET /api/admin/stats
+ */
+app.get('/api/admin/stats', async (c) => {
+  const db = c.env.DB;
+  const { results: orders } = await db.prepare('SELECT status, final_amount FROM orders').all<Order>();
+
+  let totalOrders = (orders || []).length;
+  let pendingReviewCount = 0;
+  let producingCount = 0;
+  let installingCount = 0;
+  let completedCount = 0;
+  let totalRevenue = 0;
+
+  (orders || []).forEach(o => {
+    totalRevenue += o.final_amount || 0;
+    if (o.status === 'pending_review') pendingReviewCount++;
+    else if (o.status === 'producing') producingCount++;
+    else if (o.status === 'installing') installingCount++;
+    else if (o.status === 'completed') completedCount++;
+  });
+
+  return c.json({
+    success: true,
+    data: {
+      totalOrders,
+      pendingReviewCount,
+      producingCount,
+      installingCount,
+      completedCount,
+      totalRevenue: Number(totalRevenue.toFixed(2))
+    }
+  });
+});
+
+/**
+ * 管理端 扭转订单状态 & 追加特殊费用
+ * PATCH /api/admin/orders/:id/status
+ */
+app.patch('/api/admin/orders/:id/status', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  const body = await c.req.json();
+  const { new_status, admin_remark, operator_name, special_charges_amount } = body;
+
+  const currentOrder = await db.prepare('SELECT * FROM orders WHERE id = ?').bind(id).first<Order>();
+  if (!currentOrder) {
+    return c.json({ success: false, message: '未找到订单记录' }, 404);
+  }
+
+  const oldStatus = currentOrder.status;
+  let newSpecialCharges = currentOrder.special_charges_amount || 0;
+  let newFinalAmount = currentOrder.final_amount;
+
+  if (special_charges_amount !== undefined && !isNaN(Number(special_charges_amount))) {
+    newSpecialCharges = Number(special_charges_amount);
+    newFinalAmount = Number((currentOrder.base_amount + currentOrder.extra_amount + newSpecialCharges).toFixed(2));
+  }
+
+  const targetStatus = new_status || oldStatus;
+  const targetRemark = admin_remark || currentOrder.admin_remark || '';
+
+  await db.prepare(`
+    UPDATE orders 
+    SET status = ?, admin_remark = ?, special_charges_amount = ?, final_amount = ?, updated_at = CURRENT_TIMESTAMP 
+    WHERE id = ?
+  `).bind(targetStatus, targetRemark, newSpecialCharges, newFinalAmount, id).run();
+
+  // 写入状态扭转日志
+  await db.prepare(`
+    INSERT INTO order_status_logs (id, order_id, operator_name, from_status, to_status, remark) 
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).bind(
+    `log_${Date.now()}`,
+    id,
+    operator_name || '接单员',
+    oldStatus,
+    targetStatus,
+    targetRemark || `状态变更: ${oldStatus} -> ${targetStatus}`
+  ).run();
+
+  return c.json({
+    success: true,
+    order_id: id,
+    status: targetStatus,
+    special_charges_amount: newSpecialCharges,
+    final_amount: newFinalAmount
+  });
+});
+
+/**
+ * 管理端 分类管理 CRUD (创建、编辑、禁用)
+ * POST /api/admin/categories
+ */
+app.post('/api/admin/categories', async (c) => {
+  const db = c.env.DB;
+  const body = await c.req.json();
+  const id = `cat_${Date.now()}`;
+
+  await db.prepare(`
+    INSERT INTO categories (id, name, sub_title, icon_url, sort_order, is_active) 
+    VALUES (?, ?, ?, ?, ?, 1)
+  `).bind(id, body.name, body.sub_title || body.name, body.icon_url || '', body.sort_order || 0).run();
+
+  return c.json({ success: true, id });
+});
+
+app.put('/api/admin/categories/:id', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  const body = await c.req.json();
+
+  await db.prepare(`
+    UPDATE categories 
+    SET name = ?, sub_title = ?, icon_url = ?, sort_order = ? 
+    WHERE id = ?
+  `).bind(body.name, body.sub_title || body.name, body.icon_url || '', body.sort_order || 0, id).run();
+
+  return c.json({ success: true });
+});
+
+app.delete('/api/admin/categories/:id', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  await db.prepare('UPDATE categories SET is_active = 0 WHERE id = ?').bind(id).run();
+  return c.json({ success: true });
+});
+
+/**
+ * 管理端 商品管理 CRUD
+ * POST /api/admin/products
+ */
+app.post('/api/admin/products', async (c) => {
+  const db = c.env.DB;
+  const body = await c.req.json();
+  const id = `prod_${Date.now()}`;
+
+  await db.prepare(`
+    INSERT INTO products (id, category_id, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+  `).bind(
+    id,
+    body.category_id,
+    body.name,
+    body.description || '',
+    body.cover_image || '',
+    body.base_price_sqm || 680,
+    body.min_area || 1.5,
+    body.sort_order || 0
+  ).run();
+
+  return c.json({ success: true, id });
+});
+
+app.put('/api/admin/products/:id', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  const body = await c.req.json();
+
+  await db.prepare(`
+    UPDATE products 
+    SET category_id = ?, name = ?, description = ?, cover_image = ?, base_price_sqm = ?, min_area = ?, sort_order = ? 
+    WHERE id = ?
+  `).bind(
+    body.category_id,
+    body.name,
+    body.description || '',
+    body.cover_image || '',
+    body.base_price_sqm || 680,
+    body.min_area || 1.5,
+    body.sort_order || 0,
+    id
+  ).run();
+
+  return c.json({ success: true });
+});
+
+app.delete('/api/admin/products/:id', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  await db.prepare('UPDATE products SET is_active = 0 WHERE id = ?').bind(id).run();
+  return c.json({ success: true });
+});
+
 export default app;
