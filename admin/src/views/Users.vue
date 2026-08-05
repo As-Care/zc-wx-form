@@ -129,11 +129,34 @@
           <a-input v-model="editForm.phone" placeholder="请输入手机号" />
         </a-form-item>
 
-        <!-- 客户微信头像上传 (直存 Cloudflare R2) -->
-        <a-form-item label="客户微信头像 (直存 Cloudflare R2)">
+        <!-- 客户微信头像上传 -->
+        <a-form-item label="客户微信头像">
           <div class="luxury-upload-card">
             <a-spin :loading="uploading" tip="正在上传中">
+              <div v-if="editForm.avatar_url" class="avatar-preview-box">
+                <img :src="editForm.avatar_url" class="avatar-img" />
+                <div class="avatar-hover-mask">
+                  <a-upload
+                    action="https://zc-api.carelife.top/api/upload"
+                    :show-file-list="false"
+                    @before-upload="onBeforeUpload"
+                    @success="onAvatarUploadSuccess"
+                    @error="onAvatarUploadError"
+                    style="display: inline-block;"
+                  >
+                    <template #upload-button>
+                      <span class="mask-icon" title="更换头像">
+                        <icon-camera />
+                      </span>
+                    </template>
+                  </a-upload>
+                  <span class="mask-icon mask-icon-delete ml-2" title="删除头像" @click.stop="editForm.avatar_url = ''">
+                    <icon-delete />
+                  </span>
+                </div>
+              </div>
               <a-upload
+                v-else
                 action="https://zc-api.carelife.top/api/upload"
                 :show-file-list="false"
                 @before-upload="onBeforeUpload"
@@ -141,13 +164,7 @@
                 @error="onAvatarUploadError"
               >
                 <template #upload-button>
-                  <div v-if="editForm.avatar_url" class="avatar-preview-box">
-                    <img :src="editForm.avatar_url" class="avatar-img" />
-                    <div class="avatar-hover-mask">
-                      <icon-camera style="font-size: 20px; color: #ffffff;" />
-                    </div>
-                  </div>
-                  <div v-else class="upload-dropzone">
+                  <div class="upload-dropzone">
                     <icon-plus style="font-size: 20px; color: #C5A880;" />
                     <span class="upload-title">上传头像</span>
                   </div>
@@ -276,7 +293,7 @@ const onAvatarUploadSuccess = (fileItem) => {
 
 const onAvatarUploadError = () => {
   uploading.value = false;
-  Message.error('客户头像上传至 Cloudflare R2 失败！');
+  Message.error('客户头像上传失败！');
 };
 
 const handleSaveUser = async () => {
@@ -436,15 +453,41 @@ body[arco-theme='dark'] .addr-detail {
 .avatar-hover-mask {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(2px);
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.25s ease;
 }
 
 .avatar-preview-box:hover .avatar-hover-mask {
   opacity: 1;
+}
+
+.mask-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mask-icon:hover {
+  background: rgba(255, 255, 255, 0.45);
+  transform: scale(1.1);
+}
+
+.mask-icon-delete:hover {
+  background: #f53f3f;
+  color: #ffffff;
 }
 </style>

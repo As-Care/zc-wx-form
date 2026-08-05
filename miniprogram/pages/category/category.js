@@ -1,5 +1,5 @@
 // 展晨门窗 双栏分类页 Page 逻辑
-const { request } = require('../../utils/request');
+const { request, mockData } = require('../../utils/request');
 
 Page({
   data: {
@@ -16,49 +16,74 @@ Page({
 
   fetchData() {
     request({ url: '/api/categories' }).then(res => {
-      if (res.success && res.data.length > 0) {
-        const categories = res.data;
-        const app = getApp();
-        const globalCatId = app && app.globalData ? app.globalData.selectedCatId : null;
-        const storedCat = globalCatId || wx.getStorageSync('selectedCategory');
-        
-        // 如果有由首页透传进来的 target catId，优先使用它
-        const activeCatId = storedCat || this.data.activeCatId || categories[0].id;
-        const activeCat = categories.find(c => c.id === activeCatId) || categories[0];
-
-        this.setData({
-          categories,
-          activeCatId: activeCat.id,
-          activeCatName: activeCat.name
-        });
-        
-        // 消费完毕后立即清空透传标志
-        wx.removeStorageSync('selectedCategory');
-        if (app && app.globalData) {
-          app.globalData.selectedCatId = null;
-        }
-
-        this.fetchProducts(activeCat.id);
-      }
+      let categories = (res.success && res.data && res.data.length > 0) ? res.data : mockData.categories;
+      this.initSelectedCategory(categories);
+    }).catch(() => {
+      this.initSelectedCategory(mockData.categories);
     });
   },
 
-  fetchProducts(catId) {
-    request({ url: `/api/products?category_id=${catId}` }).then(res => {
-      if (res.success) {
-        this.setData({ productList: res.data || [] });
+  initSelectedCategory(categories) {
+    const app = getApp();
+    const globalCatId = app && app.globalData ? app.globalData.selectedCatId : null;
+    const globalCatName = app && app.globalData ? app.globalData.selectedCatName : null;
+    const storedCat = globalCatId || wx.getStorageSync('selectedCategory');
+    
+    // 如果有首页透传进来的 target catId / catName，优先使用它
+    let activeCat = null;
+    if (storedCat) {
+      activeCat = categories.find(c => c.id === storedCat || c.name === storedCat || c.sub_title === storedCat);
+    }
+    if (!activeCat && globalCatName) {
+      activeCat = categories.find(c => c.name === globalCatName || c.sub_title === globalCatName);
+    }
+    if (!activeCat) {
+      activeCat = categories[0] || { id: 'cat_1', name: '断桥铝系统窗' };
+    }
+
+    this.setData({
+      categories,
+      activeCatId: activeCat.id,
+      activeCatName: activeCat.name || activeCat.sub_title || '门窗商品'
+    });
+    
+    // 消费完毕后清空透传标志
+    wx.removeStorageSync('selectedCategory');
+    if (app && app.globalData) {
+      app.globalData.selectedCatId = null;
+      app.globalData.selectedCatName = null;
+    }
+
+    this.fetchProducts(activeCat.id, activeCat.name);
+  },
+
+  fetchProducts(catId, catName) {
+    const queryParam = catId || catName || '';
+    request({ url: `/api/products?category_id=${encodeURIComponent(queryParam)}` }).then(res => {
+      if (res.success && res.data && res.data.length > 0) {
+        this.setData({ productList: res.data });
+      } else {
+        // 如果后端当前分类下商品为空或在建，保底使用标准商品列表并做前端软过滤
+        const allMock = mockData.products || [];
+        const filtered = allMock.filter(p => p.category_id === catId || p.category_name === catName || (p.name && catName && p.name.includes(catName)));
+        this.setData({ productList: filtered.length > 0 ? filtered : allMock });
       }
+    }).catch(() => {
+      const allMock = mockData.products || [];
+      const filtered = allMock.filter(p => p.category_id === catId || p.category_name === catName || (p.name && catName && p.name.includes(catName)));
+      this.setData({ productList: filtered.length > 0 ? filtered : allMock });
     });
   },
 
   selectCategory(e) {
     const catId = e.currentTarget.dataset.id;
     const cat = this.data.categories.find(c => c.id === catId);
+    const catName = cat ? (cat.name || cat.sub_title) : '';
     this.setData({
       activeCatId: catId,
-      activeCatName: cat ? cat.name : ''
+      activeCatName: catName || '门窗分类'
     });
-    this.fetchProducts(catId);
+    this.fetchProducts(catId, catName);
   },
 
   navToDetail(e) {

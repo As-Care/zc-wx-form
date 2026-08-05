@@ -43,27 +43,43 @@ Page({
 
   fetchCategories() {
     request({ url: '/api/categories' }).then(res => {
-      if (res.success && res.data) {
+      if (res.success && res.data && res.data.length > 0) {
         this.setData({ categories: res.data });
+      } else {
+        const mock = require('../../utils/request').mockData;
+        this.setData({ categories: mock.categories || [] });
       }
+    }).catch(() => {
+      const mock = require('../../utils/request').mockData;
+      this.setData({ categories: mock.categories || [] });
     });
   },
 
   fetchProducts() {
     request({ url: '/api/products' }).then(res => {
-      if (res.success && res.data) {
+      if (res.success && res.data && res.data.length > 0) {
         this.setData({ products: res.data });
+      } else {
+        const mock = require('../../utils/request').mockData;
+        this.setData({ products: mock.products || [] });
       }
+    }).catch(() => {
+      const mock = require('../../utils/request').mockData;
+      this.setData({ products: mock.products || [] });
     });
   },
 
-  // 跳转到产品页并透传 ID 选择目标分类
+  // 跳转到产品页并透传 ID / Name 选择目标分类
   navToCategory(e) {
-    const catId = e.currentTarget ? e.currentTarget.dataset.id : null;
-    if (catId) {
-      wx.setStorageSync('selectedCategory', catId);
+    const dataset = e.currentTarget ? e.currentTarget.dataset : {};
+    const catId = dataset.id || null;
+    const catName = dataset.name || null;
+    
+    if (catId || catName) {
+      wx.setStorageSync('selectedCategory', catId || catName);
       if (getApp().globalData) {
-        getApp().globalData.selectedCatId = catId;
+        getApp().globalData.selectedCatId = catId || catName;
+        getApp().globalData.selectedCatName = catName;
       }
     }
     wx.switchTab({

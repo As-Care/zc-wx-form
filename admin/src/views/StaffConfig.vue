@@ -67,11 +67,34 @@
           <a-input v-model="receiverForm.phone" placeholder="请输入接单手机号" />
         </a-form-item>
 
-        <!-- 高奢品质二维码图片上传区域 (直存 Cloudflare R2) -->
-        <a-form-item label="微信二维码图片 (直存 Cloudflare R2)">
+        <!-- 微信二维码图片上传区域 -->
+        <a-form-item label="微信二维码图片">
           <div class="luxury-upload-card">
             <a-spin :loading="uploading" tip="正在上传中">
+              <div v-if="receiverForm.qr_code_url" class="cover-preview-box">
+                <img :src="receiverForm.qr_code_url" class="cover-img" />
+                <div class="cover-hover-mask">
+                  <a-upload
+                    action="https://zc-api.carelife.top/api/upload"
+                    :show-file-list="false"
+                    @before-upload="onBeforeUpload"
+                    @success="onQrUploadSuccess"
+                    @error="onQrUploadError"
+                    style="display: inline-block;"
+                  >
+                    <template #upload-button>
+                      <span class="mask-icon" title="更换二维码">
+                        <icon-camera />
+                      </span>
+                    </template>
+                  </a-upload>
+                  <span class="mask-icon mask-icon-delete ml-2" title="删除二维码" @click.stop="receiverForm.qr_code_url = ''">
+                    <icon-delete />
+                  </span>
+                </div>
+              </div>
               <a-upload
+                v-else
                 action="https://zc-api.carelife.top/api/upload"
                 :show-file-list="false"
                 @before-upload="onBeforeUpload"
@@ -79,14 +102,7 @@
                 @error="onQrUploadError"
               >
                 <template #upload-button>
-                  <div v-if="receiverForm.qr_code_url" class="cover-preview-box">
-                    <img :src="receiverForm.qr_code_url" class="cover-img" />
-                    <div class="cover-hover-mask">
-                      <icon-camera style="font-size: 24px; color: #ffffff;" />
-                      <span style="font-size: 12px; color: #ffffff; margin-top: 4px;">点击更换二维码</span>
-                    </div>
-                  </div>
-                  <div v-else class="upload-dropzone">
+                  <div class="upload-dropzone">
                     <div class="upload-icon-circle">
                       <icon-plus style="font-size: 22px; color: #C5A880;" />
                     </div>
@@ -96,16 +112,6 @@
                 </template>
               </a-upload>
             </a-spin>
-            <a-button
-              v-if="receiverForm.qr_code_url"
-              type="text"
-              status="danger"
-              size="small"
-              style="margin-top: 6px;"
-              @click="receiverForm.qr_code_url = ''"
-            >
-              移除二维码
-            </a-button>
           </div>
         </a-form-item>
       </a-form>
@@ -175,7 +181,7 @@ const onQrUploadSuccess = (fileItem) => {
 
 const onQrUploadError = () => {
   uploading.value = false;
-  Message.error('二维码图片上传至 Cloudflare R2 失败！');
+  Message.error('二维码图片上传失败！');
 };
 
 const handleSaveReceiver = async () => {
@@ -331,10 +337,10 @@ body[arco-theme='dark'] .upload-title {
 .cover-hover-mask {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(2px);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   opacity: 0;
@@ -344,4 +350,29 @@ body[arco-theme='dark'] .upload-title {
 .cover-preview-box:hover .cover-hover-mask {
   opacity: 1;
 }
+
+.mask-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mask-icon:hover {
+  background: rgba(255, 255, 255, 0.45);
+  transform: scale(1.1);
+}
+
+.mask-icon-delete:hover {
+  background: #f53f3f;
+  color: #ffffff;
+}
+.ml-2 { margin-left: 8px; }
 </style>

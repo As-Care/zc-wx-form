@@ -91,13 +91,36 @@
 
         <a-form-item
           field="cover_image"
-          label="商品封面主图 (直存 Cloudflare R2 对象存储)"
+          label="商品封面主图"
           required
           :rules="[{ required: true, message: '请上传商品封面主图' }]"
         >
           <div class="luxury-upload-card">
             <a-spin :loading="uploading" tip="正在上传中">
+              <div v-if="form.cover_image" class="cover-preview-box">
+                <img :src="form.cover_image" class="cover-img" />
+                <div class="cover-hover-mask">
+                  <a-upload
+                    action="https://zc-api.carelife.top/api/upload"
+                    :show-file-list="false"
+                    @before-upload="onBeforeUpload"
+                    @success="onCoverUploadSuccess"
+                    @error="onCoverUploadError"
+                    style="display: inline-block;"
+                  >
+                    <template #upload-button>
+                      <span class="mask-icon" title="更换主图">
+                        <icon-camera />
+                      </span>
+                    </template>
+                  </a-upload>
+                  <span class="mask-icon mask-icon-delete ml-2" title="删除主图" @click.stop="form.cover_image = ''">
+                    <icon-delete />
+                  </span>
+                </div>
+              </div>
               <a-upload
+                v-else
                 action="https://zc-api.carelife.top/api/upload"
                 :show-file-list="false"
                 @before-upload="onBeforeUpload"
@@ -105,33 +128,16 @@
                 @error="onCoverUploadError"
               >
                 <template #upload-button>
-                  <div v-if="form.cover_image" class="cover-preview-box">
-                    <img :src="form.cover_image" class="cover-img" />
-                    <div class="cover-hover-mask">
-                      <icon-camera style="font-size: 24px; color: #ffffff;" />
-                      <span style="font-size: 12px; color: #ffffff; margin-top: 4px;">点击更换主图</span>
-                    </div>
-                  </div>
-                  <div v-else class="upload-dropzone">
+                  <div class="upload-dropzone">
                     <div class="upload-icon-circle">
                       <icon-plus style="font-size: 22px; color: #C5A880;" />
                     </div>
-                    <span class="upload-title">点击上传至 R2 存储桶</span>
+                    <span class="upload-title">点击上传图片</span>
                     <span class="upload-sub">支持 PNG / JPG / WEBP 格式</span>
                   </div>
                 </template>
               </a-upload>
             </a-spin>
-            <a-button
-              v-if="form.cover_image"
-              type="text"
-              status="danger"
-              size="small"
-              style="margin-top: 6px;"
-              @click="form.cover_image = ''"
-            >
-              移除当前图片
-            </a-button>
           </div>
         </a-form-item>
 
@@ -380,7 +386,7 @@ const onCoverUploadSuccess = (fileItem) => {
 
 const onCoverUploadError = () => {
   uploading.value = false;
-  Message.error('图片上传至 Cloudflare R2 失败，请重试！');
+  Message.error('图片上传失败，请重试！');
 };
 
 const handleSaveProduct = async () => {
@@ -533,10 +539,10 @@ body[arco-theme='dark'] .upload-title {
 .cover-hover-mask {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(2px);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   opacity: 0;
@@ -546,4 +552,29 @@ body[arco-theme='dark'] .upload-title {
 .cover-preview-box:hover .cover-hover-mask {
   opacity: 1;
 }
+
+.mask-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mask-icon:hover {
+  background: rgba(255, 255, 255, 0.45);
+  transform: scale(1.1);
+}
+
+.mask-icon-delete:hover {
+  background: #f53f3f;
+  color: #ffffff;
+}
+.ml-2 { margin-left: 8px; }
 </style>

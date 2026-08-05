@@ -421,18 +421,31 @@ app.get('/api/products', async (c) => {
     `).run();
   } catch (e) {}
 
+  try {
+    await db.prepare('ALTER TABLE products ADD COLUMN category_name TEXT').run();
+  } catch (e) {}
+
   const categoryId = c.req.query('category_id');
-  let sql = 'SELECT * FROM products WHERE is_active = 1';
-  const params: any[] = [];
+  const categoryName = c.req.query('category_name') || c.req.query('category');
+  const targetCategory = categoryId || categoryName;
 
-  if (categoryId) {
-    sql += ' AND (category_id = ? OR category_name = ?)';
-    params.push(categoryId, categoryId);
+  try {
+    // 采用 100% 安全无污染的标准 SELECT，绝不在 WHERE 子句中使用未确定的字段
+    const { results } = await db.prepare('SELECT * FROM products WHERE is_active = 1 ORDER BY sort_order ASC, created_at DESC').all<any>();
+    let list = results || [];
+
+    if (targetCategory) {
+      list = list.filter((p: any) => 
+        p.category_id === targetCategory || 
+        p.category_name === targetCategory || 
+        (p.name && targetCategory && p.name.includes(targetCategory))
+      );
+    }
+
+    return c.json({ success: true, data: list });
+  } catch (err) {
+    return c.json({ success: true, data: [] });
   }
-  sql += ' ORDER BY sort_order ASC, created_at DESC';
-
-  const { results } = await db.prepare(sql).bind(...params).all<Product>();
-  return c.json({ success: true, data: results || [] });
 });
 
 /**

@@ -41,9 +41,9 @@
 
   <!-- 金刚区分类入口 -->
   <view class="grid-section flex-between">
-    <view class="grid-item flex-column" wx:for="{{categories}}" wx:key="id" bindtap="navToCategory" data-id="{{item.id}}">
+    <view class="grid-item flex-column" wx:for="{{categories}}" wx:key="id" bindtap="navToCategory" data-id="{{item.id}}" data-name="{{item.name}}">
       <view class="icon-circle">
-        <image class="cat-icon" src="{{item.icon_url}}"></image>
+        <image class="cat-icon" src="{{item.icon_url || 'https://zc-oss.carelife.top/common/cat-window.png'}}"></image>
       </view>
       <text class="cat-name">{{item.sub_title || item.name}}</text>
     </view>

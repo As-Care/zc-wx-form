@@ -71,11 +71,34 @@
           <a-input v-model="form.sub_title" maxlength="5" show-word-limit placeholder="最多5字，适合首页导航显示" />
         </a-form-item>
 
-        <!-- 分类图标上传至 Cloudflare R2 对象存储桶 -->
-        <a-form-item label="首页导航区分类图标 (存储于 Cloudflare R2)">
+        <!-- 首页导航区分类图标 -->
+        <a-form-item label="首页导航区分类图标">
           <div class="luxury-upload-card">
             <a-spin :loading="uploading" tip="正在上传中">
+              <div v-if="form.icon_url" class="icon-preview-box">
+                <img :src="form.icon_url" class="icon-img" />
+                <div class="icon-hover-mask">
+                  <a-upload
+                    action="https://zc-api.carelife.top/api/upload"
+                    :show-file-list="false"
+                    @before-upload="onBeforeUpload"
+                    @success="onIconUploadSuccess"
+                    @error="onIconUploadError"
+                    style="display: inline-block;"
+                  >
+                    <template #upload-button>
+                      <span class="mask-icon" title="更换图片">
+                        <icon-camera />
+                      </span>
+                    </template>
+                  </a-upload>
+                  <span class="mask-icon mask-icon-delete ml-2" title="删除图片" @click.stop="form.icon_url = ''">
+                    <icon-delete />
+                  </span>
+                </div>
+              </div>
               <a-upload
+                v-else
                 action="https://zc-api.carelife.top/api/upload"
                 :show-file-list="false"
                 @before-upload="onBeforeUpload"
@@ -83,10 +106,7 @@
                 @error="onIconUploadError"
               >
                 <template #upload-button>
-                  <div v-if="form.icon_url" class="icon-preview-box">
-                    <img :src="form.icon_url" class="icon-img" />
-                  </div>
-                  <div v-else class="upload-dropzone">
+                  <div class="upload-dropzone">
                     <icon-plus style="font-size: 20px; color: #C5A880;" />
                     <span class="upload-title">上传图片</span>
                   </div>
@@ -253,6 +273,7 @@ onMounted(() => {
   height: 90px;
   border-radius: 10px;
   overflow: hidden;
+  position: relative;
   border: 1.5px solid #C5A880;
 }
 
@@ -261,4 +282,45 @@ onMounted(() => {
   height: 100%;
   object-fit: cover;
 }
+
+.icon-hover-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  backdrop-filter: blur(2px);
+}
+
+.icon-preview-box:hover .icon-hover-mask {
+  opacity: 1;
+}
+
+.mask-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mask-icon:hover {
+  background: rgba(255, 255, 255, 0.45);
+  transform: scale(1.1);
+}
+
+.mask-icon-delete:hover {
+  background: #f53f3f;
+  color: #ffffff;
+}
+.ml-2 { margin-left: 8px; }
 </style>
