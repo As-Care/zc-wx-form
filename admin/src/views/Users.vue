@@ -2,11 +2,45 @@
   <div class="users-view">
     <div class="header-bar flex-between mb-4">
       <h2 class="view-title">小程序注册客户列表</h2>
-      <a-button class="btn-champagne-primary" @click="fetchUsers">
-        <template #icon><icon-refresh /></template>
-        刷新客户列表
-      </a-button>
     </div>
+
+    <!-- 搜索与多条件筛选面板 (学习商品方案管理样式) -->
+    <a-card class="search-panel mb-4">
+      <a-form :model="searchForm" layout="inline">
+        <a-form-item label="客户昵称/姓名">
+          <a-input
+            v-model="searchForm.nickname"
+            placeholder="输入姓名或昵称模糊搜索"
+            allow-clear
+            style="width: 240px;"
+            @keyup.enter="handleSearch"
+          />
+        </a-form-item>
+
+        <a-form-item label="联系电话">
+          <a-input
+            v-model="searchForm.phone"
+            placeholder="输入手机号模糊搜索"
+            allow-clear
+            style="width: 240px;"
+            @keyup.enter="handleSearch"
+          />
+        </a-form-item>
+
+        <a-form-item>
+          <a-space>
+            <a-button type="primary" @click="handleSearch">
+              <template #icon><icon-search /></template>
+              查询
+            </a-button>
+            <a-button @click="resetSearch">
+              <template #icon><icon-refresh /></template>
+              重置
+            </a-button>
+          </a-space>
+        </a-form-item>
+      </a-form>
+    </a-card>
 
     <!-- 客户数据表格 (仅展示客户，过滤管理员) -->
     <a-table :data="customerList" :loading="tableLoading" :pagination="{ pageSize: 10 }" border row-key="id">
@@ -205,6 +239,11 @@ const userAddresses = ref([]);
 const addressLoading = ref(false);
 const uploading = ref(false);
 
+const searchForm = ref({
+  nickname: '',
+  phone: ''
+});
+
 const editForm = ref({
   id: '',
   nickname: '',
@@ -220,9 +259,20 @@ const customerList = computed(() => {
 const fetchUsers = async () => {
   tableLoading.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/users`);
+    const params = new URLSearchParams();
+    if (searchForm.value.nickname && searchForm.value.nickname.trim()) {
+      params.append('nickname', searchForm.value.nickname.trim());
+    }
+    if (searchForm.value.phone && searchForm.value.phone.trim()) {
+      params.append('phone', searchForm.value.phone.trim());
+    }
+
+    const queryStr = params.toString();
+    const url = `${API_BASE}/api/users${queryStr ? '?' + queryStr : ''}`;
+
+    const res = await fetch(url);
     const data = await res.json();
-    if (data.success && data.data && data.data.length > 0) {
+    if (data.success && Array.isArray(data.data)) {
       users.value = data.data;
     } else {
       users.value = DEFAULT_USERS;
@@ -232,6 +282,18 @@ const fetchUsers = async () => {
   } finally {
     tableLoading.value = false;
   }
+};
+
+const handleSearch = () => {
+  fetchUsers();
+};
+
+const resetSearch = () => {
+  searchForm.value = {
+    nickname: '',
+    phone: ''
+  };
+  fetchUsers();
 };
 
 const viewCustomerDetails = async (record) => {

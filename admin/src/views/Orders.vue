@@ -2,10 +2,6 @@
   <div class="orders-view">
     <div class="header-bar flex-between mb-4">
       <h2 class="view-title">订单管理 (状态扭转与特殊费用核算)</h2>
-      <a-button type="primary" @click="fetchOrders">
-        <template #icon><icon-refresh /></template>
-        刷新订单数据
-      </a-button>
     </div>
 
     <!-- 高级搜索筛选卡片 -->

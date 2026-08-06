@@ -58,7 +58,7 @@
           />
           <div class="slider border-none"></div>
         </label>
-        <span class="username">展晨总管理 (Admin)</span>
+        <span class="username">{{ userInfo.nickname || userInfo.username || '展晨总管理' }} ({{ userInfo.role_name || 'Admin' }})</span>
         <a-divider direction="vertical" />
         <a-popconfirm
           content="确定要退出登录吗？"
@@ -88,33 +88,11 @@
             class="sidebar-menu"
             @menu-item-click="handleMenuClick"
           >
-            <a-menu-item key="Overview">
-              <template #icon><IconDashboard /></template>
-              大盘数据
-            </a-menu-item>
-            <a-menu-item key="Categories">
-              <template #icon><IconFolder /></template>
-              门窗分类
-            </a-menu-item>
-            <a-menu-item key="Products">
-              <template #icon><IconApps /></template>
-              门窗商品
-            </a-menu-item>
-            <a-menu-item key="Orders">
-              <template #icon><IconFile /></template>
-              订单管理
-            </a-menu-item>
-            <a-menu-item key="StaffConfig">
-              <template #icon><IconPhone /></template>
-              接单员配置
-            </a-menu-item>
-            <a-menu-item key="Users">
-              <template #icon><IconUserGroup /></template>
-              客户管理
-            </a-menu-item>
-            <a-menu-item key="Settings">
-              <template #icon><IconSettings /></template>
-              全局设置
+            <a-menu-item v-for="menu in visibleMenuList" :key="menu.key">
+              <template #icon>
+                <component :is="menu.icon" />
+              </template>
+              {{ menu.name }}
             </a-menu-item>
           </a-menu>
         </a-layout-sider>
@@ -148,6 +126,30 @@ const router = useRouter();
 const isDark = ref(localStorage.getItem("theme") === "dark");
 const loading = computed(() => isPageLoading.value);
 
+const allowedMenus = ref([]);
+const userInfo = ref({});
+
+const ALL_MENU_CONFIG = [
+  { key: 'Overview', name: '大盘数据', icon: 'IconDashboard' },
+  { key: 'Categories', name: '门窗分类', icon: 'IconFolder' },
+  { key: 'Products', name: '门窗商品', icon: 'IconApps' },
+  { key: 'Rooms', name: '门窗空间', icon: 'IconHome' },
+  { key: 'Orders', name: '订单管理', icon: 'IconFile' },
+  { key: 'StaffConfig', name: '接单员配置', icon: 'IconPhone' },
+  { key: 'Users', name: '客户管理', icon: 'IconUserGroup' },
+  { key: 'Admins', name: '管理员管理', icon: 'IconUser' },
+  { key: 'Roles', name: '角色与权限', icon: 'IconSafe' },
+  { key: 'Menus', name: '菜单管理', icon: 'IconMenu' },
+  { key: 'Settings', name: '全局设置', icon: 'IconSettings' }
+];
+
+const visibleMenuList = computed(() => {
+  if (!allowedMenus.value || allowedMenus.value.length === 0) {
+    return ALL_MENU_CONFIG;
+  }
+  return ALL_MENU_CONFIG.filter(m => allowedMenus.value.includes(m.key));
+});
+
 const activeKey = computed(() => {
   return route.name || "Overview";
 });
@@ -158,6 +160,8 @@ const handleMenuClick = (key) => {
 
 const handleLogout = () => {
   localStorage.removeItem("admin_token");
+  localStorage.removeItem("admin_user");
+  localStorage.removeItem("admin_menus");
   Message.success("成功退出登录！");
   router.push("/login");
 };
@@ -173,6 +177,17 @@ const toggleTheme = () => {
 };
 
 onMounted(() => {
+  try {
+    const savedMenus = localStorage.getItem('admin_menus');
+    if (savedMenus) {
+      allowedMenus.value = JSON.parse(savedMenus);
+    }
+    const savedUser = localStorage.getItem('admin_user');
+    if (savedUser) {
+      userInfo.value = JSON.parse(savedUser);
+    }
+  } catch (e) {}
+
   if (isDark.value) {
     document.body.setAttribute("arco-theme", "dark");
   } else {

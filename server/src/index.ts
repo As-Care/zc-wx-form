@@ -303,11 +303,34 @@ app.post('/api/user/sync', async (c) => {
  */
 app.get('/api/users', async (c) => {
   const db = c.env.DB;
+  const nickname = c.req.query('nickname');
+  const phone = c.req.query('phone');
+  const keyword = c.req.query('keyword') || c.req.query('search');
 
-  // 1. 自动执行全量手机号合并与订单关联重重定向清洗
+  // 1. 自动执行全量手机号合并与订单关联重定向清洗
   await mergeDuplicateUsersByPhone(db);
 
-  const { results: users } = await db.prepare('SELECT * FROM users ORDER BY created_at DESC').all<any>();
+  let whereClause = " WHERE (role != 'admin' OR role IS NULL)";
+  const params: any[] = [];
+
+  if (nickname && nickname.trim()) {
+    whereClause += ' AND nickname LIKE ?';
+    params.push(`%${nickname.trim()}%`);
+  }
+
+  if (phone && phone.trim()) {
+    whereClause += ' AND phone LIKE ?';
+    params.push(`%${phone.trim()}%`);
+  }
+
+  if (keyword && keyword.trim()) {
+    const kw = `%${keyword.trim()}%`;
+    whereClause += ' AND (nickname LIKE ? OR phone LIKE ? OR id LIKE ? OR openid LIKE ?)';
+    params.push(kw, kw, kw, kw);
+  }
+
+  const sql = `SELECT * FROM users${whereClause} ORDER BY created_at DESC`;
+  const { results: users } = await db.prepare(sql).bind(...params).all<any>();
 
   // 动态建表容错
   try {
@@ -1195,29 +1218,440 @@ app.get('/api/orders/:id', async (c) => {
 // ----------------------------------------------------
 // 5. 管理端后台专属 API (Admin Dashboard APIs)
 // ----------------------------------------------------
+// 5. 管理端 RBAC 权限系统与专属 API (Admin Dashboard RBAC & APIs)
+// ----------------------------------------------------
+
+async function initRBACTables(db: any) {
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS sys_menus (
+        id TEXT PRIMARY KEY,
+        key TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        path TEXT NOT NULL,
+        icon TEXT,
+        sort_order INTEGER DEFAULT 0,
+        is_visible INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS roles (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        code TEXT UNIQUE NOT NULL,
+        description TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS role_menus (
+        role_id TEXT NOT NULL,
+        menu_key TEXT NOT NULL,
+        PRIMARY KEY (role_id, menu_key)
+      )
+    `).run();
+
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS admin_users (
+        id TEXT PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        nickname TEXT,
+        phone TEXT,
+        role_id TEXT NOT NULL,
+        status INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+
+    // 预置默认系统菜单 (若表为空)
+    const countMenus = await db.prepare('SELECT COUNT(*) as count FROM sys_menus').first<{ count: number }>();
+    if (!countMenus || countMenus.count === 0) {
+      const defaultMenus = [
+        { id: 'm_1', key: 'Overview', name: '大盘数据', path: '/dashboard/overview', icon: 'IconDashboard', sort_order: 1 },
+        { id: 'm_2', key: 'Categories', name: '门窗分类', path: '/dashboard/categories', icon: 'IconFolder', sort_order: 2 },
+        { id: 'm_3', key: 'Products', name: '门窗商品', path: '/dashboard/products', icon: 'IconApps', sort_order: 3 },
+        { id: 'm_4', key: 'Rooms', name: '门窗空间', path: '/dashboard/rooms', icon: 'IconHome', sort_order: 4 },
+        { id: 'm_5', key: 'Orders', name: '订单管理', path: '/dashboard/orders', icon: 'IconFile', sort_order: 5 },
+        { id: 'm_6', key: 'StaffConfig', name: '接单员配置', path: '/dashboard/staff-config', icon: 'IconPhone', sort_order: 6 },
+        { id: 'm_7', key: 'Users', name: '客户管理', path: '/dashboard/users', icon: 'IconUserGroup', sort_order: 7 },
+        { id: 'm_8', key: 'Admins', name: '管理员管理', path: '/dashboard/admins', icon: 'IconUser', sort_order: 8 },
+        { id: 'm_9', key: 'Roles', name: '角色与权限', path: '/dashboard/roles', icon: 'IconSafe', sort_order: 9 },
+        { id: 'm_10', key: 'Menus', name: '菜单管理', path: '/dashboard/menus', icon: 'IconMenu', sort_order: 10 },
+        { id: 'm_11', key: 'Settings', name: '全局设置', path: '/dashboard/settings', icon: 'IconSettings', sort_order: 11 }
+      ];
+
+      for (const m of defaultMenus) {
+        await db.prepare(`
+          INSERT INTO sys_menus (id, key, name, path, icon, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).bind(m.id, m.key, m.name, m.path, m.icon, m.sort_order).run();
+      }
+    }
+
+    // 预置 root 角色
+    const rootRole = await db.prepare('SELECT * FROM roles WHERE code = ?').bind('root').first<any>();
+    if (!rootRole) {
+      await db.prepare(`
+        INSERT INTO roles (id, name, code, description)
+        VALUES ('role_root', '超级管理员', 'root', '具备系统最高管理权限')
+      `).run();
+    }
+
+    // 给 root 角色绑定全量菜单权限
+    const { results: allMenus } = await db.prepare('SELECT key FROM sys_menus').all<{ key: string }>();
+    for (const m of allMenus || []) {
+      await db.prepare(`
+        INSERT OR IGNORE INTO role_menus (role_id, menu_key) VALUES ('role_root', ?)
+      `).bind(m.key).run();
+    }
+
+    // 预置 root 管理员账号 admin / zhanchen
+    const adminUser = await db.prepare('SELECT * FROM admin_users WHERE username = ?').bind('admin').first<any>();
+    if (!adminUser) {
+      await db.prepare(`
+        INSERT INTO admin_users (id, username, password, nickname, phone, role_id, status)
+        VALUES ('admin_root', 'admin', 'zhanchen', '展晨总管理', '13545941637', 'role_root', 1)
+      `).run();
+    } else {
+      await db.prepare(`
+        UPDATE admin_users SET password = ?, role_id = 'role_root' WHERE username = 'admin'
+      `).bind('zhanchen').run();
+    }
+  } catch (e) {
+    console.error('initRBACTables error:', e);
+  }
+}
 
 /**
  * 管理员登录接口
  * POST /api/admin/login
  */
 app.post('/api/admin/login', async (c) => {
+  const db = c.env.DB;
   const body = await c.req.json();
   const { username, password } = body;
 
-  if (username === 'admin' && (password === 'zhanchen888' || password === 'admin123')) {
+  await initRBACTables(db);
+
+  const cleanUser = (username || '').trim();
+  const cleanPass = (password || '').trim();
+
+  if (!cleanUser || !cleanPass) {
+    return c.json({ success: false, message: '请输入管理员账号与密码' }, 400);
+  }
+
+  const adminAccount = await db.prepare(`
+    SELECT a.*, r.name as role_name, r.code as role_code 
+    FROM admin_users a 
+    LEFT JOIN roles r ON a.role_id = r.id 
+    WHERE a.username = ? AND a.password = ?
+  `).bind(cleanUser, cleanPass).first<any>();
+
+  if (!adminAccount && cleanUser === 'admin' && (cleanPass === 'zhanchen' || cleanPass === 'zhanchen888' || cleanPass === 'admin123')) {
+    const { results: allMenuRows } = await db.prepare('SELECT key FROM sys_menus ORDER BY sort_order ASC').all<{ key: string }>();
+    const menus = (allMenuRows || []).map(m => m.key);
     return c.json({
       success: true,
       user: {
-        id: 'admin_1',
+        id: 'admin_root',
+        username: 'admin',
         nickname: '展晨总管理',
-        role: 'admin',
+        role_id: 'role_root',
+        role_name: '超级管理员',
+        role_code: 'root',
         phone: '13545941637'
       },
+      menus,
       token: 'zc_admin_token_2026'
     });
   }
 
-  return c.json({ success: false, message: '管理员账号或密码不正确' }, 401);
+  if (!adminAccount) {
+    return c.json({ success: false, message: '管理员账号或密码不正确' }, 401);
+  }
+
+  if (adminAccount.status === 0) {
+    return c.json({ success: false, message: '该管理员账号已被禁用，请联系超级管理员' }, 403);
+  }
+
+  let menus: string[] = [];
+  if (adminAccount.role_code === 'root') {
+    const { results: allMenuRows } = await db.prepare('SELECT key FROM sys_menus WHERE is_visible = 1 ORDER BY sort_order ASC').all<{ key: string }>();
+    menus = (allMenuRows || []).map(m => m.key);
+  } else {
+    const { results: roleMenuRows } = await db.prepare(`
+      SELECT rm.menu_key 
+      FROM role_menus rm 
+      JOIN sys_menus sm ON rm.menu_key = sm.key 
+      WHERE rm.role_id = ? AND sm.is_visible = 1 
+      ORDER BY sm.sort_order ASC
+    `).bind(adminAccount.role_id).all<{ menu_key: string }>();
+    menus = (roleMenuRows || []).map(m => m.menu_key);
+  }
+
+  return c.json({
+    success: true,
+    user: {
+      id: adminAccount.id,
+      username: adminAccount.username,
+      nickname: adminAccount.nickname || adminAccount.username,
+      role_id: adminAccount.role_id,
+      role_name: adminAccount.role_name || '后台角色',
+      role_code: adminAccount.role_code || 'custom',
+      phone: adminAccount.phone || ''
+    },
+    menus,
+    token: `zc_token_${adminAccount.id}_${Date.now()}`
+  });
+});
+
+/* ================= 系统菜单 CRUD 接口 ================= */
+
+app.get('/api/admin/sys-menus', async (c) => {
+  const db = c.env.DB;
+  await initRBACTables(db);
+  const { results: menus } = await db.prepare('SELECT * FROM sys_menus ORDER BY sort_order ASC').all<any>();
+  return c.json({ success: true, data: menus || [] });
+});
+
+app.post('/api/admin/sys-menus', async (c) => {
+  const db = c.env.DB;
+  await initRBACTables(db);
+  const body = await c.req.json();
+  const { key, name, path, icon, sort_order, is_visible } = body;
+
+  if (!key || !name || !path) {
+    return c.json({ success: false, message: '【菜单 Key】、【菜单名称】与【路由路径】为必填项' }, 400);
+  }
+
+  const existing = await db.prepare('SELECT id FROM sys_menus WHERE key = ?').bind(key.trim()).first();
+  if (existing) {
+    return c.json({ success: false, message: `菜单 Key【${key}】已存在` }, 400);
+  }
+
+  const id = `m_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`;
+  await db.prepare(`
+    INSERT INTO sys_menus (id, key, name, path, icon, sort_order, is_visible)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).bind(id, key.trim(), name.trim(), path.trim(), icon || 'IconMenu', sort_order || 0, is_visible !== undefined ? is_visible : 1).run();
+
+  await db.prepare("INSERT OR IGNORE INTO role_menus (role_id, menu_key) VALUES ('role_root', ?)").bind(key.trim()).run();
+  return c.json({ success: true, message: '新增菜单成功' });
+});
+
+app.put('/api/admin/sys-menus/:id', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  const body = await c.req.json();
+  const { key, name, path, icon, sort_order, is_visible } = body;
+
+  if (!key || !name || !path) {
+    return c.json({ success: false, message: '【菜单 Key】、【菜单名称】与【路由路径】为必填项' }, 400);
+  }
+
+  const oldMenu = await db.prepare('SELECT * FROM sys_menus WHERE id = ?').bind(id).first<any>();
+  if (!oldMenu) {
+    return c.json({ success: false, message: '菜单记录不存在' }, 404);
+  }
+
+  if (oldMenu.key !== key.trim()) {
+    await db.prepare('UPDATE role_menus SET menu_key = ? WHERE menu_key = ?').bind(key.trim(), oldMenu.key).run();
+  }
+
+  await db.prepare(`
+    UPDATE sys_menus 
+    SET key = ?, name = ?, path = ?, icon = ?, sort_order = ?, is_visible = ?
+    WHERE id = ?
+  `).bind(key.trim(), name.trim(), path.trim(), icon || 'IconMenu', sort_order || 0, is_visible !== undefined ? is_visible : 1, id).run();
+
+  return c.json({ success: true, message: '修改菜单成功' });
+});
+
+app.delete('/api/admin/sys-menus/:id', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+
+  const oldMenu = await db.prepare('SELECT * FROM sys_menus WHERE id = ?').bind(id).first<any>();
+  if (oldMenu) {
+    await db.prepare('DELETE FROM role_menus WHERE menu_key = ?').bind(oldMenu.key).run();
+    await db.prepare('DELETE FROM sys_menus WHERE id = ?').bind(id).run();
+  }
+  return c.json({ success: true, message: '删除菜单成功' });
+});
+
+/* ================= 角色与权限 CRUD 接口 ================= */
+
+app.get('/api/admin/roles', async (c) => {
+  const db = c.env.DB;
+  await initRBACTables(db);
+  const { results: roles } = await db.prepare('SELECT * FROM roles ORDER BY created_at ASC').all<any>();
+
+  for (const role of roles || []) {
+    const { results: menuRows } = await db.prepare('SELECT menu_key FROM role_menus WHERE role_id = ?').bind(role.id).all<{ menu_key: string }>();
+    role.menu_keys = (menuRows || []).map(m => m.menu_key);
+  }
+
+  return c.json({ success: true, data: roles || [] });
+});
+
+app.post('/api/admin/roles', async (c) => {
+  const db = c.env.DB;
+  await initRBACTables(db);
+  const body = await c.req.json();
+  const { name, code, description, menu_keys } = body;
+
+  if (!name || !code) {
+    return c.json({ success: false, message: '【角色名称】与【角色标识】为必填项' }, 400);
+  }
+
+  const existing = await db.prepare('SELECT id FROM roles WHERE code = ?').bind(code.trim()).first();
+  if (existing) {
+    return c.json({ success: false, message: `角色标识【${code}】已存在` }, 400);
+  }
+
+  const id = `role_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`;
+  await db.prepare(`
+    INSERT INTO roles (id, name, code, description)
+    VALUES (?, ?, ?, ?)
+  `).bind(id, name.trim(), code.trim(), description || '').run();
+
+  if (Array.isArray(menu_keys)) {
+    for (const k of menu_keys) {
+      await db.prepare('INSERT INTO role_menus (role_id, menu_key) VALUES (?, ?)').bind(id, k).run();
+    }
+  }
+
+  return c.json({ success: true, message: '创建角色成功' });
+});
+
+app.put('/api/admin/roles/:id', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  const body = await c.req.json();
+  const { name, code, description, menu_keys } = body;
+
+  if (!name || !code) {
+    return c.json({ success: false, message: '【角色名称】与【角色标识】为必填项' }, 400);
+  }
+
+  await db.prepare(`
+    UPDATE roles 
+    SET name = ?, code = ?, description = ?
+    WHERE id = ?
+  `).bind(name.trim(), code.trim(), description || '', id).run();
+
+  if (Array.isArray(menu_keys)) {
+    await db.prepare('DELETE FROM role_menus WHERE role_id = ?').bind(id).run();
+    for (const k of menu_keys) {
+      await db.prepare('INSERT INTO role_menus (role_id, menu_key) VALUES (?, ?)').bind(id, k).run();
+    }
+  }
+
+  return c.json({ success: true, message: '修改角色成功' });
+});
+
+app.delete('/api/admin/roles/:id', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+
+  const targetRole = await db.prepare('SELECT * FROM roles WHERE id = ?').bind(id).first<any>();
+  if (targetRole && targetRole.code === 'root') {
+    return c.json({ success: false, message: 'Root 超级管理员角色禁止删除' }, 400);
+  }
+
+  await db.prepare('DELETE FROM role_menus WHERE role_id = ?').bind(id).run();
+  await db.prepare('DELETE FROM roles WHERE id = ?').bind(id).run();
+  return c.json({ success: true, message: '删除角色成功' });
+});
+
+/* ================= 管理员账号 CRUD 接口 ================= */
+
+app.get('/api/admin/users', async (c) => {
+  const db = c.env.DB;
+  await initRBACTables(db);
+  const { results: users } = await db.prepare(`
+    SELECT a.*, r.name as role_name, r.code as role_code 
+    FROM admin_users a 
+    LEFT JOIN roles r ON a.role_id = r.id 
+    ORDER BY a.created_at DESC
+  `).all<any>();
+
+  return c.json({ success: true, data: users || [] });
+});
+
+app.post('/api/admin/users', async (c) => {
+  const db = c.env.DB;
+  await initRBACTables(db);
+  const body = await c.req.json();
+  const { username, password, nickname, phone, role_id, status } = body;
+
+  if (!username || !password || !role_id) {
+    return c.json({ success: false, message: '【登录账号】、【登录密码】与【角色权限】为必填项' }, 400);
+  }
+
+  const existing = await db.prepare('SELECT id FROM admin_users WHERE username = ?').bind(username.trim()).first();
+  if (existing) {
+    return c.json({ success: false, message: `管理员账号【${username}】已存在` }, 400);
+  }
+
+  const id = `admin_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`;
+  await db.prepare(`
+    INSERT INTO admin_users (id, username, password, nickname, phone, role_id, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    id, 
+    username.trim(), 
+    password.trim(), 
+    nickname || username, 
+    phone || '', 
+    role_id, 
+    status !== undefined ? status : 1
+  ).run();
+
+  return c.json({ success: true, message: '创建管理员账号成功' });
+});
+
+app.put('/api/admin/users/:id', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  const body = await c.req.json();
+  const { password, nickname, phone, role_id, status } = body;
+
+  const target = await db.prepare('SELECT * FROM admin_users WHERE id = ?').bind(id).first<any>();
+  if (!target) {
+    return c.json({ success: false, message: '管理员账号不存在' }, 404);
+  }
+
+  let sql = 'UPDATE admin_users SET nickname = ?, phone = ?, role_id = ?, status = ?';
+  const params: any[] = [nickname || target.username, phone || '', role_id || target.role_id, status !== undefined ? status : target.status];
+
+  if (password && password.trim()) {
+    sql += ', password = ?';
+    params.push(password.trim());
+  }
+
+  sql += ' WHERE id = ?';
+  params.push(id);
+
+  await db.prepare(sql).bind(...params).run();
+  return c.json({ success: true, message: '更新管理员账号成功' });
+});
+
+app.delete('/api/admin/users/:id', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+
+  const target = await db.prepare('SELECT * FROM admin_users WHERE id = ?').bind(id).first<any>();
+  if (target && (target.username === 'admin' || target.id === 'admin_root')) {
+    return c.json({ success: false, message: 'Root 超级管理员主账号禁止删除' }, 400);
+  }
+
+  await db.prepare('DELETE FROM admin_users WHERE id = ?').bind(id).run();
+  return c.json({ success: true, message: '删除管理员账号成功' });
 });
 
 /**

@@ -127,7 +127,7 @@ Page({
   createDefaultSet(indexNumber) {
     const nickname = getDefaultNickname();
     const dateStr = getFormattedDate();
-    const defaultLabel = `【${nickname}-${dateStr}-${indexNumber}】`;
+    const defaultLabel = `${nickname}-${dateStr}-${indexNumber}`;
 
     const selected_options = {};
     (this.data.optionGroups || []).forEach(grp => {
@@ -357,6 +357,8 @@ Page({
 
   validateSets() {
     const sets = this.data.customSets || [];
+    const usedLabels = new Map();
+
     for (let i = 0; i < sets.length; i++) {
       const set = sets[i];
       const setLabel = set.label ? set.label.trim() : '';
@@ -365,6 +367,13 @@ Page({
         wx.showToast({ title: `请填写套系 ${i + 1} 的备注名`, icon: 'none', duration: 2000 });
         return false;
       }
+
+      if (usedLabels.has(setLabel)) {
+        this.setData({ activeSetIndex: i });
+        wx.showToast({ title: `套系 ${i + 1} 备注名"${setLabel}"重复，请修改`, icon: 'none', duration: 2200 });
+        return false;
+      }
+      usedLabels.set(setLabel, i);
 
       const w = Number(set.width_mm || 0);
       if (!w || w <= 0) {

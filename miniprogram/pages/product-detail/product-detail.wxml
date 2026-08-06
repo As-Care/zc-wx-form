@@ -45,7 +45,7 @@
     <view class="full-input-row flex-between">
       <text class="dim-label">备注名</text>
       <view class="full-input-box flex-row">
-        <input class="full-dim-input left-align" value="{{customSets[activeSetIndex].label}}" placeholder="如【客厅主窗】、【卧室侧窗】" placeholder-style="color:#64748B;" bindinput="onLabelInput" />
+        <input class="full-dim-input left-align" value="{{customSets[activeSetIndex].label}}" placeholder="如 客厅主窗、卧室侧窗" placeholder-style="color:#64748B;" bindinput="onLabelInput" />
       </view>
     </view>
     <!-- 宽度 W 长条输入框 -->

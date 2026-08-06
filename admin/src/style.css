@@ -14,6 +14,159 @@
 
   --dark: #121316;
   --offwhite: #ffffff;
+
+  /* 全局主色：高奢香槟金 (Champagne Gold Theme) */
+  --primary-1: #FAF6F0;
+  --primary-2: #F4EBE0;
+  --primary-3: #E6D6C2;
+  --primary-4: #D8C2A3;
+  --primary-5: #CEB490;
+  --primary-6: #C5A880;
+  --primary-7: #B2956C;
+  --primary-8: #9C7E55;
+  --primary-9: #80633C;
+  --primary-10: #5C4323;
+
+  --arcoblue-1: #FAF6F0;
+  --arcoblue-2: #F4EBE0;
+  --arcoblue-3: #E6D6C2;
+  --arcoblue-4: #D8C2A3;
+  --arcoblue-5: #CEB490;
+  --arcoblue-6: #C5A880;
+  --arcoblue-7: #B2956C;
+  --arcoblue-8: #9C7E55;
+  --arcoblue-9: #80633C;
+  --arcoblue-10: #5C4323;
+}
+
+/* ===================================================
+ * 全局 Arco Design 组件高奢香槟金 (#C5A880) 统一样式覆写
+ * =================================================== */
+
+/* 1. 全局主要按钮 (Primary Buttons) */
+.arco-btn-primary {
+  background-color: #C5A880 !important;
+  border-color: #C5A880 !important;
+  color: #ffffff !important;
+}
+
+.arco-btn-primary:hover,
+.arco-btn-primary:focus {
+  background-color: #b2956c !important;
+  border-color: #b2956c !important;
+  color: #ffffff !important;
+}
+
+.arco-btn-primary:active {
+  background-color: #9c7e55 !important;
+  border-color: #9c7e55 !important;
+}
+
+.arco-btn-outline.arco-btn-primary {
+  color: #C5A880 !important;
+  border-color: #C5A880 !important;
+  background-color: transparent !important;
+}
+
+.arco-btn-outline.arco-btn-primary:hover {
+  background-color: rgba(197, 168, 128, 0.1) !important;
+}
+
+.arco-btn-text.arco-btn-primary {
+  color: #C5A880 !important;
+}
+
+/* 2. 表格分页器 (Pagination) */
+.arco-pagination-item-active,
+.arco-pagination-item-active:hover,
+.arco-pagination-item-active:focus {
+  background-color: #C5A880 !important;
+  color: #ffffff !important;
+  border-color: #C5A880 !important;
+  font-weight: 700 !important;
+}
+
+.arco-pagination-item:hover {
+  color: #C5A880 !important;
+  border-color: rgba(197, 168, 128, 0.5) !important;
+}
+
+/* 3. 开关、单选、复选框 (Switch, Radio, Checkbox) */
+.arco-switch-checked {
+  background-color: #C5A880 !important;
+}
+
+.arco-checkbox-checked .arco-checkbox-icon {
+  background-color: #C5A880 !important;
+  border-color: #C5A880 !important;
+}
+
+.arco-checkbox-icon-hover:hover {
+  border-color: #C5A880 !important;
+}
+
+.arco-radio-checked .arco-radio-icon {
+  border-color: #C5A880 !important;
+}
+
+.arco-radio-checked .arco-radio-icon-inner {
+  background-color: #C5A880 !important;
+}
+
+/* 4. 输入框/下拉框/文本域焦点状态 (Input, Select, Textarea Focus) */
+.arco-input-wrapper:focus-within,
+.arco-input-wrapper-focus,
+.arco-select-view-focus,
+.arco-textarea-wrapper:focus-within,
+.arco-input-number:focus-within {
+  border-color: #C5A880 !important;
+  box-shadow: 0 0 0 2px rgba(197, 168, 128, 0.25) !important;
+}
+
+.arco-select-option-selected,
+.arco-select-option-active {
+  color: #C5A880 !important;
+  font-weight: 600;
+  background-color: rgba(197, 168, 128, 0.1) !important;
+}
+
+/* 5. 标签页 & 菜单 (Tabs & Menu) */
+.arco-tabs-nav-tab-title-active,
+.arco-tabs-nav-tab-title:hover {
+  color: #C5A880 !important;
+}
+
+.arco-tabs-nav-ink {
+  background-color: #C5A880 !important;
+}
+
+/* 6. Tag 标签 & 加载 Spinner */
+.arco-tag-checked,
+.arco-tag-primary {
+  background-color: rgba(197, 168, 128, 0.15) !important;
+  color: #C5A880 !important;
+  border-color: rgba(197, 168, 128, 0.35) !important;
+}
+
+.arco-spin-icon,
+.arco-spin-text {
+  color: #C5A880 !important;
+}
+
+/* 7. 链接 & 时间轴 & 步骤条 */
+.arco-link, 
+.arco-link:hover {
+  color: #C5A880 !important;
+}
+
+.arco-timeline-item-dot-custom,
+.arco-timeline-item-dot-header {
+  border-color: #C5A880 !important;
+}
+
+.arco-steps-item-process .arco-steps-icon {
+  background-color: #C5A880 !important;
+  color: #ffffff !important;
 }
 
 body {

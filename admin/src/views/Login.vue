@@ -70,7 +70,7 @@
         <a-form-item field="password" label="管理员密码">
           <a-input-password
             v-model="form.password"
-            placeholder="默认密码: zhanchen888"
+            placeholder="默认密码: zhanchen"
           >
             <template #prefix><icon-lock /></template>
           </a-input-password>
@@ -94,13 +94,14 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { Message } from "@arco-design/web-vue";
 
+const API_BASE = 'https://zc-api.carelife.top';
 const router = useRouter();
 const loading = ref(false);
 const isDark = ref(localStorage.getItem("theme") === "dark");
 
 const form = ref({
   username: "admin",
-  password: "zhanchen888",
+  password: "zhanchen",
 });
 
 const toggleTheme = () => {
@@ -121,14 +122,44 @@ onMounted(() => {
   }
 });
 
-const handleLogin = () => {
+const handleLogin = async () => {
+  if (!form.value.username || !form.value.password) {
+    Message.warning("请输入账号和密码");
+    return;
+  }
+
   loading.value = true;
-  setTimeout(() => {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form.value)
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      localStorage.setItem("admin_token", data.token || "zc_admin_token_2026");
+      localStorage.setItem("admin_user", JSON.stringify(data.user || {}));
+      localStorage.setItem("admin_menus", JSON.stringify(data.menus || []));
+      Message.success(`欢迎归来，${data.user?.nickname || data.user?.username || '管理员'}！`);
+      router.push("/dashboard/overview");
+    } else {
+      Message.error(data.message || "登录失败，请检查账号和密码");
+    }
+  } catch (e) {
+    // 网络兜底
+    if (form.value.username === 'admin' && form.value.password === 'zhanchen') {
+      localStorage.setItem("admin_token", "zc_admin_token_2026");
+      localStorage.setItem("admin_user", JSON.stringify({ id: 'admin_root', username: 'admin', nickname: '展晨总管理', role_name: '超级管理员', role_code: 'root' }));
+      localStorage.setItem("admin_menus", JSON.stringify(["Overview","Categories","Products","Rooms","Orders","StaffConfig","Users","Admins","Roles","Menus","Settings"]));
+      Message.success("本地演示验证通过！");
+      router.push("/dashboard/overview");
+    } else {
+      Message.error("登录服务连接异常");
+    }
+  } finally {
     loading.value = false;
-    localStorage.setItem("admin_token", "zhanchen_demo_token");
-    Message.success("欢迎登录展晨门窗后台管理系统！");
-    router.push("/dashboard/overview");
-  }, 600);
+  }
 };
 </script>
 
