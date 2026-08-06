@@ -347,8 +347,37 @@ const categories = ref([
 ]);
 
 const DEFAULT_PRODUCTS = [
-  { id: 'prod_1', category_id: 'cat_1', category_name: '断桥铝系统窗', name: '110断桥铝系统平开窗', description: '壁厚1.8mm，配LOW-E双玻中空，德国好博/施格兰五金', cover_image: 'https://zc-oss.carelife.top/common/prod-110.png', base_price_sqm: 880, min_area: 1, is_active: 1 },
-  { id: 'prod_2', category_id: 'cat_2', category_name: '极窄推拉门/平开门', name: '极窄边框推拉门 (磁吸静音)', description: '极简2.0cm极窄边框，高强度铝钛合金，静音缓冲滑轮', cover_image: 'https://zc-oss.carelife.top/common/prod-narrow-door.png', base_price_sqm: 750, min_area: 1, is_active: 1 }
+  {
+    id: 'prod_1',
+    category_id: 'cat_1',
+    category_name: '断桥铝系统窗',
+    name: '110断桥铝系统平开窗',
+    description: '壁厚1.8mm，配LOW-E双玻中空，德国好博/施格兰五金',
+    cover_image: 'https://zc-oss.carelife.top/common/prod-110.png',
+    base_price_sqm: 880,
+    min_area: 1,
+    is_active: 1,
+    options: [
+      { id: 'opt_1', group_name: '玻璃配置', option_name: '5+18A+5 标准中空钢化玻璃', price_type: 'per_sqm', price: 0, is_default: 1 },
+      { id: 'opt_2', group_name: '玻璃配置', option_name: '5+18A+5 Low-E 超白隔热玻璃', price_type: 'per_sqm', price: 80, is_default: 0 },
+      { id: 'opt_3', group_name: '五金配件品牌', option_name: '德国好博 (Hoppe) 原装执手', price_type: 'per_item', price: 150, is_default: 1 }
+    ]
+  },
+  {
+    id: 'prod_2',
+    category_id: 'cat_2',
+    category_name: '极窄推拉门/平开门',
+    name: '极窄边框推拉门 (磁吸静音)',
+    description: '极简2.0cm极窄边框，高强度铝钛合金，静音缓冲滑轮',
+    cover_image: 'https://zc-oss.carelife.top/common/prod-narrow-door.png',
+    base_price_sqm: 750,
+    min_area: 1,
+    is_active: 1,
+    options: [
+      { id: 'opt_4', group_name: '玻璃配置', option_name: '8mm 单层钢化极窄玻璃', price_type: 'per_sqm', price: 0, is_default: 1 },
+      { id: 'opt_5', group_name: '铝材表面涂层颜色', option_name: '氟碳雅致黑', price_type: 'fixed', price: 0, is_default: 1 }
+    ]
+  }
 ];
 
 const searchForm = ref({

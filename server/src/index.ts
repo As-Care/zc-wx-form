@@ -502,9 +502,72 @@ app.get('/api/products', async (c) => {
       );
     }
 
+    // 批量为每个商品绑定其选配规则列表，供管理后台列表显示规则项数
+    for (const prod of list) {
+      try {
+        const { results: opts } = await db.prepare('SELECT * FROM product_options WHERE product_id = ? ORDER BY sort_order ASC').bind(prod.id).all<any>();
+        prod.options = opts || [];
+      } catch (e) {
+        prod.options = [];
+      }
+    }
+
     return c.json({ success: true, data: list });
   } catch (err) {
     return c.json({ success: true, data: [] });
+  }
+});
+
+/**
+ * 保存/更新产品的全量选配规则列表
+ * POST /api/admin/products/:id/options
+ */
+app.post('/api/admin/products/:id/options', async (c) => {
+  const db = c.env.DB;
+  if (!db) return c.json({ success: false, message: 'DB 未绑定' }, 500);
+  const id = c.req.param('id');
+  const body = await c.req.json();
+  const options = body.options || [];
+
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS product_options (
+        id TEXT PRIMARY KEY,
+        product_id TEXT NOT NULL,
+        group_name TEXT NOT NULL,
+        option_name TEXT NOT NULL,
+        price_type TEXT DEFAULT 'per_sqm',
+        price REAL DEFAULT 0,
+        is_default INTEGER DEFAULT 0,
+        sort_order INTEGER DEFAULT 0
+      )
+    `).run();
+
+    // 1. 删除该商品原有的选配规则
+    await db.prepare('DELETE FROM product_options WHERE product_id = ?').bind(id).run();
+
+    // 2. 批量插入最新的选配规则列表
+    for (let i = 0; i < options.length; i++) {
+      const opt = options[i];
+      const optId = opt.id || `opt_${Date.now()}_${i}`;
+      await db.prepare(`
+        INSERT INTO product_options (id, product_id, group_name, option_name, price_type, price, is_default, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        optId,
+        id,
+        opt.group_name || '选配分组',
+        opt.option_name || '',
+        opt.price_type || 'per_sqm',
+        Number(opt.price || 0),
+        opt.is_default ? 1 : 0,
+        i
+      ).run();
+    }
+
+    return c.json({ success: true, message: '选配规则更新成功！' });
+  } catch (e: any) {
+    return c.json({ success: false, message: '保存失败: ' + (e.message || String(e)) }, 500);
   }
 });
 
@@ -1319,7 +1382,22 @@ app.get('/api/receivers', async (c) => {
   } catch (e) {}
 
   const { results } = await db.prepare('SELECT * FROM receivers WHERE is_active = 1 ORDER BY created_at ASC').all<any>();
-  return c.json({ success: true, data: results || [] });
+  let list = results || [];
+
+  if (!list || list.length === 0) {
+    const defaultReceivers = [
+      { id: 'rec_1', name: '李师傅 (仙桃店主管)', phone: '13545941637', qr_code_url: 'https://zc-oss.carelife.top/common/qr-li.png', is_active: 1 },
+      { id: 'rec_2', name: '张经理 (客服拓展经理)', phone: '13888889999', qr_code_url: 'https://zc-oss.carelife.top/common/qr-zhang.png', is_active: 1 }
+    ];
+    for (const r of defaultReceivers) {
+      try {
+        await db.prepare('INSERT OR IGNORE INTO receivers (id, name, phone, qr_code_url, is_active) VALUES (?, ?, ?, ?, 1)').bind(r.id, r.name, r.phone, r.qr_code_url).run();
+      } catch (e) {}
+    }
+    list = defaultReceivers;
+  }
+
+  return c.json({ success: true, data: list });
 });
 
 /**
