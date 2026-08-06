@@ -37,9 +37,9 @@
 
         <a-table-column title="创建时间" data-index="created_at" :width="180" />
 
-        <a-table-column title="操作" :width="240">
+        <a-table-column title="操作" :width="220">
           <template #cell="{ record }">
-            <div style="display: flex; gap: 8px;">
+            <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
               <a-button type="outline" size="small" @click="editRolePermission(record)">
                 <template #icon><icon-safe /></template>
                 分配菜单权限
@@ -55,15 +55,15 @@
                   删除
                 </a-button>
               </a-popconfirm>
-              <span v-else style="color: #86909c; font-size: 12px; margin-top: 4px;">Root禁止删除</span>
+              <a-tag v-else color="gray" size="small">Root主角色</a-tag>
             </div>
           </template>
         </a-table-column>
       </template>
     </a-table>
 
-    <!-- 角色与权限分配 Drawer 抽屉 -->
-    <a-drawer v-model:visible="drawerVisible" width="480px" :title="isEdit ? '🔐 编辑角色与菜单授权' : '➕ 新建角色并分配权限'" unmount-on-close @ok="handleSaveRole">
+    <!-- 角色与权限分配 Drawer 抽屉 (加宽至 640px，强效单行防换行) -->
+    <a-drawer v-model:visible="drawerVisible" width="640px" :title="isEdit ? '编辑角色与菜单授权' : '新建角色并分配权限'" unmount-on-close @ok="handleSaveRole">
       <a-form :model="form" layout="vertical">
         <a-form-item label="角色名称" required>
           <a-input v-model="form.name" placeholder="如：店长经理 / 客服接单员" />
@@ -77,9 +77,9 @@
           <a-textarea v-model="form.description" placeholder="请输入该角色的管理范围与职责说明" row="2" />
         </a-form-item>
 
-        <a-divider>🛡️ 勾选授权可见菜单 (后台侧边栏)</a-divider>
+        <a-divider>勾选授权可见菜单 (后台侧边栏)</a-divider>
 
-        <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; white-space: nowrap;">
           <span style="font-size: 13px; color: #86909c;">按需勾选给该角色开放的后台导航菜单：</span>
           <a-space size="small">
             <a-button size="mini" type="text" @click="selectAllMenus">全选</a-button>
@@ -90,13 +90,13 @@
         <div class="menu-checkbox-container">
           <a-checkbox-group v-model="form.menu_keys" direction="vertical" style="width: 100%;">
             <div v-for="menu in allSysMenus" :key="menu.key" class="menu-item-row">
-              <a-checkbox :value="menu.key" :disabled="form.code === 'root'">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <strong>{{ menu.name }}</strong>
-                  <code style="color: #86909c; font-size: 12px;">({{ menu.key }})</code>
+              <a-checkbox :value="menu.key" :disabled="form.code === 'root'" style="white-space: nowrap;">
+                <div style="display: flex; align-items: center; gap: 8px; white-space: nowrap;">
+                  <strong style="white-space: nowrap;">{{ menu.name }}</strong>
+                  <code style="color: #86909c; font-size: 12px; white-space: nowrap;">({{ menu.key }})</code>
                 </div>
               </a-checkbox>
-              <span style="color: #c5a880; font-size: 12px;">{{ menu.path }}</span>
+              <span style="color: #c5a880; font-size: 12px; font-family: monospace; white-space: nowrap;">{{ menu.path }}</span>
             </div>
           </a-checkbox-group>
         </div>
@@ -257,10 +257,14 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 4px;
+  padding: 8px 6px;
   border-bottom: 1px dashed #e5e6eb;
+  white-space: nowrap !important;
 }
 .menu-item-row:last-child {
   border-bottom: none;
+}
+:deep(.arco-checkbox-label) {
+  white-space: nowrap !important;
 }
 </style>

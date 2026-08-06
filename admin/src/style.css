@@ -210,6 +210,79 @@ body {
   margin-left: 4px;
 }
 
+/* ===================================================
+ * 全局 Flex 布局与 Margin / Padding 工具类
+ * =================================================== */
+.flex-between {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.flex-center {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.flex-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+}
+
+.header-bar {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 20px !important;
+}
+
+.view-title {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
+}
+
+.mb-1 { margin-bottom: 4px !important; }
+.mb-2 { margin-bottom: 8px !important; }
+.mb-3 { margin-bottom: 16px !important; }
+.mb-4 { margin-bottom: 20px !important; }
+.mb-5 { margin-bottom: 24px !important; }
+
+.mt-1 { margin-top: 4px !important; }
+.mt-2 { margin-top: 8px !important; }
+.mt-3 { margin-top: 16px !important; }
+.mt-4 { margin-top: 20px !important; }
+.mt-5 { margin-top: 24px !important; }
+
+.ml-1 { margin-left: 4px !important; }
+.ml-2 { margin-left: 8px !important; }
+.ml-3 { margin-left: 12px !important; }
+.ml-4 { margin-left: 16px !important; }
+
+.mr-1 { margin-right: 4px !important; }
+.mr-2 { margin-right: 8px !important; }
+.mr-3 { margin-right: 12px !important; }
+.mr-4 { margin-right: 16px !important; }
+
+/* 全局表格单元格与标题强制单行展示 (无换行) */
+:deep(.arco-table-th-title),
+:deep(.arco-table-cell),
+.arco-table-th-title,
+.arco-table-cell {
+  white-space: nowrap !important;
+}
+
+/* 统一单行操作按钮组 */
+.action-row-buttons {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  white-space: nowrap !important;
+  gap: 6px !important;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

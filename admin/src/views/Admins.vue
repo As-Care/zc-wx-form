@@ -38,17 +38,26 @@
           </template>
         </a-table-column>
 
-        <a-table-column title="账号状态" :width="120">
+        <a-table-column title="账号状态" :width="140">
           <template #cell="{ record }">
-            <a-badge :status="record.status === 1 ? 'success' : 'danger'" :text="record.status === 1 ? '正常启用' : '已禁用'" />
+            <a-switch
+              v-model="record.status"
+              :checked-value="1"
+              :unchecked-value="0"
+              :disabled="record.username === 'admin' || record.id === 'admin_root'"
+              @change="(val) => handleStatusChange(record, val)"
+            >
+              <template #checked>已启用</template>
+              <template #unchecked>已禁用</template>
+            </a-switch>
           </template>
         </a-table-column>
 
         <a-table-column title="创建时间" data-index="created_at" :width="180" />
 
-        <a-table-column title="操作" :width="200">
+        <a-table-column title="操作" :width="180">
           <template #cell="{ record }">
-            <div style="display: flex; gap: 8px;">
+            <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
               <a-button type="outline" size="small" @click="editAdmin(record)">
                 编辑资料
               </a-button>
@@ -63,7 +72,7 @@
                   删除
                 </a-button>
               </a-popconfirm>
-              <span v-else style="color: #86909c; font-size: 12px; margin-top: 4px;">主账号保护</span>
+              <a-tag v-else color="gray" size="small">主账号保护</a-tag>
             </div>
           </template>
         </a-table-column>
@@ -71,7 +80,7 @@
     </a-table>
 
     <!-- 新建/编辑管理员 Modal -->
-    <a-modal v-model:visible="modalVisible" :title="isEdit ? '✏️ 编辑管理员账号' : '➕ 新建后端管理员账号'" @ok="handleModalSave">
+    <a-modal v-model:visible="modalVisible" :title="isEdit ? '编辑管理员账号' : '新建后端管理员账号'" @ok="handleModalSave">
       <a-form :model="form" layout="vertical">
         <a-form-item label="登录账号" required>
           <a-input v-model="form.username" placeholder="请输入登录用户名" :disabled="isEdit" />
@@ -98,10 +107,14 @@
         </a-form-item>
 
         <a-form-item label="账号激活状态">
-          <a-radio-group v-model="form.status">
-            <a-radio :value="1">🟢 启用正常</a-radio>
-            <a-radio :value="0">🔴 锁定禁用</a-radio>
-          </a-radio-group>
+          <a-switch
+            v-model="form.status"
+            :checked-value="1"
+            :unchecked-value="0"
+          >
+            <template #checked>已启用</template>
+            <template #unchecked>已禁用</template>
+          </a-switch>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -214,6 +227,27 @@ const handleModalSave = async () => {
     }
   } catch (e) {
     Message.error('网络请求失败');
+  }
+};
+
+const handleStatusChange = async (record, val) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/users/${record.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...record, status: val })
+    });
+    const data = await res.json();
+    if (data.success) {
+      Message.success(`管理员账号状态已更新为：${val === 1 ? '已启用' : '已禁用'}`);
+      fetchAdmins();
+    } else {
+      Message.error(data.message || '修改状态失败');
+      record.status = val === 1 ? 0 : 1;
+    }
+  } catch (e) {
+    Message.error('修改状态失败');
+    record.status = val === 1 ? 0 : 1;
   }
 };
 

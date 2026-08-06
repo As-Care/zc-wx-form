@@ -151,7 +151,7 @@ const handleLogin = async () => {
     if (form.value.username === 'admin' && form.value.password === 'zhanchen') {
       localStorage.setItem("admin_token", "zc_admin_token_2026");
       localStorage.setItem("admin_user", JSON.stringify({ id: 'admin_root', username: 'admin', nickname: '展晨总管理', role_name: '超级管理员', role_code: 'root' }));
-      localStorage.setItem("admin_menus", JSON.stringify(["Overview","Categories","Products","Rooms","Orders","StaffConfig","Users","Admins","Roles","Menus","Settings"]));
+      localStorage.setItem("admin_menus", JSON.stringify(["Overview","Categories","Products","Orders","StaffConfig","Users","Admins","Roles","Menus","Settings"]));
       Message.success("本地演示验证通过！");
       router.push("/dashboard/overview");
     } else {

@@ -133,7 +133,6 @@ const ALL_MENU_CONFIG = [
   { key: 'Overview', name: '大盘数据', icon: 'IconDashboard' },
   { key: 'Categories', name: '门窗分类', icon: 'IconFolder' },
   { key: 'Products', name: '门窗商品', icon: 'IconApps' },
-  { key: 'Rooms', name: '门窗空间', icon: 'IconHome' },
   { key: 'Orders', name: '订单管理', icon: 'IconFile' },
   { key: 'StaffConfig', name: '接单员配置', icon: 'IconPhone' },
   { key: 'Users', name: '客户管理', icon: 'IconUserGroup' },

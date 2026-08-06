@@ -2,17 +2,17 @@
   <div class="overview-view">
     <div class="header-bar flex-between mb-3">
       <h2 class="view-title">展晨门窗 - 运营大盘数据概览</h2>
-      <a-button type="outline" size="small" @click="initCharts">
+      <a-button type="outline" size="small" @click="fetchRealStats">
         <template #icon><icon-refresh /></template>
-        刷新图表
+        刷新图表数据
       </a-button>
     </div>
 
-    <!-- 顶栏 KPI 统计卡片 -->
+    <!-- 顶栏 KPI 统计卡片 (真实数据库统计) -->
     <a-grid :cols="4" :colGap="14" :rowGap="14" class="mb-3">
       <a-grid-item>
         <a-card class="stat-box" hoverable>
-          <a-statistic title="定制订单总数" :value="128" show-group-separator>
+          <a-statistic title="定制订单总数" :value="statsData.totalOrders" show-group-separator>
             <template #prefix
               ><icon-file-text style="color: #c5a880"
             /></template>
@@ -22,9 +22,9 @@
       </a-grid-item>
       <a-grid-item>
         <a-card class="stat-box" hoverable>
-          <a-statistic title="待复核/待报价" :value="12" show-group-separator>
+          <a-statistic title="待复核" :value="statsData.pendingReviewCount" show-group-separator>
             <template #prefix
-              ><icon-clock-circle style="color: #eab308"
+              ><icon-clock-circle style="color: #cbd5e1"
             /></template>
             <template #suffix>单</template>
           </a-statistic>
@@ -32,9 +32,9 @@
       </a-grid-item>
       <a-grid-item>
         <a-card class="stat-box" hoverable>
-          <a-statistic title="排产及制作中" :value="34" show-group-separator>
+          <a-statistic title="生产中" :value="statsData.producingCount" show-group-separator>
             <template #prefix
-              ><icon-settings style="color: #60a5fa"
+              ><icon-settings style="color: #f97316"
             /></template>
             <template #suffix>单</template>
           </a-statistic>
@@ -42,9 +42,9 @@
       </a-grid-item>
       <a-grid-item>
         <a-card class="stat-box" hoverable>
-          <a-statistic title="已完成交付" :value="82" show-group-separator>
+          <a-statistic title="已完成" :value="statsData.completedCount" show-group-separator>
             <template #prefix
-              ><icon-check-circle style="color: #4ade80"
+              ><icon-check-circle style="color: #10b981"
             /></template>
             <template #suffix>单</template>
           </a-statistic>
@@ -83,12 +83,12 @@
         <a-card title="📍 门店信息与服务标准">
           <div class="store-details">
             <p>
-              <strong>品牌旗舰店：</strong> 展晨门窗
-              (湖北仙桃恒迪建材市场2期14栋1-107)
+              <strong>品牌旗舰店：</strong> {{ storeInfo.name || '展晨门窗' }}
+              ({{ storeInfo.address || '湖北省仙桃市恒迪建材市场2期14栋1-107' }})
             </p>
             <p>
               <strong>官方咨询热线：</strong>
-              <span style="color: #b89768; font-weight: bold">13545941637</span>
+              <span style="color: #b89768; font-weight: bold">{{ storeInfo.phone || '13545941637' }}</span>
             </p>
             <p>
               <strong>品牌资质背书：</strong> 20+年专业门窗制造经验 / 50000+
@@ -109,6 +109,8 @@
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import * as echarts from "echarts";
 
+const API_BASE = 'https://zc-api.carelife.top';
+
 const lineChartRef = ref(null);
 const pieChartRef = ref(null);
 const barChartRef = ref(null);
@@ -117,7 +119,48 @@ let lineChartInstance = null;
 let pieChartInstance = null;
 let barChartInstance = null;
 
-// 监听日间/夜间模式切换自动更新图表色彩
+const statsData = ref({
+  totalOrders: 0,
+  pendingReviewCount: 0,
+  producingCount: 0,
+  installingCount: 0,
+  completedCount: 0,
+  totalRevenue: 0,
+  recentTrends: {
+    dates: [],
+    createdCounts: [],
+    completedCounts: []
+  },
+  productDistribution: [],
+  statusDistribution: []
+});
+
+const storeInfo = ref({
+  name: '展晨门窗',
+  phone: '13545941637',
+  address: '湖北省仙桃市恒迪建材市场2期14栋1-107'
+});
+
+const fetchRealStats = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/stats`);
+    const data = await res.json();
+    if (data.success && data.data) {
+      statsData.value = data.data;
+    }
+  } catch (e) {}
+
+  try {
+    const resStore = await fetch(`${API_BASE}/api/admin/config/store`);
+    const dataStore = await resStore.json();
+    if (dataStore.success && dataStore.data) {
+      storeInfo.value = dataStore.data;
+    }
+  } catch (e) {}
+
+  initCharts();
+};
+
 const getIsDark = () => document.body.getAttribute("arco-theme") === "dark";
 
 const initCharts = () => {
@@ -126,11 +169,15 @@ const initCharts = () => {
   const axisLineColor = isDark ? "rgba(255, 255, 255, 0.15)" : "#E5E6EB";
   const splitLineColor = isDark ? "rgba(255, 255, 255, 0.06)" : "#F2F3F5";
 
-  // 1. 初始化近7天走势折线图 (Legend 置于右上角防止与 X 轴重叠)
+  // 1. 近 7 天折线图 (真实数据)
   if (lineChartRef.value) {
     if (!lineChartInstance) {
       lineChartInstance = echarts.init(lineChartRef.value);
     }
+    const dates = statsData.value.recentTrends?.dates || ["08-01", "08-02", "08-03", "08-04", "08-05", "08-06", "08-07"];
+    const created = statsData.value.recentTrends?.createdCounts || [0, 0, 0, 0, 0, 0, 0];
+    const completed = statsData.value.recentTrends?.completedCounts || [0, 0, 0, 0, 0, 0, 0];
+
     lineChartInstance.setOption({
       tooltip: {
         trigger: "axis",
@@ -152,12 +199,13 @@ const initCharts = () => {
       xAxis: {
         type: "category",
         boundaryGap: false,
-        data: ["07-30", "07-31", "08-01", "08-02", "08-03", "08-04", "08-05"],
+        data: dates,
         axisLine: { lineStyle: { color: axisLineColor } },
         axisLabel: { color: textColor, fontSize: 11 },
       },
       yAxis: {
         type: "value",
+        minInterval: 1,
         splitLine: { lineStyle: { color: splitLineColor } },
         axisLabel: { color: textColor, fontSize: 11 },
       },
@@ -166,7 +214,7 @@ const initCharts = () => {
           name: "新建定制订单",
           type: "line",
           smooth: true,
-          data: [8, 12, 15, 11, 18, 22, 26],
+          data: created,
           itemStyle: { color: "#C5A880" },
           areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -179,12 +227,12 @@ const initCharts = () => {
           name: "完成交付订单",
           type: "line",
           smooth: true,
-          data: [5, 8, 10, 9, 14, 16, 20],
-          itemStyle: { color: "#4ADE80" },
+          data: completed,
+          itemStyle: { color: "#10b981" },
           areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: "rgba(74, 222, 128, 0.25)" },
-              { offset: 1, color: "rgba(74, 222, 128, 0.02)" },
+              { offset: 0, color: "rgba(16, 185, 129, 0.25)" },
+              { offset: 1, color: "rgba(16, 185, 129, 0.02)" },
             ]),
           },
         },
@@ -192,11 +240,22 @@ const initCharts = () => {
     });
   }
 
-  // 2. 初始化饼图 (热门门窗系列选购分布)
+  // 2. 热门选购占比饼图 (真实数据)
   if (pieChartRef.value) {
     if (!pieChartInstance) {
       pieChartInstance = echarts.init(pieChartRef.value);
     }
+
+    const pieColors = ["#C5A880", "#f97316", "#10b981", "#eab308", "#8b5cf6", "#ec4899"];
+    const rawPieData = statsData.value.productDistribution || [];
+    const pieData = rawPieData.length > 0 ? rawPieData.map((item, idx) => ({
+      name: item.name,
+      value: item.value || 0,
+      itemStyle: { color: pieColors[idx % pieColors.length] }
+    })) : [
+      { name: "108热桥级断桥铝窗", value: 1, itemStyle: { color: "#C5A880" } }
+    ];
+
     pieChartInstance.setOption({
       tooltip: {
         trigger: "item",
@@ -230,34 +289,13 @@ const initCharts = () => {
             },
           },
           labelLine: { show: false },
-          data: [
-            {
-              value: 45,
-              name: "108热桥级断桥铝窗",
-              itemStyle: { color: "#C5A880" },
-            },
-            {
-              value: 30,
-              name: "极简16重型推拉门",
-              itemStyle: { color: "#60A5FA" },
-            },
-            {
-              value: 15,
-              name: "120超静音三玻窗",
-              itemStyle: { color: "#4ADE80" },
-            },
-            {
-              value: 10,
-              name: "尊享断桥阳光房",
-              itemStyle: { color: "#A855F7" },
-            },
-          ],
+          data: pieData,
         },
       ],
     });
   }
 
-  // 3. 初始化柱状图 (订单阶段流转分布)
+  // 3. 订单阶段分布柱状图 (真实数据与规范色彩与小程序标准文案)
   if (barChartRef.value) {
     if (!barChartInstance) {
       barChartInstance = echarts.init(barChartRef.value);
@@ -276,12 +314,13 @@ const initCharts = () => {
       },
       xAxis: {
         type: "category",
-        data: ["待复核/报价", "排产制作中", "准备待提货", "完成交付"],
+        data: ["待复核", "生产中", "待提货", "已完成"],
         axisLine: { lineStyle: { color: axisLineColor } },
         axisLabel: { color: textColor, fontSize: 11 },
       },
       yAxis: {
         type: "value",
+        minInterval: 1,
         splitLine: { lineStyle: { color: splitLineColor } },
         axisLabel: { color: textColor, fontSize: 11 },
       },
@@ -292,20 +331,20 @@ const initCharts = () => {
           barWidth: "36%",
           data: [
             {
-              value: 12,
-              itemStyle: { color: "#EAB308", borderRadius: [6, 6, 0, 0] },
+              value: statsData.value.pendingReviewCount || 0,
+              itemStyle: { color: "#e2e8f0", borderColor: "#94a3b8", borderWidth: 1, borderRadius: [6, 6, 0, 0] },
             },
             {
-              value: 34,
-              itemStyle: { color: "#60A5FA", borderRadius: [6, 6, 0, 0] },
+              value: statsData.value.producingCount || 0,
+              itemStyle: { color: "#f97316", borderRadius: [6, 6, 0, 0] },
             },
             {
-              value: 18,
-              itemStyle: { color: "#C5A880", borderRadius: [6, 6, 0, 0] },
+              value: statsData.value.installingCount || 0,
+              itemStyle: { color: "#eab308", borderRadius: [6, 6, 0, 0] },
             },
             {
-              value: 82,
-              itemStyle: { color: "#4ADE80", borderRadius: [6, 6, 0, 0] },
+              value: statsData.value.completedCount || 0,
+              itemStyle: { color: "#10b981", borderRadius: [6, 6, 0, 0] },
             },
           ],
         },
@@ -321,12 +360,9 @@ const handleResize = () => {
 };
 
 onMounted(() => {
-  setTimeout(() => {
-    initCharts();
-  }, 100);
+  fetchRealStats();
   window.addEventListener("resize", handleResize);
 
-  // 监听主题属性变化
   const observer = new MutationObserver(() => {
     initCharts();
   });

@@ -9,7 +9,6 @@ import Users from '../views/Users.vue';
 import Overview from '../views/Overview.vue';
 import StaffConfig from '../views/StaffConfig.vue';
 import Settings from '../views/Settings.vue';
-import Rooms from '../views/Rooms.vue';
 import Admins from '../views/Admins.vue';
 import Roles from '../views/Roles.vue';
 import Menus from '../views/Menus.vue';
@@ -49,11 +48,6 @@ const routes = [
         path: 'categories',
         name: 'Categories',
         component: Categories
-      },
-      {
-        path: 'rooms',
-        name: 'Rooms',
-        component: Rooms
       },
       {
         path: 'users',

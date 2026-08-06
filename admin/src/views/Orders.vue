@@ -174,18 +174,22 @@
             <a-descriptions-item label="客户姓名">{{ currentOrderDetail.customer_name }}</a-descriptions-item>
             <a-descriptions-item label="联系电话">{{ currentOrderDetail.customer_phone }}</a-descriptions-item>
             <a-descriptions-item label="安装详细地址" :span="2">{{ currentOrderDetail.install_address }}</a-descriptions-item>
-            <a-descriptions-item label="客户现场备注" :span="2" v-if="currentOrderDetail.customer_remark">{{ currentOrderDetail.customer_remark }}</a-descriptions-item>
-            <a-descriptions-item label="现场环境照片" :span="2" v-if="currentOrderDetail.scene_images">
-              <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
+            <a-descriptions-item label="客户现场备注" :span="2">
+              <span v-if="currentOrderDetail.customer_remark">{{ currentOrderDetail.customer_remark }}</span>
+              <span v-else style="color: #c9cdd4;">暂无现场备注</span>
+            </a-descriptions-item>
+            <a-descriptions-item label="现场环境照片" :span="2">
+              <div v-if="getSceneImages(currentOrderDetail).length > 0" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
                 <a-image
-                  v-for="(imgUrl, imgIdx) in (typeof currentOrderDetail.scene_images === 'string' ? currentOrderDetail.scene_images.split(',').filter(Boolean) : currentOrderDetail.scene_images)"
+                  v-for="(imgUrl, imgIdx) in getSceneImages(currentOrderDetail)"
                   :key="imgIdx"
                   :src="imgUrl"
-                  width="80"
-                  height="80"
+                  width="90"
+                  height="90"
                   style="object-fit: cover; border-radius: 6px; border: 1px solid #e5e6eb;"
                 />
               </div>
+              <span v-else style="color: #c9cdd4;">暂无现场照片</span>
             </a-descriptions-item>
           </a-descriptions>
         </a-card>
@@ -212,15 +216,18 @@
             </div>
 
             <!-- 选配明细卡片 -->
-            <div class="options-detail-panel" v-if="item.options_summary || (item.selected_options && item.selected_options.length > 0)">
+            <div class="options-detail-panel" v-if="getItemOptions(item).length > 0">
               <div class="panel-title">选配升级配置明细：</div>
-              <div v-for="(opt, oIdx) in (item.options_summary || item.selected_options)" :key="oIdx" class="option-row" style="display: flex; align-items: center; gap: 6px;">
+              <div v-for="(opt, oIdx) in getItemOptions(item)" :key="oIdx" class="option-row" style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
                 <span class="dot">•</span>
-                <span class="group-label">{{ opt.groupTitle || opt.group }}：</span>
+                <span class="group-label">{{ opt.groupTitle || opt.group || opt.group_name || '选配' }}：</span>
                 <img v-if="opt.image_url" :src="opt.image_url" style="width: 20px; height: 20px; object-fit: cover; border-radius: 3px; border: 1px solid #e5e6eb;" />
-                <span class="opt-name">{{ opt.option_name || opt.name }}</span>
-                <span class="opt-price" v-if="opt.priceText">{{ opt.priceText }}</span>
+                <span class="opt-name">{{ opt.option_name || opt.name || opt.id }}</span>
+                <span class="opt-price" v-if="opt.priceText" style="color: #ff7d00; margin-left: 4px;">{{ opt.priceText }}</span>
               </div>
+            </div>
+            <div v-else class="options-detail-panel" style="color: #86909c; font-size: 12px; font-style: italic;">
+              暂无特殊选配升级项 (使用基础标配)
             </div>
           </div>
         </a-card>
@@ -346,13 +353,13 @@ const getStatusText = (status) => {
 
 const getStatusColor = (status) => {
   const map = {
-    'pending_review': 'gray',
-    'producing': 'orange',
-    'installing': 'gold',
-    'completed': 'green',
-    'cancelled': 'gray'
+    'pending_review': '#cbd5e1',
+    'producing': '#f97316',
+    'installing': '#eab308',
+    'completed': '#10b981',
+    'cancelled': '#94a3b8'
   };
-  return map[status] || 'gray';
+  return map[status] || '#cbd5e1';
 };
 
 const handleSearch = () => {
@@ -411,6 +418,8 @@ const fetchOrders = async () => {
         customer_name: o.customer_name || '客户',
         customer_phone: o.customer_phone || '',
         install_address: o.install_address || '',
+        customer_remark: o.customer_remark || '',
+        scene_images: o.scene_images || '',
         created_at: o.created_at || '',
         spec: o.items && o.items[0] ? `${o.items[0].width_mm} × ${o.items[0].height_mm} mm (${o.items[0].billed_area} ㎡)` : '',
         base_amount: o.base_amount || 0,
@@ -434,9 +443,79 @@ const fetchOrders = async () => {
   }
 };
 
-const viewOrderDetail = (record) => {
-  currentOrderDetail.value = record;
+const viewOrderDetail = async (record) => {
+  currentOrderDetail.value = { ...record };
   detailDrawerVisible.value = true;
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/${record.id}`);
+    const data = await res.json();
+    if (data.success && data.data && data.data.order) {
+      currentOrderDetail.value = {
+        ...data.data.order,
+        customer_remark: data.data.order.customer_remark || record.customer_remark || '',
+        scene_images: data.data.order.scene_images || record.scene_images || '',
+        items: data.data.order.items || record.items || []
+      };
+    }
+  } catch (e) {}
+};
+
+const getSceneImages = (order) => {
+  if (!order || !order.scene_images) return [];
+  if (Array.isArray(order.scene_images)) return order.scene_images;
+  if (typeof order.scene_images === 'string') {
+    try {
+      const parsed = JSON.parse(order.scene_images);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (e) {}
+    return order.scene_images.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  return [];
+};
+
+const getItemOptions = (item) => {
+  if (!item) return [];
+  if (item.options_summary && Array.isArray(item.options_summary) && item.options_summary.length > 0) {
+    return item.options_summary;
+  }
+  let summary = [];
+  if (item.options_summary_json) {
+    try {
+      summary = JSON.parse(item.options_summary_json);
+      if (Array.isArray(summary) && summary.length > 0) return summary;
+    } catch (e) {}
+  }
+  let selMap = {};
+  if (item.selected_options_json) {
+    try { selMap = JSON.parse(item.selected_options_json); } catch (e) {}
+  } else if (item.selected_options) {
+    selMap = typeof item.selected_options === 'string' ? JSON.parse(item.selected_options) : item.selected_options;
+  }
+  if (selMap && typeof selMap === 'object') {
+    const DEFAULT_OPT_MAP = {
+      'opt_1': { group: '玻璃配置', name: '双层玻璃' },
+      'opt_2': { group: '玻璃配置', name: '双层钢化玻璃' },
+      'opt_3': { group: '门锁配置', name: '默认门锁' },
+      'opt_4': { group: '铝材配置', name: '默认铝材' },
+      'opt_5': { group: '颜色配置', name: '琉璃白' },
+      'opt_6': { group: '颜色配置', name: '深空灰' },
+      'opt_7': { group: '开门方向', name: '左锁（左合页）' },
+      'opt_8': { group: '开门方向', name: '右锁（左合页）' },
+      'opt_9': { group: '开门内外', name: '内开（朝内打开）' },
+      'opt_10': { group: '开门内外', name: '外开（朝外打开）' }
+    };
+    return Object.keys(selMap).map(grp => {
+      const rawVal = selMap[grp];
+      const optId = typeof rawVal === 'string' ? rawVal : (rawVal && (rawVal.id || rawVal.option_name));
+      const def = optId ? DEFAULT_OPT_MAP[optId] : null;
+      return {
+        groupTitle: def ? def.group : grp,
+        option_name: def ? def.name : (optId || ''),
+        priceText: ''
+      };
+    }).filter(o => o.option_name);
+  }
+  return [];
 };
 
 const openModal = (record) => {

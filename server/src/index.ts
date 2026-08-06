@@ -1106,14 +1106,42 @@ app.get('/api/orders', async (c) => {
   // 抓取各订单的明细项用于卡片预览
   for (const order of orders || []) {
     const { results: items } = await db.prepare('SELECT * FROM order_items WHERE order_id = ?').bind(order.id).all<OrderItem>();
+    const DEFAULT_OPT_MAP: Record<string, { group: string; name: string }> = {
+      'opt_1': { group: '玻璃配置', name: '双层玻璃' },
+      'opt_2': { group: '玻璃配置', name: '双层钢化玻璃' },
+      'opt_3': { group: '门锁配置', name: '默认门锁' },
+      'opt_4': { group: '铝材配置', name: '默认铝材' },
+      'opt_5': { group: '颜色配置', name: '琉璃白' },
+      'opt_6': { group: '颜色配置', name: '深空灰' },
+      'opt_7': { group: '开门方向', name: '左锁（左合页）' },
+      'opt_8': { group: '开门方向', name: '右锁（左合页）' },
+      'opt_9': { group: '开门内外', name: '内开（朝内打开）' },
+      'opt_10': { group: '开门内外', name: '外开（朝外打开）' }
+    };
     (items || []).forEach(it => {
+      let summary: any[] = [];
       if (it.options_summary_json) {
-        try {
-          it.options_summary = JSON.parse(it.options_summary_json);
-        } catch (e) {
-          it.options_summary = [];
+        try { summary = JSON.parse(it.options_summary_json); } catch (e) { summary = []; }
+      }
+      if (!summary || summary.length === 0) {
+        let selMap: any = {};
+        if (it.selected_options_json) {
+          try { selMap = JSON.parse(it.selected_options_json); } catch (e) { selMap = {}; }
+        }
+        if (selMap && typeof selMap === 'object') {
+          summary = Object.keys(selMap).map(grp => {
+            const rawVal = selMap[grp];
+            const optId = typeof rawVal === 'string' ? rawVal : (rawVal && (rawVal.id || rawVal.option_name));
+            const def = optId ? DEFAULT_OPT_MAP[optId] : null;
+            return {
+              groupTitle: def ? def.group : grp,
+              option_name: def ? def.name : (optId || ''),
+              priceText: ''
+            };
+          }).filter(o => o.option_name);
         }
       }
+      it.options_summary = summary;
     });
     order.items = items || [];
   }
@@ -1267,21 +1295,23 @@ async function initRBACTables(db: any) {
       )
     `).run();
 
-    // 预置默认系统菜单 (若表为空)
+    // 预置默认系统菜单 (若表为空)，清理多余的 Rooms (门窗空间) 菜单
+    await db.prepare("DELETE FROM sys_menus WHERE key = 'Rooms'").run();
+    await db.prepare("DELETE FROM role_menus WHERE menu_key = 'Rooms'").run();
+
     const countMenus = await db.prepare('SELECT COUNT(*) as count FROM sys_menus').first<{ count: number }>();
     if (!countMenus || countMenus.count === 0) {
       const defaultMenus = [
         { id: 'm_1', key: 'Overview', name: '大盘数据', path: '/dashboard/overview', icon: 'IconDashboard', sort_order: 1 },
         { id: 'm_2', key: 'Categories', name: '门窗分类', path: '/dashboard/categories', icon: 'IconFolder', sort_order: 2 },
         { id: 'm_3', key: 'Products', name: '门窗商品', path: '/dashboard/products', icon: 'IconApps', sort_order: 3 },
-        { id: 'm_4', key: 'Rooms', name: '门窗空间', path: '/dashboard/rooms', icon: 'IconHome', sort_order: 4 },
-        { id: 'm_5', key: 'Orders', name: '订单管理', path: '/dashboard/orders', icon: 'IconFile', sort_order: 5 },
-        { id: 'm_6', key: 'StaffConfig', name: '接单员配置', path: '/dashboard/staff-config', icon: 'IconPhone', sort_order: 6 },
-        { id: 'm_7', key: 'Users', name: '客户管理', path: '/dashboard/users', icon: 'IconUserGroup', sort_order: 7 },
-        { id: 'm_8', key: 'Admins', name: '管理员管理', path: '/dashboard/admins', icon: 'IconUser', sort_order: 8 },
-        { id: 'm_9', key: 'Roles', name: '角色与权限', path: '/dashboard/roles', icon: 'IconSafe', sort_order: 9 },
-        { id: 'm_10', key: 'Menus', name: '菜单管理', path: '/dashboard/menus', icon: 'IconMenu', sort_order: 10 },
-        { id: 'm_11', key: 'Settings', name: '全局设置', path: '/dashboard/settings', icon: 'IconSettings', sort_order: 11 }
+        { id: 'm_5', key: 'Orders', name: '订单管理', path: '/dashboard/orders', icon: 'IconFile', sort_order: 4 },
+        { id: 'm_6', key: 'StaffConfig', name: '接单员配置', path: '/dashboard/staff-config', icon: 'IconPhone', sort_order: 5 },
+        { id: 'm_7', key: 'Users', name: '客户管理', path: '/dashboard/users', icon: 'IconUserGroup', sort_order: 6 },
+        { id: 'm_8', key: 'Admins', name: '管理员管理', path: '/dashboard/admins', icon: 'IconUser', sort_order: 7 },
+        { id: 'm_9', key: 'Roles', name: '角色与权限', path: '/dashboard/roles', icon: 'IconSafe', sort_order: 8 },
+        { id: 'm_10', key: 'Menus', name: '菜单管理', path: '/dashboard/menus', icon: 'IconMenu', sort_order: 9 },
+        { id: 'm_11', key: 'Settings', name: '全局设置', path: '/dashboard/settings', icon: 'IconSettings', sort_order: 10 }
       ];
 
       for (const m of defaultMenus) {
@@ -1660,7 +1690,7 @@ app.delete('/api/admin/users/:id', async (c) => {
  */
 app.get('/api/admin/stats', async (c) => {
   const db = c.env.DB;
-  const { results: orders } = await db.prepare('SELECT status, final_amount FROM orders').all<Order>();
+  const { results: orders } = await db.prepare('SELECT id, status, final_amount, created_at, updated_at FROM orders').all<any>();
 
   let totalOrders = (orders || []).length;
   let pendingReviewCount = 0;
@@ -1677,6 +1707,47 @@ app.get('/api/admin/stats', async (c) => {
     else if (o.status === 'completed') completedCount++;
   });
 
+  // 近 7 天订单与交付走势真实数据计算
+  const dates: string[] = [];
+  const createdCounts: number[] = [];
+  const completedCounts: number[] = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(5, 10);
+    const fullDateStr = d.toISOString().slice(0, 10);
+    dates.push(dateStr);
+
+    const cCount = (orders || []).filter(o => (o.created_at || '').startsWith(fullDateStr)).length;
+    const fCount = (orders || []).filter(o => o.status === 'completed' && (o.updated_at || '').startsWith(fullDateStr)).length;
+    createdCounts.push(cCount);
+    completedCounts.push(fCount);
+  }
+
+  // 热门门窗系列选购分布真实数据
+  let productDistribution: Array<{ name: string; value: number }> = [];
+  try {
+    const { results: items } = await db.prepare('SELECT product_name FROM order_items').all<{ product_name: string }>();
+    const prodMap: Record<string, number> = {};
+    (items || []).forEach(it => {
+      const pName = it.product_name || '其他系统门窗';
+      prodMap[pName] = (prodMap[pName] || 0) + 1;
+    });
+
+    productDistribution = Object.keys(prodMap).map(name => ({
+      name,
+      value: prodMap[name]
+    }));
+  } catch (e) {}
+
+  if (productDistribution.length === 0) {
+    try {
+      const { results: products } = await db.prepare('SELECT name FROM products WHERE is_active = 1 LIMIT 5').all<{ name: string }>();
+      productDistribution = (products || []).map(p => ({ name: p.name, value: 0 }));
+    } catch (e) {}
+  }
+
   return c.json({
     success: true,
     data: {
@@ -1685,7 +1756,19 @@ app.get('/api/admin/stats', async (c) => {
       producingCount,
       installingCount,
       completedCount,
-      totalRevenue: Number(totalRevenue.toFixed(2))
+      totalRevenue: Number(totalRevenue.toFixed(2)),
+      recentTrends: {
+        dates,
+        createdCounts,
+        completedCounts
+      },
+      productDistribution,
+      statusDistribution: [
+        { name: '待复核', count: pendingReviewCount },
+        { name: '生产中', count: producingCount },
+        { name: '待提货', count: installingCount },
+        { name: '已完成', count: completedCount }
+      ]
     }
   });
 });

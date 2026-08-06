@@ -43,9 +43,9 @@
           </template>
         </a-table-column>
 
-        <a-table-column title="操作" :width="180">
+        <a-table-column title="操作" :width="140">
           <template #cell="{ record }">
-            <div style="display: flex; gap: 8px;">
+            <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
               <a-button type="outline" size="small" @click="editMenu(record)">
                 编辑
               </a-button>
@@ -62,7 +62,7 @@
     </a-table>
 
     <!-- 新建/编辑菜单 Modal -->
-    <a-modal v-model:visible="modalVisible" :title="isEdit ? '✏️ 编辑系统菜单' : '➕ 新建系统菜单项'" @ok="handleModalSave">
+    <a-modal v-model:visible="modalVisible" :title="isEdit ? '编辑系统菜单' : '新建系统菜单项'" @ok="handleModalSave">
       <a-form :model="form" layout="vertical">
         <a-form-item label="菜单显示名称" required>
           <a-input v-model="form.name" placeholder="如：财务报表 / 规则引擎" />
@@ -85,10 +85,14 @@
         </a-form-item>
 
         <a-form-item label="全局是否可见">
-          <a-radio-group v-model="form.is_visible">
-            <a-radio :value="1">🟢 可见展示</a-radio>
-            <a-radio :value="0">🙈 隐藏停用</a-radio>
-          </a-radio-group>
+          <a-switch
+            v-model="form.is_visible"
+            :checked-value="1"
+            :unchecked-value="0"
+          >
+            <template #checked>已启用</template>
+            <template #unchecked>已禁用</template>
+          </a-switch>
         </a-form-item>
       </a-form>
     </a-modal>
