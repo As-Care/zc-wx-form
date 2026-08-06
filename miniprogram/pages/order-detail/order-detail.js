@@ -27,6 +27,18 @@ const ALL_STEPS = [
   { key: 'completed', name: '已完成' }
 ];
 
+function formatOptionsSummary(it) {
+  let opts = it.options_summary || [];
+  if (typeof opts === 'string') {
+    try { opts = JSON.parse(opts); } catch (e) { opts = []; }
+  }
+  if ((!opts || opts.length === 0) && typeof it.options_summary_json === 'string') {
+    try { opts = JSON.parse(it.options_summary_json); } catch (e) { opts = []; }
+  }
+
+  return opts || [];
+}
+
 Page({
   data: {
     orderId: '',
@@ -47,18 +59,38 @@ Page({
     if (!id) return;
     request({ url: `/api/orders/${id}` }).then(res => {
       if (res.success && res.data) {
-        const target = res.data;
+        const target = res.data.order || res.data;
         const statusInfo = STATUS_INFO_MAP[target.status] || {
           text: '待复核',
           desc: '正在等待接单员复核'
         };
 
-        const items = (target.items || []).map((it, idx) => ({
-          ...it,
-          label: it.label || `【套系-${idx + 1}】`,
-          actual_area: it.actual_area || it.billed_area || 0,
-          options_summary: it.options_summary || []
-        }));
+        const items = (target.items || []).map((it, idx) => {
+          const optsSum = formatOptionsSummary(it);
+
+          let itemSceneImgs = [];
+          if (typeof it.scene_images === 'string') {
+            itemSceneImgs = it.scene_images.split(',').map(s => s.trim()).filter(Boolean);
+          } else if (Array.isArray(it.scene_images)) {
+            itemSceneImgs = it.scene_images;
+          }
+          if ((!itemSceneImgs || itemSceneImgs.length === 0) && target.scene_images) {
+            itemSceneImgs = typeof target.scene_images === 'string'
+              ? target.scene_images.split(',').map(s => s.trim()).filter(Boolean)
+              : (Array.isArray(target.scene_images) ? target.scene_images : []);
+          }
+
+          const itemRemark = it.customer_remark || target.customer_remark || '';
+
+          return {
+            ...it,
+            label: it.label || `【套系-${idx + 1}】`,
+            actual_area: it.actual_area || it.billed_area || 0,
+            options_summary: optsSum,
+            scene_images_list: itemSceneImgs,
+            customer_remark: itemRemark
+          };
+        });
 
         const scene_images_list = typeof target.scene_images === 'string'
           ? target.scene_images.split(',').map(s => s.trim()).filter(Boolean)
@@ -119,6 +151,17 @@ Page({
     wx.previewImage({
       current: url,
       urls: (this.data.order && this.data.order.scene_images_list) || [url]
+    });
+  },
+
+  previewItemSceneImg(e) {
+    const url = e.currentTarget.dataset.url;
+    const idx = e.currentTarget.dataset.idx;
+    const item = this.data.order && this.data.order.items && this.data.order.items[idx];
+    const urls = (item && item.scene_images_list) || [url];
+    wx.previewImage({
+      current: url,
+      urls
     });
   },
 

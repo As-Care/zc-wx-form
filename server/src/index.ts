@@ -749,9 +749,25 @@ app.post('/api/orders', async (c) => {
     const selectedOptionObjects: ProductOption[] = [];
     const selectedOptionsSummary: Array<{ groupTitle: string; option_name: string; priceText: string }> = [];
 
+    const OPTION_ID_NAME_MAP: Record<string, string> = {
+      'opt_1': '双层玻璃',
+      'opt_2': '双层钢化玻璃',
+      'opt_3': '默认门锁',
+      'opt_4': '默认铝材',
+      'opt_5': '琉璃白',
+      'opt_6': '深空灰',
+      'opt_7': '左锁（左合页）',
+      'opt_8': '右锁（左合页）',
+      'opt_9': '内开（朝内打开）',
+      'opt_10': '外开（朝外打开）'
+    };
+
     Object.keys(selectedOptionsMap).forEach(grpKey => {
-      const optId = selectedOptionsMap[grpKey];
-      const optObj = optionMap.get(optId);
+      const rawVal = selectedOptionsMap[grpKey];
+      const optId = typeof rawVal === 'string' ? rawVal : (rawVal && (rawVal.id || rawVal.option_name));
+      const optObj = optId ? optionMap.get(optId) : null;
+      let name = optObj ? optObj.option_name : (OPTION_ID_NAME_MAP[optId] || optId || '');
+
       if (optObj) {
         selectedOptionObjects.push(optObj);
         let pText = '包含在基础单价内';
@@ -764,11 +780,31 @@ app.post('/api/orders', async (c) => {
         }
         selectedOptionsSummary.push({
           groupTitle: optObj.group_title || grpKey,
-          option_name: optObj.option_name,
+          option_name: name,
           priceText: pText
+        });
+      } else if (name) {
+        selectedOptionsSummary.push({
+          groupTitle: grpKey,
+          option_name: name,
+          priceText: ''
         });
       }
     });
+
+    if (selectedOptionsSummary.length === 0 && Array.isArray(set.selectedOptionsSummary) && set.selectedOptionsSummary.length > 0) {
+      set.selectedOptionsSummary.forEach((so: any) => {
+        let name = so.option_name || so.name || '';
+        if (OPTION_ID_NAME_MAP[name]) {
+          name = OPTION_ID_NAME_MAP[name];
+        }
+        selectedOptionsSummary.push({
+          groupTitle: so.groupTitle || so.group_name || '选配',
+          option_name: name,
+          priceText: so.priceText || ''
+        });
+      });
+    }
 
     const pricing = calculateDoorWindowPrice({
       width_mm: width,
@@ -933,14 +969,63 @@ app.get('/api/orders/:id', async (c) => {
   }
 
   const { results: items } = await db.prepare('SELECT * FROM order_items WHERE order_id = ?').bind(id).all<OrderItem>();
+  const { results: allDbOptions } = await db.prepare('SELECT * FROM product_options').all<ProductOption>();
+  const dbOptMap = new Map<string, ProductOption>();
+  (allDbOptions || []).forEach(o => dbOptMap.set(o.id, o));
+
+  const DEFAULT_OPT_MAP: Record<string, { group: string; name: string }> = {
+    'opt_1': { group: '玻璃配置', name: '双层玻璃' },
+    'opt_2': { group: '玻璃配置', name: '双层钢化玻璃' },
+    'opt_3': { group: '门锁配置', name: '默认门锁' },
+    'opt_4': { group: '铝材配置', name: '默认铝材' },
+    'opt_5': { group: '颜色配置', name: '琉璃白' },
+    'opt_6': { group: '颜色配置', name: '深空灰' },
+    'opt_7': { group: '开门方向', name: '左锁（左合页）' },
+    'opt_8': { group: '开门方向', name: '右锁（左合页）' },
+    'opt_9': { group: '开门内外', name: '内开（朝内打开）' },
+    'opt_10': { group: '开门内外', name: '外开（朝外打开）' }
+  };
+
   (items || []).forEach(it => {
+    let summary: any[] = [];
     if (it.options_summary_json) {
-      try {
-        it.options_summary = JSON.parse(it.options_summary_json);
-      } catch (e) {
-        it.options_summary = [];
-      }
+      try { summary = JSON.parse(it.options_summary_json); } catch (e) { summary = []; }
     }
+
+    if (!summary || summary.length === 0) {
+      let selMap: any = {};
+      if (it.selected_options_json) {
+        try { selMap = JSON.parse(it.selected_options_json); } catch (e) { selMap = {}; }
+      }
+      if (selMap && typeof selMap === 'object') {
+        summary = Object.keys(selMap).map(grp => {
+          const rawVal = selMap[grp];
+          const optId = typeof rawVal === 'string' ? rawVal : (rawVal && (rawVal.id || rawVal.option_name));
+          const dbOpt = optId ? dbOptMap.get(optId) : null;
+          const def = optId ? DEFAULT_OPT_MAP[optId] : null;
+          return {
+            groupTitle: dbOpt ? dbOpt.group_name : (def ? def.group : grp),
+            option_name: dbOpt ? dbOpt.option_name : (def ? def.name : (optId || '')),
+            priceText: dbOpt && dbOpt.price > 0 ? `+¥ ${dbOpt.price}` : ''
+          };
+        }).filter(o => o.option_name);
+      }
+    } else {
+      summary.forEach(o => {
+        const rawName = o.option_name || o.id || '';
+        const dbOpt = dbOptMap.get(rawName);
+        const def = DEFAULT_OPT_MAP[rawName];
+        if (dbOpt) {
+          o.groupTitle = o.groupTitle || dbOpt.group_name;
+          o.option_name = dbOpt.option_name;
+        } else if (def) {
+          o.groupTitle = o.groupTitle || def.group;
+          o.option_name = def.name;
+        }
+      });
+    }
+
+    it.options_summary = summary;
   });
 
   const { results: logs } = await db.prepare('SELECT * FROM order_status_logs WHERE order_id = ? ORDER BY created_at ASC').bind(id).all();

@@ -26,6 +26,33 @@
     </view>
   </view>
 
+  <!-- 👤 客户信息与安装地址卡片 -->
+  <view class="glass-card customer-card" wx:if="{{order.customer_name || order.order_no}}">
+    <text class="card-title">👤 客户信息与安装地址</text>
+    <view class="c-info-grid flex-column">
+      <view class="info-row flex-between" wx:if="{{order.order_no}}">
+        <text class="info-label">订单编号</text>
+        <text class="info-val bold">{{order.order_no}}</text>
+      </view>
+      <view class="info-row flex-between" wx:if="{{order.created_at}}">
+        <text class="info-label">下单时间</text>
+        <text class="info-val">{{order.created_at}}</text>
+      </view>
+      <view class="info-row flex-between" wx:if="{{order.customer_name}}">
+        <text class="info-label">客户姓名</text>
+        <text class="info-val">{{order.customer_name}}</text>
+      </view>
+      <view class="info-row flex-between" wx:if="{{order.customer_phone}}">
+        <text class="info-label">联系电话</text>
+        <text class="info-val gold-text">{{order.customer_phone}}</text>
+      </view>
+      <view class="info-row flex-between" wx:if="{{order.install_address}}">
+        <text class="info-label">安装地址</text>
+        <text class="info-val address-text">{{order.install_address}}</text>
+      </view>
+    </view>
+  </view>
+
   <!-- 特殊费用核算通知 (如果有) -->
   <view class="glass-card special-charge-card" wx:if="{{order.special_charges_amount > 0 || order.admin_remark}}">
     <text class="card-title">⚠️ 商家复核说明与补充收费</text>
@@ -38,46 +65,57 @@
     </view>
   </view>
 
-  <!-- 现场照片与备注信息卡片 (如果有照片或备注) -->
-  <view class="glass-card scene-card" wx:if="{{(order.scene_images_list && order.scene_images_list.length > 0) || order.customer_remark}}">
-    <text class="card-title">📷 现场照片与备注要求</text>
-    <view class="scene-content flex-column">
-      <view class="scene-img-grid flex-row" wx:if="{{order.scene_images_list && order.scene_images_list.length > 0}}">
-        <image class="scene-img-thumb" wx:for="{{order.scene_images_list}}" wx:key="*this" src="{{item}}" mode="aspectFill" bindtap="previewSceneImg" data-url="{{item}}" />
-      </view>
-      <text class="scene-remark" wx:if="{{order.customer_remark}}">客户现场备注：{{order.customer_remark}}</text>
-    </view>
-  </view>
-
   <!-- 门窗多套定制规格明细拆解 -->
   <view class="glass-card items-card">
     <text class="card-title">② 门窗多套定制规格明细拆解 (共{{order.items.length}}套)</text>
 
     <!-- 逐套展示明细 -->
-    <view class="item-card" wx:for="{{order.items}}" wx:key="label" wx:for-index="idx">
-      <view class="item-header flex-between">
-        <view class="set-label-box flex-row">
-          <text class="set-idx-badge">套系{{idx + 1}}</text>
-          <text class="p-name">{{item.label}}</text>
-        </view>
-        <text class="p-subtotal">小计 ¥ {{item.item_subtotal}}</text>
+    <view class="item-preview-box mb-3" wx:for="{{order.items}}" wx:key="label" wx:for-index="idx">
+      <view class="flex-between mb-2">
+        <view class="prod-title">{{item.product_name || '110断桥铝系统平开窗'}}</view>
+        <text class="set-tag">【 {{item.label || ('套系 ' + (idx + 1))}} 】</text>
       </view>
 
-      <view class="p-prod-title">{{item.product_name}}</view>
-
-      <view class="item-detail-grid">
-        <text class="d-text">规格尺寸：{{item.width_mm}} × {{item.height_mm}} mm</text>
-        <text class="d-text">实际面积：{{item.actual_area}} ㎡</text>
-        <text class="d-text">计费面积：{{item.billed_area}} ㎡</text>
+      <view class="spec-row flex-between">
+        <text class="s-label">输入尺寸 (宽 × 高)</text>
+        <text class="s-val">{{item.width_mm}} × {{item.height_mm}} mm</text>
+      </view>
+      <view class="spec-row flex-between">
+        <text class="s-label">本套实际面积</text>
+        <text class="s-val">{{item.actual_area}} ㎡</text>
+      </view>
+      <view class="spec-row flex-between">
+        <text class="s-label">本套计费面积</text>
+        <text class="s-val theme-gold-text">{{item.billed_area}} ㎡</text>
+      </view>
+      <view class="spec-row flex-between">
+        <text class="s-label">本套预估小计</text>
+        <text class="s-val theme-gold-text">¥ {{item.item_subtotal}}</text>
       </view>
 
-      <!-- 选配项明细 -->
-      <view class="opt-breakdown-box flex-column" wx:if="{{item.options_summary && item.options_summary.length > 0}}">
-        <text class="opt-b-title">选配配置明细：</text>
-        <view class="opt-b-line flex-row" wx:for="{{item.options_summary}}" wx:for-item="opt" wx:key="groupTitle">
-          <image wx:if="{{opt.image_url}}" class="opt-detail-img" src="{{opt.image_url}}" mode="aspectFill" />
-          <text>• {{opt.groupTitle}}：{{opt.option_name}}</text>
+      <view class="divider"></view>
+
+      <!-- 已选配置明细 -->
+      <text class="sub-title">已选配置明细：</text>
+      <view class="opt-tag-list flex-row mt-1">
+        <view class="opt-tag flex-row" wx:for="{{item.options_summary}}" wx:for-item="opt" wx:key="groupTitle">
+          <image wx:if="{{opt.image_url}}" class="opt-tag-img" src="{{opt.image_url}}" mode="aspectFill" />
+          <text>{{opt.groupTitle || opt.group_name}}：{{opt.option_name || opt.name}} <text wx:if="{{opt.priceText}}" style="color: #94A3B8;">({{opt.priceText}})</text></text>
         </view>
+      </view>
+
+      <!-- 该套上传的现场照片列表 -->
+      <view class="scene-preview-sec flex-column" wx:if="{{item.scene_images_list && item.scene_images_list.length > 0}}">
+        <text class="sub-title sec-title">📷 现场环境照片：</text>
+        <view class="scene-img-grid flex-row">
+          <image class="scene-thumb-img" wx:for="{{item.scene_images_list}}" wx:for-item="sImg" wx:key="*this" src="{{sImg}}" mode="aspectFill" bindtap="previewItemSceneImg" data-url="{{sImg}}" data-idx="{{idx}}" />
+        </view>
+      </view>
+
+      <!-- 该套现场工况与施工备注 -->
+      <view class="scene-remark-sec flex-column" wx:if="{{item.customer_remark}}">
+        <text class="sub-title sec-title">📝 现场施工与工况备注：</text>
+        <text class="remark-text-box">{{item.customer_remark}}</text>
       </view>
     </view>
 
