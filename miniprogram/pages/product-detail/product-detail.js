@@ -204,7 +204,8 @@ Page({
           option_name: targetOpt.option_name,
           price_type: targetOpt.price_type,
           price: targetOpt.price,
-          priceText: targetOpt.priceText
+          priceText: targetOpt.priceText,
+          image_url: targetOpt.image_url || ''
         });
       });
 

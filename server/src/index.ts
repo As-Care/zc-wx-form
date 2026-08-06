@@ -539,9 +539,14 @@ app.post('/api/admin/products/:id/options', async (c) => {
         price_type TEXT DEFAULT 'per_sqm',
         price REAL DEFAULT 0,
         is_default INTEGER DEFAULT 0,
-        sort_order INTEGER DEFAULT 0
+        sort_order INTEGER DEFAULT 0,
+        image_url TEXT
       )
     `).run();
+
+    try {
+      await db.prepare('ALTER TABLE product_options ADD COLUMN image_url TEXT').run();
+    } catch (e) {}
 
     // 1. 删除该商品原有的选配规则
     await db.prepare('DELETE FROM product_options WHERE product_id = ?').bind(id).run();
@@ -551,17 +556,18 @@ app.post('/api/admin/products/:id/options', async (c) => {
       const opt = options[i];
       const optId = opt.id || `opt_${Date.now()}_${i}`;
       await db.prepare(`
-        INSERT INTO product_options (id, product_id, group_name, option_name, price_type, price, is_default, sort_order)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO product_options (id, product_id, group_name, option_name, price_type, price, is_default, sort_order, image_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         optId,
         id,
         opt.group_name || '选配分组',
         opt.option_name || '',
-        opt.price_type || 'per_sqm',
+        opt.price_type || 'fixed',
         Number(opt.price || 0),
         opt.is_default ? 1 : 0,
-        i
+        i,
+        opt.image_url || ''
       ).run();
     }
 

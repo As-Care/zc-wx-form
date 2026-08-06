@@ -290,6 +290,15 @@
   background: #C5A880;
 }
 
+.opt-thumb-img {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 8rpx;
+  margin-right: 12rpx;
+  border: 1rpx solid rgba(197, 168, 128, 0.4);
+  flex-shrink: 0;
+}
+
 .radio-circle.checked::after {
   content: '';
   width: 12rpx;

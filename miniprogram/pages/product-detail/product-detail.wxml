@@ -89,6 +89,7 @@
       <view class="option-item flex-between {{customSets[activeSetIndex].selected_options[grp.group_name] === opt.id ? 'active' : ''}}" wx:for="{{grp.options}}" wx:for-item="opt" wx:key="id" bindtap="toggleOption" data-group="{{grp.group_name}}" data-id="{{opt.id}}">
         <view class="opt-left flex-row">
           <view class="radio-circle {{customSets[activeSetIndex].selected_options[grp.group_name] === opt.id ? 'checked' : ''}}"></view>
+          <image wx:if="{{opt.image_url}}" class="opt-thumb-img" src="{{opt.image_url}}" mode="aspectFill" />
           <text class="opt-name">{{opt.option_name}}</text>
         </view>
         <text class="opt-price">{{opt.priceText}}</text>

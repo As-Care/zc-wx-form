@@ -63,7 +63,10 @@
       <!-- 选配项明细 -->
       <view class="opt-breakdown-box flex-column" wx:if="{{item.options_summary && item.options_summary.length > 0}}">
         <text class="opt-b-title">选配配置明细：</text>
-        <text class="opt-b-line" wx:for="{{item.options_summary}}" wx:for-item="opt" wx:key="groupTitle">• {{opt.groupTitle}}：{{opt.option_name}}</text>
+        <view class="opt-b-line flex-row" wx:for="{{item.options_summary}}" wx:for-item="opt" wx:key="groupTitle">
+          <image wx:if="{{opt.image_url}}" class="opt-detail-img" src="{{opt.image_url}}" mode="aspectFill" />
+          <text>• {{opt.groupTitle}}：{{opt.option_name}}</text>
+        </view>
       </view>
     </view>
 

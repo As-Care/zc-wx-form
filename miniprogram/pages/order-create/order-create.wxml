@@ -28,8 +28,9 @@
       <view class="divider"></view>
       <text class="sub-title">已选配置明细：</text>
       <view class="opt-tag-list flex-row">
-        <view class="opt-tag" wx:for="{{item.selectedOptionsSummary || item.selected_options}}" wx:key="id" wx:for-item="opt">
-          {{opt.groupTitle || opt.group_name}}：{{opt.option_name || opt.name}}
+        <view class="opt-tag flex-row" wx:for="{{item.selectedOptionsSummary || item.selected_options}}" wx:key="id" wx:for-item="opt">
+          <image wx:if="{{opt.image_url}}" class="opt-tag-img" src="{{opt.image_url}}" mode="aspectFill" />
+          <text>{{opt.groupTitle || opt.group_name}}：{{opt.option_name || opt.name}}</text>
         </view>
       </view>
     </view>

@@ -30,13 +30,14 @@ export interface Category {
 export interface ProductOption {
   id: string;
   product_id: string;
-  group_name: 'glass' | 'hardware' | 'color' | 'extra';
-  group_title: string;
+  group_name: string;
+  group_title?: string;
   option_name: string;
   price_type: 'per_sqm' | 'per_item' | 'fixed';
   price: number;
   is_default: number;
   sort_order: number;
+  image_url?: string;
   priceText?: string;
 }
 

@@ -258,10 +258,13 @@
             <template #title>
               <div style="display: flex; align-items: center; gap: 12px;">
                 <span style="font-size: 14px; font-weight: 700; color: #1d2129; white-space: nowrap;">📦 选配分组 {{ gIdx + 1 }}：</span>
-                <a-select v-model="group.group_name" size="medium" allow-create placeholder="选择或手动输入分组名称 (如: 玻璃配置)" style="width: 300px;">
+                <a-select v-model="group.group_name" size="medium" allow-create placeholder="选择或手动输入分组名称" style="width: 300px;">
                   <a-option value="玻璃配置">玻璃配置</a-option>
-                  <a-option value="五金配件品牌">五金配件品牌</a-option>
-                  <a-option value="铝材表面涂层颜色">铝材表面涂层颜色</a-option>
+                  <a-option value="门锁配置">门锁配置</a-option>
+                  <a-option value="铝材配置">铝材配置</a-option>
+                  <a-option value="颜色配置">颜色配置 (支持上传配图)</a-option>
+                  <a-option value="开门方向">开门方向</a-option>
+                  <a-option value="开门内外">开门内外</a-option>
                   <a-option value="其它选配">其它选配</a-option>
                 </a-select>
               </div>
@@ -283,35 +286,62 @@
             <!-- 组内选项细项表格 -->
             <a-table :data="group.items" :pagination="false" border size="medium" class="no-wrap-header-table">
               <template #columns>
-                <a-table-column title="选项名称 (如: Low-E 超白隔热玻璃)" :width="340">
+                <a-table-column title="选项名称 (如: 琉璃白 / 双层钢化玻璃)" :width="260">
                   <template #cell="{ record }">
                     <a-input v-model="record.option_name" size="medium" placeholder="请输入选项名称" />
                   </template>
                 </a-table-column>
 
-                <a-table-column title="加价方式" :width="200">
+                <a-table-column title="选项示图/色卡 (可选)" :width="160">
+                  <template #cell="{ record }">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <a-popover v-if="record.image_url" trigger="hover">
+                        <img :src="record.image_url" style="width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e6eb; cursor: pointer;" />
+                        <template #content>
+                          <img :src="record.image_url" style="max-width: 160px; max-height: 160px; border-radius: 6px;" />
+                        </template>
+                      </a-popover>
+                      <a-upload
+                        action="https://zc-api.carelife.top/api/upload"
+                        :show-file-list="false"
+                        @success="(fileItem) => onOptionImgUploadSuccess(record, fileItem)"
+                      >
+                        <template #upload-button>
+                          <a-button type="outline" size="mini">
+                            {{ record.image_url ? '更换' : '上传图' }}
+                          </a-button>
+                        </template>
+                      </a-upload>
+                      <a-button v-if="record.image_url" type="text" status="danger" size="mini" @click="record.image_url = ''">
+                        <icon-delete />
+                      </a-button>
+                    </div>
+                  </template>
+                </a-table-column>
+
+                <a-table-column title="加价方式" :width="180">
                   <template #cell="{ record }">
                     <a-select v-model="record.price_type" size="medium">
+                      <a-option value="fixed">固定金额(元)</a-option>
                       <a-option value="per_sqm">按平米(元/㎡)</a-option>
                       <a-option value="per_item">按件/套(元/套)</a-option>
-                      <a-option value="fixed">固定金额(元)</a-option>
                     </a-select>
                   </template>
                 </a-table-column>
 
-                <a-table-column title="加价金额 (元)" :width="160">
+                <a-table-column title="加价金额 (元)" :width="140">
                   <template #cell="{ record }">
                     <a-input-number v-model="record.price" size="medium" :min="0" placeholder="0" />
                   </template>
                 </a-table-column>
 
-                <a-table-column title="默认勾选" :width="120">
+                <a-table-column title="默认勾选" :width="110">
                   <template #cell="{ record }">
                     <a-switch v-model="record.is_default" size="medium" :checked-value="1" :unchecked-value="0" />
                   </template>
                 </a-table-column>
 
-                <a-table-column title="操作" :width="80">
+                <a-table-column title="操作" :width="70">
                   <template #cell="{ record, rowIndex }">
                     <a-button type="text" status="danger" size="medium" @click="removeItemFromGroup(group, rowIndex)">
                       <template #icon><icon-delete /></template>
@@ -358,9 +388,16 @@ const DEFAULT_PRODUCTS = [
     min_area: 1,
     is_active: 1,
     options: [
-      { id: 'opt_1', group_name: '玻璃配置', option_name: '5+18A+5 标准中空钢化玻璃', price_type: 'per_sqm', price: 0, is_default: 1 },
-      { id: 'opt_2', group_name: '玻璃配置', option_name: '5+18A+5 Low-E 超白隔热玻璃', price_type: 'per_sqm', price: 80, is_default: 0 },
-      { id: 'opt_3', group_name: '五金配件品牌', option_name: '德国好博 (Hoppe) 原装执手', price_type: 'per_item', price: 150, is_default: 1 }
+      { id: 'opt_1', group_name: '玻璃配置', option_name: '双层玻璃', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+      { id: 'opt_2', group_name: '玻璃配置', option_name: '双层钢化玻璃', price_type: 'fixed', price: 50, is_default: 0, image_url: '' },
+      { id: 'opt_3', group_name: '门锁配置', option_name: '默认门锁', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+      { id: 'opt_4', group_name: '铝材配置', option_name: '默认铝材', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+      { id: 'opt_5', group_name: '颜色配置', option_name: '琉璃白', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+      { id: 'opt_6', group_name: '颜色配置', option_name: '深空灰', price_type: 'fixed', price: 0, is_default: 0, image_url: '' },
+      { id: 'opt_7', group_name: '开门方向', option_name: '左锁（左合页）', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+      { id: 'opt_8', group_name: '开门方向', option_name: '右锁（左合页）', price_type: 'fixed', price: 0, is_default: 0, image_url: '' },
+      { id: 'opt_9', group_name: '开门内外', option_name: '内开（朝内打开）', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+      { id: 'opt_10', group_name: '开门内外', option_name: '外开（朝外打开）', price_type: 'fixed', price: 0, is_default: 0, image_url: '' }
     ]
   },
   {
@@ -374,8 +411,10 @@ const DEFAULT_PRODUCTS = [
     min_area: 1,
     is_active: 1,
     options: [
-      { id: 'opt_4', group_name: '玻璃配置', option_name: '8mm 单层钢化极窄玻璃', price_type: 'per_sqm', price: 0, is_default: 1 },
-      { id: 'opt_5', group_name: '铝材表面涂层颜色', option_name: '氟碳雅致黑', price_type: 'fixed', price: 0, is_default: 1 }
+      { id: 'opt_11', group_name: '玻璃配置', option_name: '双层玻璃', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+      { id: 'opt_12', group_name: '门锁配置', option_name: '默认门锁', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+      { id: 'opt_13', group_name: '颜色配置', option_name: '琉璃白', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+      { id: 'opt_14', group_name: '开门方向', option_name: '左锁（左合页）', price_type: 'fixed', price: 0, is_default: 1, image_url: '' }
     ]
   }
 ];
@@ -498,6 +537,15 @@ const handleStatusChange = async (record, val) => {
   }
 };
 
+const onOptionImgUploadSuccess = (record, fileItem) => {
+  if (fileItem && fileItem.response && fileItem.response.url) {
+    record.image_url = fileItem.response.url;
+  } else if (fileItem && fileItem.url) {
+    record.image_url = fileItem.url;
+  }
+  Message.success('选项示图/色卡上传成功！');
+};
+
 const groupedOptions = ref([]);
 
 const openOptionsDrawer = async (record) => {
@@ -522,9 +570,10 @@ const openOptionsDrawer = async (record) => {
     groupMap[gName].items.push({
       id: opt.id || `opt_${Date.now()}_${Math.random()}`,
       option_name: opt.option_name || opt.name || '',
-      price_type: opt.price_type || 'per_sqm',
+      price_type: opt.price_type || 'fixed',
       price: opt.price !== undefined ? opt.price : 0,
-      is_default: opt.is_default ? 1 : 0
+      is_default: opt.is_default ? 1 : 0,
+      image_url: opt.image_url || ''
     });
   });
 
@@ -532,18 +581,49 @@ const openOptionsDrawer = async (record) => {
   if (list.length === 0) {
     list = [
       {
-        id: `grp_1`,
+        id: `grp_1_${Date.now()}`,
         group_name: '玻璃配置',
         items: [
-          { id: `opt_1`, option_name: '5+18A+5 标准中空钢化玻璃', price_type: 'per_sqm', price: 0, is_default: 1 },
-          { id: `opt_2`, option_name: '5+18A+5 Low-E 超白隔热玻璃', price_type: 'per_sqm', price: 80, is_default: 0 }
+          { id: `opt_1`, option_name: '双层玻璃', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+          { id: `opt_2`, option_name: '双层钢化玻璃', price_type: 'fixed', price: 50, is_default: 0, image_url: '' }
         ]
       },
       {
-        id: `grp_2`,
-        group_name: '五金配件品牌',
+        id: `grp_2_${Date.now()}`,
+        group_name: '门锁配置',
         items: [
-          { id: `opt_3`, option_name: '德国好博 (Hoppe) 原装执手', price_type: 'per_item', price: 150, is_default: 1 }
+          { id: `opt_3`, option_name: '默认门锁', price_type: 'fixed', price: 0, is_default: 1, image_url: '' }
+        ]
+      },
+      {
+        id: `grp_3_${Date.now()}`,
+        group_name: '铝材配置',
+        items: [
+          { id: `opt_4`, option_name: '默认铝材', price_type: 'fixed', price: 0, is_default: 1, image_url: '' }
+        ]
+      },
+      {
+        id: `grp_4_${Date.now()}`,
+        group_name: '颜色配置',
+        items: [
+          { id: `opt_5`, option_name: '琉璃白', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+          { id: `opt_6`, option_name: '深空灰', price_type: 'fixed', price: 0, is_default: 0, image_url: '' }
+        ]
+      },
+      {
+        id: `grp_5_${Date.now()}`,
+        group_name: '开门方向',
+        items: [
+          { id: `opt_7`, option_name: '左锁（左合页）', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+          { id: `opt_8`, option_name: '右锁（左合页）', price_type: 'fixed', price: 0, is_default: 0, image_url: '' }
+        ]
+      },
+      {
+        id: `grp_6_${Date.now()}`,
+        group_name: '开门内外',
+        items: [
+          { id: `opt_9`, option_name: '内开（朝内打开）', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+          { id: `opt_10`, option_name: '外开（朝外打开）', price_type: 'fixed', price: 0, is_default: 0, image_url: '' }
         ]
       }
     ];
@@ -558,7 +638,7 @@ const addGroup = () => {
     id: `grp_${Date.now()}`,
     group_name: '新增选配分组',
     items: [
-      { id: `opt_${Date.now()}`, option_name: '', price_type: 'per_sqm', price: 0, is_default: 1 }
+      { id: `opt_${Date.now()}`, option_name: '', price_type: 'fixed', price: 0, is_default: 1, image_url: '' }
     ]
   });
 };
@@ -572,9 +652,10 @@ const addItemToGroup = (group) => {
   group.items.push({
     id: `opt_${Date.now()}`,
     option_name: '',
-    price_type: 'per_sqm',
+    price_type: 'fixed',
     price: 0,
-    is_default: 0
+    is_default: 0,
+    image_url: ''
   });
 };
 
@@ -596,9 +677,10 @@ const saveOptions = async () => {
           id: it.id || `opt_${Date.now()}_${Math.random()}`,
           group_name: gName,
           option_name: it.option_name.trim(),
-          price_type: it.price_type || 'per_sqm',
+          price_type: it.price_type || 'fixed',
           price: Number(it.price || 0),
-          is_default: it.is_default ? 1 : 0
+          is_default: it.is_default ? 1 : 0,
+          image_url: it.image_url || ''
         });
       }
     });

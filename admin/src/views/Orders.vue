@@ -205,9 +205,10 @@
             <!-- 选配明细卡片 -->
             <div class="options-detail-panel" v-if="item.options_summary || (item.selected_options && item.selected_options.length > 0)">
               <div class="panel-title">选配升级配置明细：</div>
-              <div v-for="(opt, oIdx) in (item.options_summary || item.selected_options)" :key="oIdx" class="option-row">
+              <div v-for="(opt, oIdx) in (item.options_summary || item.selected_options)" :key="oIdx" class="option-row" style="display: flex; align-items: center; gap: 6px;">
                 <span class="dot">•</span>
                 <span class="group-label">{{ opt.groupTitle || opt.group }}：</span>
+                <img v-if="opt.image_url" :src="opt.image_url" style="width: 20px; height: 20px; object-fit: cover; border-radius: 3px; border: 1px solid #e5e6eb;" />
                 <span class="opt-name">{{ opt.option_name || opt.name }}</span>
                 <span class="opt-price" v-if="opt.priceText">{{ opt.priceText }}</span>
               </div>
