@@ -223,12 +223,6 @@ import { Message } from '@arco-design/web-vue';
 
 const API_BASE = 'https://zc-api.carelife.top';
 
-const DEFAULT_USERS = [
-  { id: 'usr_1', nickname: 'care', phone: '13344443333', avatar_url: 'https://zc-oss.carelife.top/common/zc-logo.jpg', order_count: 4, openid: 'wx_openid_demo_care', address: '湖北仙桃恒迪建材市场2期14栋1-107-108', role: 'customer', created_at: '2026-08-05 05:30:09' },
-  { id: 'usr_2', nickname: '张先生', phone: '13812345678', avatar_url: '', order_count: 1, openid: 'wx_user_13812345678', address: '湖北省仙桃市锦绣江山小区3栋201', role: 'customer', created_at: '2026-08-02 14:30:00' },
-  { id: 'usr_3', nickname: '李女士', phone: '15987654321', avatar_url: '', order_count: 2, openid: 'wx_user_15987654321', address: '湖北省仙桃市碧桂园5栋1002', role: 'customer', created_at: '2026-08-03 16:20:00' }
-];
-
 const users = ref([]);
 const tableLoading = ref(true);
 
@@ -275,10 +269,10 @@ const fetchUsers = async () => {
     if (data.success && Array.isArray(data.data)) {
       users.value = data.data;
     } else {
-      users.value = DEFAULT_USERS;
+      users.value = [];
     }
   } catch (e) {
-    users.value = DEFAULT_USERS;
+    users.value = [];
   } finally {
     tableLoading.value = false;
   }

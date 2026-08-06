@@ -132,10 +132,6 @@ import { Message } from '@arco-design/web-vue';
 
 const API_BASE = 'https://zc-api.carelife.top';
 
-const DEFAULT_RECEIVERS = [
-  { id: 'rec_1', name: '客服经理 · 展晨专人', phone: '13545941637', qr_code_url: 'https://zc-oss.carelife.top/common/zc-logo.jpg', is_active: 1 }
-];
-
 const receivers = ref([]);
 const tableLoading = ref(true);
 
@@ -241,13 +237,13 @@ const fetchReceivers = async () => {
   try {
     const res = await fetch(`${API_BASE}/api/receivers`);
     const data = await res.json();
-    if (data.success && data.data && data.data.length > 0) {
+    if (data.success && Array.isArray(data.data)) {
       receivers.value = data.data;
     } else {
-      receivers.value = DEFAULT_RECEIVERS;
+      receivers.value = [];
     }
   } catch (e) {
-    receivers.value = DEFAULT_RECEIVERS;
+    receivers.value = [];
   } finally {
     tableLoading.value = false;
   }

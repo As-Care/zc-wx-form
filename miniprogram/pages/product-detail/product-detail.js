@@ -48,8 +48,8 @@ Page({
       { id: 'opt_6', group_name: '颜色配置', option_name: '深空灰', price: 0, price_type: 'fixed', is_default: 0, image_url: '' },
       { id: 'opt_7', group_name: '开门方向', option_name: '左锁（左合页）', price: 0, price_type: 'fixed', is_default: 1, image_url: '' },
       { id: 'opt_8', group_name: '开门方向', option_name: '右锁（左合页）', price: 0, price_type: 'fixed', is_default: 0, image_url: '' },
-      { id: 'opt_9', group_name: '开门内外', option_name: '内开（朝内打开）', price: 0, price_type: 'fixed', is_default: 1, image_url: '' },
-      { id: 'opt_10', group_name: '开门内外', option_name: '外开（朝外打开）', price: 0, price_type: 'fixed', is_default: 0, image_url: '' }
+      { id: 'opt_default_in', group_name: '开门内外', option_name: '内开（朝内打开）', price: 0, price_type: 'fixed', is_default: 1, image_url: '' },
+      { id: 'opt_default_out', group_name: '开门内外', option_name: '外开（朝外打开）', price: 0, price_type: 'fixed', is_default: 0, image_url: '' }
     ];
 
     const groupMap = {};

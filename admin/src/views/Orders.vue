@@ -156,41 +156,24 @@
         <div class="status-banner mb-4">
           <div class="flex-between">
             <div>
-              <span style="font-size: 12px; color: #86909c;">订单编号：</span>
-              <strong style="font-size: 16px; color: #1d2129;">{{ currentOrderDetail.order_no }}</strong>
+              <span style="font-size: 12px; color: var(--color-text-3);">订单编号：</span>
+              <strong style="font-size: 16px; color: var(--color-text-1);">{{ currentOrderDetail.order_no }}</strong>
             </div>
             <a-tag :color="getStatusColor(currentOrderDetail.status)" size="large">
               {{ getStatusText(currentOrderDetail.status) }}
             </a-tag>
           </div>
-          <div style="font-size: 12px; color: #86909c; margin-top: 6px;">
+          <div style="font-size: 12px; color: var(--color-text-3); margin-top: 6px;">
             下单时间：{{ currentOrderDetail.created_at || '暂无时间' }}
           </div>
         </div>
 
         <!-- 👤 客户基本信息 -->
-        <a-card title="👤 客户基本信息与现场照片" class="mb-4" size="small">
+        <a-card title="👤 客户基本信息" class="mb-4" size="small">
           <a-descriptions :column="2" border size="small">
             <a-descriptions-item label="客户姓名">{{ currentOrderDetail.customer_name }}</a-descriptions-item>
             <a-descriptions-item label="联系电话">{{ currentOrderDetail.customer_phone }}</a-descriptions-item>
             <a-descriptions-item label="安装详细地址" :span="2">{{ currentOrderDetail.install_address }}</a-descriptions-item>
-            <a-descriptions-item label="客户现场备注" :span="2">
-              <span v-if="currentOrderDetail.customer_remark">{{ currentOrderDetail.customer_remark }}</span>
-              <span v-else style="color: #c9cdd4;">暂无现场备注</span>
-            </a-descriptions-item>
-            <a-descriptions-item label="现场环境照片" :span="2">
-              <div v-if="getSceneImages(currentOrderDetail).length > 0" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
-                <a-image
-                  v-for="(imgUrl, imgIdx) in getSceneImages(currentOrderDetail)"
-                  :key="imgIdx"
-                  :src="imgUrl"
-                  width="90"
-                  height="90"
-                  style="object-fit: cover; border-radius: 6px; border: 1px solid #e5e6eb;"
-                />
-              </div>
-              <span v-else style="color: #c9cdd4;">暂无现场照片</span>
-            </a-descriptions-item>
           </a-descriptions>
         </a-card>
 
@@ -206,8 +189,8 @@
               <strong style="color: #b89768; font-size: 16px;">小计：¥ {{ item.item_subtotal || item.billed_area * item.base_price_sqm }}</strong>
             </div>
 
-            <h4 style="margin: 4px 0 8px 0; font-size: 15px; color: #1d2129;">{{ item.product_name }}</h4>
-            <div style="font-size: 13px; color: #4e5969; margin-bottom: 8px;">
+            <h4 style="margin: 4px 0 8px 0; font-size: 15px; color: var(--color-text-1);">{{ item.product_name }}</h4>
+            <div style="font-size: 13px; color: var(--color-text-2); margin-bottom: 8px;">
               规格尺寸：<strong>{{ item.width_mm }} × {{ item.height_mm }} mm</strong>
               &nbsp;|&nbsp;
               实际面积：<strong>{{ item.area_sqm || ((item.width_mm * item.height_mm) / 1000000).toFixed(2) }} ㎡</strong>
@@ -215,19 +198,39 @@
               计费起步面积：<strong>{{ item.billed_area }} ㎡</strong>
             </div>
 
-            <!-- 选配明细卡片 -->
-            <div class="options-detail-panel" v-if="getItemOptions(item).length > 0">
+            <!-- 选配明细卡片 (在照片和备注上面) -->
+            <div class="options-detail-panel mb-3" v-if="getItemOptions(item).length > 0">
               <div class="panel-title">选配升级配置明细：</div>
               <div v-for="(opt, oIdx) in getItemOptions(item)" :key="oIdx" class="option-row" style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
                 <span class="dot">•</span>
-                <span class="group-label">{{ opt.groupTitle || opt.group || opt.group_name || '选配' }}：</span>
-                <img v-if="opt.image_url" :src="opt.image_url" style="width: 20px; height: 20px; object-fit: cover; border-radius: 3px; border: 1px solid #e5e6eb;" />
-                <span class="opt-name">{{ opt.option_name || opt.name || opt.id }}</span>
+                <span class="group-label" style="color: var(--color-text-2);">{{ opt.groupTitle || opt.group || opt.group_name || '选配' }}：</span>
+                <img v-if="opt.image_url" :src="opt.image_url" style="width: 20px; height: 20px; object-fit: cover; border-radius: 3px; border: 1px solid var(--color-border);" />
+                <span class="opt-name" style="color: var(--color-text-1);">{{ opt.option_name || opt.name || opt.id }}</span>
                 <span class="opt-price" v-if="opt.priceText" style="color: #ff7d00; margin-left: 4px;">{{ opt.priceText }}</span>
               </div>
             </div>
-            <div v-else class="options-detail-panel" style="color: #86909c; font-size: 12px; font-style: italic;">
+            <div v-else class="options-detail-panel mb-3" style="color: var(--color-text-3); font-size: 12px; font-style: italic;">
               暂无特殊选配升级项 (使用基础标配)
+            </div>
+
+            <!-- 1. 单套现场照片 (在配置明细下方，且在备注上方) -->
+            <div v-if="getItemSceneImages(item, currentOrderDetail).length > 0" style="margin-top: 10px; margin-bottom: 8px;">
+              <div style="font-size: 12px; color: var(--color-text-2); font-weight: 600; margin-bottom: 4px;">本套现场环境照片：</div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <a-image
+                  v-for="(imgUrl, imgIdx) in getItemSceneImages(item, currentOrderDetail)"
+                  :key="imgIdx"
+                  :src="imgUrl"
+                  width="80"
+                  height="80"
+                  style="object-fit: cover; border-radius: 6px; border: 1px solid var(--color-border);"
+                />
+              </div>
+            </div>
+
+            <!-- 2. 单套现场备注 (在照片下方) -->
+            <div v-if="getItemRemark(item, currentOrderDetail)" class="site-remark-box">
+              <strong style="color: #d46b08;">本套现场备注：</strong>{{ getItemRemark(item, currentOrderDetail) }}
             </div>
           </div>
         </a-card>
@@ -249,7 +252,7 @@
             </div>
             <a-divider style="margin: 10px 0;" />
             <div class="price-row flex-between" style="font-size: 18px;">
-              <strong>订单核算最终总金额：</strong>
+              <strong style="color: var(--color-text-1);">订单核算最终总金额：</strong>
               <strong style="color: #C5A880; font-size: 20px;">¥ {{ currentOrderDetail.final_amount }}</strong>
             </div>
           </div>
@@ -257,7 +260,7 @@
 
         <!-- 📝 商家备注 -->
         <a-card title="📝 商家备注" size="small" v-if="currentOrderDetail.admin_remark">
-          <div style="font-size: 13px; color: #4e5969; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px; border: 1px dashed #e5e6eb;">
+          <div style="font-size: 13px; color: var(--color-text-1); background: var(--color-fill-2); padding: 12px; border-radius: 8px; border: 1px dashed var(--color-border);">
             {{ currentOrderDetail.admin_remark }}
           </div>
         </a-card>
@@ -460,31 +463,67 @@ const viewOrderDetail = async (record) => {
   } catch (e) {}
 };
 
-const getSceneImages = (order) => {
-  if (!order || !order.scene_images) return [];
-  if (Array.isArray(order.scene_images)) return order.scene_images;
-  if (typeof order.scene_images === 'string') {
+const getItemRemark = (item, order) => {
+  if (item && (item.remark || item.customer_remark || item.note)) {
+    return item.remark || item.customer_remark || item.note;
+  }
+  return order?.customer_remark || '';
+};
+
+const getItemSceneImages = (item, order) => {
+  let imgs = item?.scene_images || item?.scene_image || item?.images || item?.photos;
+  if (!imgs) {
+    imgs = order?.scene_images;
+  }
+  if (!imgs) return [];
+  if (Array.isArray(imgs)) return imgs;
+  if (typeof imgs === 'string') {
     try {
-      const parsed = JSON.parse(order.scene_images);
+      const parsed = JSON.parse(imgs);
       if (Array.isArray(parsed)) return parsed;
     } catch (e) {}
-    return order.scene_images.split(',').map(s => s.trim()).filter(Boolean);
+    return imgs.split(',').map(s => s.trim()).filter(Boolean);
   }
   return [];
 };
 
+const KEY_TO_CN_MAP = {
+  'glass': '玻璃配置',
+  'hardware': '门锁配置',
+  'lock': '门锁配置',
+  'aluminum': '铝材配置',
+  'color': '颜色配置',
+  'direction': '开门方向',
+  'open_direction': '开门方向',
+  'open_type': '开门内外',
+  'inside_outside': '开门内外',
+  'screen': '纱窗配置',
+  'flyscreen': '金刚网纱窗'
+};
+
+const formatGroupTitle = (rawTitle) => {
+  if (!rawTitle) return '选配';
+  const key = String(rawTitle).trim().toLowerCase();
+  return KEY_TO_CN_MAP[key] || rawTitle;
+};
+
 const getItemOptions = (item) => {
   if (!item) return [];
-  if (item.options_summary && Array.isArray(item.options_summary) && item.options_summary.length > 0) {
-    return item.options_summary;
-  }
   let summary = [];
-  if (item.options_summary_json) {
+  if (item.options_summary && Array.isArray(item.options_summary) && item.options_summary.length > 0) {
+    summary = item.options_summary;
+  } else if (item.options_summary_json) {
     try {
       summary = JSON.parse(item.options_summary_json);
-      if (Array.isArray(summary) && summary.length > 0) return summary;
     } catch (e) {}
   }
+  if (Array.isArray(summary) && summary.length > 0) {
+    return summary.map(opt => ({
+      ...opt,
+      groupTitle: formatGroupTitle(opt.groupTitle || opt.group_name || opt.group)
+    }));
+  }
+
   let selMap = {};
   if (item.selected_options_json) {
     try { selMap = JSON.parse(item.selected_options_json); } catch (e) {}
@@ -492,25 +531,12 @@ const getItemOptions = (item) => {
     selMap = typeof item.selected_options === 'string' ? JSON.parse(item.selected_options) : item.selected_options;
   }
   if (selMap && typeof selMap === 'object') {
-    const DEFAULT_OPT_MAP = {
-      'opt_1': { group: '玻璃配置', name: '双层玻璃' },
-      'opt_2': { group: '玻璃配置', name: '双层钢化玻璃' },
-      'opt_3': { group: '门锁配置', name: '默认门锁' },
-      'opt_4': { group: '铝材配置', name: '默认铝材' },
-      'opt_5': { group: '颜色配置', name: '琉璃白' },
-      'opt_6': { group: '颜色配置', name: '深空灰' },
-      'opt_7': { group: '开门方向', name: '左锁（左合页）' },
-      'opt_8': { group: '开门方向', name: '右锁（左合页）' },
-      'opt_9': { group: '开门内外', name: '内开（朝内打开）' },
-      'opt_10': { group: '开门内外', name: '外开（朝外打开）' }
-    };
     return Object.keys(selMap).map(grp => {
       const rawVal = selMap[grp];
-      const optId = typeof rawVal === 'string' ? rawVal : (rawVal && (rawVal.id || rawVal.option_name));
-      const def = optId ? DEFAULT_OPT_MAP[optId] : null;
+      const optName = typeof rawVal === 'string' ? rawVal : (rawVal && (rawVal.option_name || rawVal.name || rawVal.id));
       return {
-        groupTitle: def ? def.group : grp,
-        option_name: def ? def.name : (optId || ''),
+        groupTitle: formatGroupTitle(grp),
+        option_name: optName || '',
         priceText: ''
       };
     }).filter(o => o.option_name);
@@ -598,16 +624,21 @@ onMounted(() => {
   border: 1px solid rgba(197, 168, 128, 0.2);
 }
 
+body[arco-theme='dark'] .status-banner {
+  background: rgba(197, 168, 128, 0.12);
+  border-color: rgba(197, 168, 128, 0.3);
+}
+
 .item-spec-box {
   background: rgba(0, 0, 0, 0.02);
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 16px;
 }
 
 body[arco-theme='dark'] .item-spec-box {
   background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .options-detail-panel {
@@ -615,6 +646,26 @@ body[arco-theme='dark'] .item-spec-box {
   border-radius: 8px;
   padding: 10px 14px;
   margin-top: 10px;
+}
+
+body[arco-theme='dark'] .options-detail-panel {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.site-remark-box {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--color-text-1);
+  background: #fff8e6;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ffe7ba;
+}
+
+body[arco-theme='dark'] .site-remark-box {
+  background: rgba(255, 125, 0, 0.15);
+  border-color: rgba(255, 125, 0, 0.35);
+  color: #f6f6f6;
 }
 
 .panel-title {
@@ -627,7 +678,7 @@ body[arco-theme='dark'] .item-spec-box {
 .option-row {
   font-size: 13px;
   line-height: 1.8;
-  color: #4e5969;
+  color: var(--color-text-2);
 }
 
 body[arco-theme='dark'] .option-row {
@@ -648,7 +699,7 @@ body[arco-theme='dark'] .option-row {
 .price-summary-box .price-row {
   font-size: 14px;
   margin-bottom: 8px;
-  color: #4e5969;
+  color: var(--color-text-2);
 }
 
 body[arco-theme='dark'] .price-summary-box .price-row {

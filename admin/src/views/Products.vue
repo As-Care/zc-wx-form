@@ -245,8 +245,8 @@
       <a-spin :loading="drawerLoading" tip="正在同步拉取最全选配规则..." style="width: 100%; display: block; min-height: 380px;">
         <div v-if="currentProduct">
           <div class="drawer-header mb-4">
-            <h3 style="margin: 0; color: #1d2129; font-size: 18px;">【{{ currentProduct.name }}】选配规则列表</h3>
-            <p style="margin: 6px 0 0 0; font-size: 13px; color: #86909c;">按选配分组进行层级管理（如玻璃配置/五金品牌），每个分组下可配置多个选项细项，同屏同步渲染于小程序端。</p>
+            <h3 style="margin: 0; color: var(--color-text-1); font-size: 18px;">【{{ currentProduct.name }}】选配规则列表</h3>
+            <p style="margin: 6px 0 0 0; font-size: 13px; color: var(--color-text-3);">按选配分组进行层级管理（如玻璃配置/五金品牌），每个分组下可配置多个选项细项，同屏同步渲染于小程序端。</p>
           </div>
 
           <div class="mb-4 flex-between">
@@ -262,7 +262,7 @@
             <a-card border class="group-card">
               <template #title>
                 <div style="display: flex; align-items: center; gap: 12px;">
-                  <span style="font-size: 14px; font-weight: 700; color: #1d2129; white-space: nowrap;">📦 选配分组 {{ gIdx + 1 }}：</span>
+                  <span style="font-size: 14px; font-weight: 700; color: var(--color-text-1); white-space: nowrap;">📦 选配分组 {{ gIdx + 1 }}：</span>
                   <a-select v-model="group.group_name" size="medium" allow-create placeholder="选择或手动输入分组名称" style="width: 300px;">
                     <a-option value="玻璃配置">玻璃配置</a-option>
                     <a-option value="门锁配置">门锁配置</a-option>
@@ -383,49 +383,6 @@ const categories = ref([
   '幕墙工程系'
 ]);
 
-const DEFAULT_PRODUCTS = [
-  {
-    id: 'prod_1',
-    category_id: 'cat_1',
-    category_name: '断桥铝系统窗',
-    name: '110断桥铝系统平开窗',
-    description: '壁厚1.8mm，配LOW-E双玻中空，德国好博/施格兰五金',
-    cover_image: 'https://zc-oss.carelife.top/common/prod-110.png',
-    base_price_sqm: 880,
-    min_area: 1,
-    is_active: 1,
-    options: [
-      { id: 'opt_1', group_name: '玻璃配置', option_name: '双层玻璃', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-      { id: 'opt_2', group_name: '玻璃配置', option_name: '双层钢化玻璃', price_type: 'fixed', price: 50, is_default: 0, image_url: '' },
-      { id: 'opt_3', group_name: '门锁配置', option_name: '默认门锁', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-      { id: 'opt_4', group_name: '铝材配置', option_name: '默认铝材', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-      { id: 'opt_5', group_name: '颜色配置', option_name: '琉璃白', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-      { id: 'opt_6', group_name: '颜色配置', option_name: '深空灰', price_type: 'fixed', price: 0, is_default: 0, image_url: '' },
-      { id: 'opt_7', group_name: '开门方向', option_name: '左锁（左合页）', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-      { id: 'opt_8', group_name: '开门方向', option_name: '右锁（左合页）', price_type: 'fixed', price: 0, is_default: 0, image_url: '' },
-      { id: 'opt_9', group_name: '开门内外', option_name: '内开（朝内打开）', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-      { id: 'opt_10', group_name: '开门内外', option_name: '外开（朝外打开）', price_type: 'fixed', price: 0, is_default: 0, image_url: '' }
-    ]
-  },
-  {
-    id: 'prod_2',
-    category_id: 'cat_2',
-    category_name: '极窄推拉门/平开门',
-    name: '极窄边框推拉门 (磁吸静音)',
-    description: '极简2.0cm极窄边框，高强度铝钛合金，静音缓冲滑轮',
-    cover_image: 'https://zc-oss.carelife.top/common/prod-narrow-door.png',
-    base_price_sqm: 750,
-    min_area: 1,
-    is_active: 1,
-    options: [
-      { id: 'opt_11', group_name: '玻璃配置', option_name: '双层玻璃', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-      { id: 'opt_12', group_name: '门锁配置', option_name: '默认门锁', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-      { id: 'opt_13', group_name: '颜色配置', option_name: '琉璃白', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-      { id: 'opt_14', group_name: '开门方向', option_name: '左锁（左合页）', price_type: 'fixed', price: 0, is_default: 1, image_url: '' }
-    ]
-  }
-];
-
 const searchForm = ref({
   categories: [],
   name: ''
@@ -451,19 +408,6 @@ const form = ref({
   is_active: 1
 });
 
-const DEFAULT_STANDARD_OPTIONS = [
-  { group_name: '玻璃配置', option_name: '双层玻璃', price_type: 'fixed', price: 0, is_default: 1 },
-  { group_name: '玻璃配置', option_name: '双层钢化玻璃', price_type: 'fixed', price: 50, is_default: 0 },
-  { group_name: '门锁配置', option_name: '默认门锁', price_type: 'fixed', price: 0, is_default: 1 },
-  { group_name: '铝材配置', option_name: '默认铝材', price_type: 'fixed', price: 0, is_default: 1 },
-  { group_name: '颜色配置', option_name: '琉璃白', price_type: 'fixed', price: 0, is_default: 1 },
-  { group_name: '颜色配置', option_name: '深空灰', price_type: 'fixed', price: 0, is_default: 0 },
-  { group_name: '开门方向', option_name: '左锁（左合页）', price_type: 'fixed', price: 0, is_default: 1 },
-  { group_name: '开门方向', option_name: '右锁（左合页）', price_type: 'fixed', price: 0, is_default: 0 },
-  { group_name: '开门内外', option_name: '内开（朝内打开）', price_type: 'fixed', price: 0, is_default: 1 },
-  { group_name: '开门内外', option_name: '外开（朝外打开）', price_type: 'fixed', price: 0, is_default: 0 }
-];
-
 const fetchProducts = async () => {
   tableLoading.value = true;
   try {
@@ -477,17 +421,17 @@ const fetchProducts = async () => {
 
     const res = await fetch(`${API_BASE}/api/admin/products?${params.toString()}`);
     const data = await res.json();
-    if (data.success && data.data) {
+    if (data.success && Array.isArray(data.data)) {
       products.value = data.data.map(p => ({
         ...p,
-        options: (p.options && p.options.length > 0) ? p.options : DEFAULT_STANDARD_OPTIONS,
+        options: p.options || [],
         is_active: (p.is_active !== undefined && p.is_active !== null) ? Number(p.is_active) : 1
       }));
     } else {
-      products.value = DEFAULT_PRODUCTS;
+      products.value = [];
     }
   } catch (e) {
-    products.value = DEFAULT_PRODUCTS;
+    products.value = [];
   } finally {
     tableLoading.value = false;
   }
@@ -705,6 +649,7 @@ const saveOptions = async () => {
         flatList.push({
           id: it.id || `opt_${Date.now()}_${Math.random()}`,
           group_name: gName,
+          group_title: gName,
           option_name: it.option_name.trim(),
           price_type: it.price_type || 'fixed',
           price: Number(it.price || 0),

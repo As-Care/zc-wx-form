@@ -210,14 +210,6 @@ import { Message } from '@arco-design/web-vue';
 
 const API_BASE = 'https://zc-api.carelife.top';
 
-const DEFAULT_CATEGORIES = [
-  { id: 'cat_1', name: '断桥铝系统窗', sub_title: '系统断桥窗', icon_url: '', sort_order: 1, is_active: 1 },
-  { id: 'cat_2', name: '极窄推拉门/平开门', sub_title: '极窄推拉门', icon_url: '', sort_order: 2, is_active: 1 },
-  { id: 'cat_3', name: '系统封阳台/阳光房', sub_title: '封阳台阳光房', icon_url: '', sort_order: 3, is_active: 1 },
-  { id: 'cat_4', name: '金刚网纱窗及配件', sub_title: '金刚网纱窗', icon_url: '', sort_order: 4, is_active: 1 },
-  { id: 'cat_5', name: '幕墙工程系', sub_title: '幕墙工程系', icon_url: '', sort_order: 5, is_active: 1 }
-];
-
 const searchForm = ref({
   name: ''
 });
@@ -256,7 +248,7 @@ const fetchCategories = async () => {
     const res = await fetch(`${API_BASE}/api/admin/categories?${params.toString()}`);
     const data = await res.json();
     let list = data.data || data.categories;
-    if (data.success && list) {
+    if (data.success && Array.isArray(list)) {
       if (searchForm.value.name && searchForm.value.name.trim()) {
         const kw = searchForm.value.name.trim().toLowerCase();
         list = list.filter(c => 
@@ -270,10 +262,10 @@ const fetchCategories = async () => {
         is_active: (c.is_active !== undefined && c.is_active !== null) ? Number(c.is_active) : 1
       }));
     } else {
-      categories.value = DEFAULT_CATEGORIES;
+      categories.value = [];
     }
   } catch (e) {
-    categories.value = DEFAULT_CATEGORIES;
+    categories.value = [];
   } finally {
     tableLoading.value = false;
   }

@@ -9,43 +9,57 @@
     </div>
 
     <!-- 顶栏 KPI 统计卡片 (真实数据库统计) -->
-    <a-grid :cols="4" :colGap="14" :rowGap="14" class="mb-3">
+    <a-grid :cols="5" :colGap="12" :rowGap="12" class="mb-3">
       <a-grid-item>
         <a-card class="stat-box" hoverable>
           <a-statistic title="定制订单总数" :value="statsData.totalOrders" show-group-separator>
-            <template #prefix
-              ><icon-file-text style="color: #c5a880"
-            /></template>
+            <template #prefix>
+              <icon-file-text style="color: #c5a880" />
+            </template>
             <template #suffix>单</template>
           </a-statistic>
         </a-card>
       </a-grid-item>
+
       <a-grid-item>
         <a-card class="stat-box" hoverable>
           <a-statistic title="待复核" :value="statsData.pendingReviewCount" show-group-separator>
-            <template #prefix
-              ><icon-clock-circle style="color: #cbd5e1"
-            /></template>
+            <template #prefix>
+              <img src="https://zc-oss.carelife.top/common/icon-pending-review.png" style="width: 32px; height: 32px; vertical-align: -6px; margin-right: 4px; object-fit: contain;" />
+            </template>
             <template #suffix>单</template>
           </a-statistic>
         </a-card>
       </a-grid-item>
+
       <a-grid-item>
         <a-card class="stat-box" hoverable>
           <a-statistic title="生产中" :value="statsData.producingCount" show-group-separator>
-            <template #prefix
-              ><icon-settings style="color: #f97316"
-            /></template>
+            <template #prefix>
+              <img src="https://zc-oss.carelife.top/common/icon-in-production.png" style="width: 32px; height: 32px; vertical-align: -6px; margin-right: 4px; object-fit: contain;" />
+            </template>
             <template #suffix>单</template>
           </a-statistic>
         </a-card>
       </a-grid-item>
+
+      <a-grid-item>
+        <a-card class="stat-box" hoverable>
+          <a-statistic title="待提货" :value="statsData.installingCount" show-group-separator>
+            <template #prefix>
+              <img src="https://zc-oss.carelife.top/common/icon-ing-pickup.png" style="width: 32px; height: 32px; vertical-align: -6px; margin-right: 4px; object-fit: contain;" />
+            </template>
+            <template #suffix>单</template>
+          </a-statistic>
+        </a-card>
+      </a-grid-item>
+
       <a-grid-item>
         <a-card class="stat-box" hoverable>
           <a-statistic title="已完成" :value="statsData.completedCount" show-group-separator>
-            <template #prefix
-              ><icon-check-circle style="color: #10b981"
-            /></template>
+            <template #prefix>
+              <img src="https://zc-oss.carelife.top/common/icon-completed.png" style="width: 32px; height: 32px; vertical-align: -6px; margin-right: 4px; object-fit: contain;" />
+            </template>
             <template #suffix>单</template>
           </a-statistic>
         </a-card>

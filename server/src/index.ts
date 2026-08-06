@@ -710,6 +710,7 @@ async function initProductOptionsTable(db: any) {
         id TEXT PRIMARY KEY,
         product_id TEXT NOT NULL,
         group_name TEXT NOT NULL,
+        group_title TEXT,
         option_name TEXT NOT NULL,
         price_type TEXT DEFAULT 'per_sqm',
         price REAL DEFAULT 0,
@@ -718,7 +719,8 @@ async function initProductOptionsTable(db: any) {
         image_url TEXT
       )
     `).run();
-    await db.prepare('ALTER TABLE product_options ADD COLUMN image_url TEXT').run();
+    try { await db.prepare('ALTER TABLE product_options ADD COLUMN group_title TEXT').run(); } catch (e) {}
+    try { await db.prepare('ALTER TABLE product_options ADD COLUMN image_url TEXT').run(); } catch (e) {}
     productOptionsInitialized = true;
   } catch (e) {
     productOptionsInitialized = true;
@@ -745,14 +747,19 @@ app.post('/api/admin/products/:id/options', async (c) => {
     for (let i = 0; i < options.length; i++) {
       const opt = options[i];
       const optId = opt.id || `opt_${Date.now()}_${i}`;
+      const groupName = opt.group_name || opt.group_title || 'glass';
+      const groupTitle = opt.group_title || opt.groupTitle || opt.group_name || groupName || '选配分组';
+      const optionName = opt.option_name || opt.name || '';
+
       await db.prepare(`
-        INSERT INTO product_options (id, product_id, group_name, option_name, price_type, price, is_default, sort_order, image_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO product_options (id, product_id, group_name, group_title, option_name, price_type, price, is_default, sort_order, image_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         optId,
         id,
-        opt.group_name || '选配分组',
-        opt.option_name || '',
+        groupName,
+        groupTitle,
+        optionName,
         opt.price_type || 'fixed',
         Number(opt.price || 0),
         opt.is_default ? 1 : 0,
@@ -841,6 +848,12 @@ async function initOrdersTable(db: any) {
   } catch (e) {}
   try {
     await db.prepare('ALTER TABLE orders ADD COLUMN scene_images TEXT').run();
+  } catch (e) {}
+  try {
+    await db.prepare('ALTER TABLE order_items ADD COLUMN remark TEXT').run();
+  } catch (e) {}
+  try {
+    await db.prepare('ALTER TABLE order_items ADD COLUMN scene_images TEXT').run();
   } catch (e) {}
   ordersTableInitialized = true;
 }
@@ -981,64 +994,57 @@ app.post('/api/orders', async (c) => {
     const label = set.label || `【${customer_name || 'care'}-${dateStr.slice(2)}-${i + 1}】`;
     const selectedOptionsMap = set.selected_options || {};
 
-    // 筛选当前套系选中的选配规则
+    const itemRemark = set.remark || set.customer_remark || set.note || '';
+    const itemImages = set.scene_images || set.scene_image || (Array.isArray(set.images) ? JSON.stringify(set.images) : (set.images || ''));
+
+    // 筛选当前套系选中的选配规则 (完全按下单当时的前端已选中文快照保存，确保与后续商品修改彻底隔离)
     const selectedOptionObjects: ProductOption[] = [];
     const selectedOptionsSummary: Array<{ groupTitle: string; option_name: string; priceText: string }> = [];
 
-    const OPTION_ID_NAME_MAP: Record<string, string> = {
-      'opt_1': '双层玻璃',
-      'opt_2': '双层钢化玻璃',
-      'opt_3': '默认门锁',
-      'opt_4': '默认铝材',
-      'opt_5': '琉璃白',
-      'opt_6': '深空灰',
-      'opt_7': '左锁（左合页）',
-      'opt_8': '右锁（左合页）',
-      'opt_9': '内开（朝内打开）',
-      'opt_10': '外开（朝外打开）'
-    };
-
-    Object.keys(selectedOptionsMap).forEach(grpKey => {
-      const rawVal = selectedOptionsMap[grpKey];
-      const optId = typeof rawVal === 'string' ? rawVal : (rawVal && (rawVal.id || rawVal.option_name));
-      const optObj = optId ? optionMap.get(optId) : null;
-      let name = optObj ? optObj.option_name : (OPTION_ID_NAME_MAP[optId] || optId || '');
-
-      if (optObj) {
-        selectedOptionObjects.push(optObj);
-        let pText = '包含在基础单价内';
-        if (optObj.price > 0) {
-          if (optObj.price_type === 'per_sqm') pText = `+¥ ${optObj.price} / ㎡`;
-          else if (optObj.price_type === 'per_item') pText = `+¥ ${optObj.price} / 套`;
-          else pText = `+¥ ${optObj.price}`;
-        } else if (optObj.group_name === 'color' && optObj.is_default) {
-          pText = '标准配色';
-        }
-        selectedOptionsSummary.push({
-          groupTitle: optObj.group_title || grpKey,
-          option_name: name,
-          priceText: pText
-        });
-      } else if (name) {
-        selectedOptionsSummary.push({
-          groupTitle: grpKey,
-          option_name: name,
-          priceText: ''
-        });
-      }
-    });
-
-    if (selectedOptionsSummary.length === 0 && Array.isArray(set.selectedOptionsSummary) && set.selectedOptionsSummary.length > 0) {
+    if (Array.isArray(set.selectedOptionsSummary) && set.selectedOptionsSummary.length > 0) {
       set.selectedOptionsSummary.forEach((so: any) => {
         let name = so.option_name || so.name || '';
-        if (OPTION_ID_NAME_MAP[name]) {
-          name = OPTION_ID_NAME_MAP[name];
+        const groupTitle = so.groupTitle || so.group_name || '选配';
+        if (name && !name.startsWith('opt_')) {
+          selectedOptionsSummary.push({
+            groupTitle,
+            option_name: name,
+            priceText: so.priceText || ''
+          });
         }
-        selectedOptionsSummary.push({
-          groupTitle: so.groupTitle || so.group_name || '选配',
-          option_name: name,
-          priceText: so.priceText || ''
-        });
+      });
+    }
+
+    if (selectedOptionsSummary.length === 0) {
+      Object.keys(selectedOptionsMap).forEach(grpKey => {
+        const rawVal = selectedOptionsMap[grpKey];
+        const optId = typeof rawVal === 'string' ? rawVal : (rawVal && (rawVal.id || rawVal.option_name));
+        const optObj = optId ? optionMap.get(optId) : null;
+        let name = optObj ? optObj.option_name : (typeof rawVal === 'string' ? (rawVal.startsWith('opt_') ? '' : rawVal) : (rawVal?.option_name || rawVal?.name || ''));
+        let groupTitle = optObj ? (optObj.group_title || optObj.group_name || grpKey) : grpKey;
+
+        if (optObj) {
+          selectedOptionObjects.push(optObj);
+          let pText = '包含在基础单价内';
+          if (optObj.price > 0) {
+            if (optObj.price_type === 'per_sqm') pText = `+¥ ${optObj.price} / ㎡`;
+            else if (optObj.price_type === 'per_item') pText = `+¥ ${optObj.price} / 套`;
+            else pText = `+¥ ${optObj.price}`;
+          } else if (optObj.group_name === 'color' && optObj.is_default) {
+            pText = '标准配色';
+          }
+          selectedOptionsSummary.push({
+            groupTitle,
+            option_name: name,
+            priceText: pText
+          });
+        } else if (name) {
+          selectedOptionsSummary.push({
+            groupTitle,
+            option_name: name,
+            priceText: ''
+          });
+        }
       });
     }
 
@@ -1059,8 +1065,8 @@ app.post('/api/orders', async (c) => {
     const itemId = `item_${Date.now()}_${i + 1}`;
     await db.prepare(`
       INSERT INTO order_items 
-      (id, order_id, product_id, product_name, label, width_mm, height_mm, actual_area, billed_area, unit_price, item_subtotal, selected_options_json, options_summary_json)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, order_id, product_id, product_name, label, width_mm, height_mm, actual_area, billed_area, unit_price, item_subtotal, selected_options_json, options_summary_json, remark, scene_images)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       itemId,
       orderId,
@@ -1074,7 +1080,9 @@ app.post('/api/orders', async (c) => {
       base_price_sqm || product?.base_price_sqm || 680,
       pricing.subtotal,
       JSON.stringify(selectedOptionsMap),
-      JSON.stringify(selectedOptionsSummary)
+      JSON.stringify(selectedOptionsSummary),
+      itemRemark,
+      itemImages
     ).run();
   }
 
@@ -1167,18 +1175,6 @@ app.get('/api/orders', async (c) => {
   // 抓取各订单的明细项用于卡片预览
   for (const order of orders || []) {
     const { results: items } = await db.prepare('SELECT * FROM order_items WHERE order_id = ?').bind(order.id).all<OrderItem>();
-    const DEFAULT_OPT_MAP: Record<string, { group: string; name: string }> = {
-      'opt_1': { group: '玻璃配置', name: '双层玻璃' },
-      'opt_2': { group: '玻璃配置', name: '双层钢化玻璃' },
-      'opt_3': { group: '门锁配置', name: '默认门锁' },
-      'opt_4': { group: '铝材配置', name: '默认铝材' },
-      'opt_5': { group: '颜色配置', name: '琉璃白' },
-      'opt_6': { group: '颜色配置', name: '深空灰' },
-      'opt_7': { group: '开门方向', name: '左锁（左合页）' },
-      'opt_8': { group: '开门方向', name: '右锁（左合页）' },
-      'opt_9': { group: '开门内外', name: '内开（朝内打开）' },
-      'opt_10': { group: '开门内外', name: '外开（朝外打开）' }
-    };
     (items || []).forEach(it => {
       let summary: any[] = [];
       if (it.options_summary_json) {
@@ -1192,11 +1188,10 @@ app.get('/api/orders', async (c) => {
         if (selMap && typeof selMap === 'object') {
           summary = Object.keys(selMap).map(grp => {
             const rawVal = selMap[grp];
-            const optId = typeof rawVal === 'string' ? rawVal : (rawVal && (rawVal.id || rawVal.option_name));
-            const def = optId ? DEFAULT_OPT_MAP[optId] : null;
+            const optName = typeof rawVal === 'string' ? rawVal : (rawVal && (rawVal.option_name || rawVal.name || rawVal.id));
             return {
-              groupTitle: def ? def.group : grp,
-              option_name: def ? def.name : (optId || ''),
+              groupTitle: grp,
+              option_name: optName || '',
               priceText: ''
             };
           }).filter(o => o.option_name);
@@ -1233,22 +1228,6 @@ app.get('/api/orders/:id', async (c) => {
   }
 
   const { results: items } = await db.prepare('SELECT * FROM order_items WHERE order_id = ?').bind(id).all<OrderItem>();
-  const { results: allDbOptions } = await db.prepare('SELECT * FROM product_options').all<ProductOption>();
-  const dbOptMap = new Map<string, ProductOption>();
-  (allDbOptions || []).forEach(o => dbOptMap.set(o.id, o));
-
-  const DEFAULT_OPT_MAP: Record<string, { group: string; name: string }> = {
-    'opt_1': { group: '玻璃配置', name: '双层玻璃' },
-    'opt_2': { group: '玻璃配置', name: '双层钢化玻璃' },
-    'opt_3': { group: '门锁配置', name: '默认门锁' },
-    'opt_4': { group: '铝材配置', name: '默认铝材' },
-    'opt_5': { group: '颜色配置', name: '琉璃白' },
-    'opt_6': { group: '颜色配置', name: '深空灰' },
-    'opt_7': { group: '开门方向', name: '左锁（左合页）' },
-    'opt_8': { group: '开门方向', name: '右锁（左合页）' },
-    'opt_9': { group: '开门内外', name: '内开（朝内打开）' },
-    'opt_10': { group: '开门内外', name: '外开（朝外打开）' }
-  };
 
   (items || []).forEach(it => {
     let summary: any[] = [];
@@ -1256,6 +1235,7 @@ app.get('/api/orders/:id', async (c) => {
       try { summary = JSON.parse(it.options_summary_json); } catch (e) { summary = []; }
     }
 
+    // 严禁关联产品动态配置表，保证历史订单快照 100% 隔离不联动
     if (!summary || summary.length === 0) {
       let selMap: any = {};
       if (it.selected_options_json) {
@@ -1264,29 +1244,21 @@ app.get('/api/orders/:id', async (c) => {
       if (selMap && typeof selMap === 'object') {
         summary = Object.keys(selMap).map(grp => {
           const rawVal = selMap[grp];
-          const optId = typeof rawVal === 'string' ? rawVal : (rawVal && (rawVal.id || rawVal.option_name));
-          const dbOpt = optId ? dbOptMap.get(optId) : null;
-          const def = optId ? DEFAULT_OPT_MAP[optId] : null;
+          let optName = '';
+          let pText = '';
+          if (typeof rawVal === 'string') {
+            optName = rawVal.startsWith('opt_') ? '' : rawVal;
+          } else if (rawVal && typeof rawVal === 'object') {
+            optName = rawVal.option_name || rawVal.name || (rawVal.id && !rawVal.id.startsWith('opt_') ? rawVal.id : '');
+            pText = rawVal.priceText || (rawVal.price > 0 ? `+¥ ${rawVal.price}` : '');
+          }
           return {
-            groupTitle: dbOpt ? dbOpt.group_name : (def ? def.group : grp),
-            option_name: dbOpt ? dbOpt.option_name : (def ? def.name : (optId || '')),
-            priceText: dbOpt && dbOpt.price > 0 ? `+¥ ${dbOpt.price}` : ''
+            groupTitle: grp,
+            option_name: optName,
+            priceText: pText
           };
         }).filter(o => o.option_name);
       }
-    } else {
-      summary.forEach(o => {
-        const rawName = o.option_name || o.id || '';
-        const dbOpt = dbOptMap.get(rawName);
-        const def = DEFAULT_OPT_MAP[rawName];
-        if (dbOpt) {
-          o.groupTitle = o.groupTitle || dbOpt.group_name;
-          o.option_name = dbOpt.option_name;
-        } else if (def) {
-          o.groupTitle = o.groupTitle || def.group;
-          o.option_name = def.name;
-        }
-      });
     }
 
     it.options_summary = summary;
