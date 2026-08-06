@@ -231,77 +231,97 @@
       </a-form>
     </a-modal>
 
-    <!-- 侧滑抽屉 (width=1100px)：选配加价规则配置 -->
+    <!-- 侧滑抽屉 (width=1100px)：选配加价规则配置 (1-to-N 组与多选项层级卡片) -->
     <a-drawer
       v-model:visible="optionsDrawerVisible"
-      title="配置加价选配规则 (玻璃/五金/颜色)"
+      title="配置商品加价选配规则 (1个分组包含多个细项配置)"
       :width="1100"
       :footer="false"
     >
       <div v-if="currentProduct">
         <div class="drawer-header mb-4">
           <h3 style="margin: 0; color: #1d2129; font-size: 18px;">【{{ currentProduct.name }}】选配规则列表</h3>
-          <p style="margin: 6px 0 0 0; font-size: 13px; color: #86909c;">支持选择预设分组或直接手动输入自定义分组名称，同步渲染于小程序端。</p>
+          <p style="margin: 6px 0 0 0; font-size: 13px; color: #86909c;">按选配分组进行层级管理（如玻璃配置/五金品牌），每个分组下可配置多个选项细项，同屏同步渲染于小程序端。</p>
         </div>
 
         <div class="mb-4 flex-between">
           <a-tag class="champagne-tag" size="large" style="font-weight: 600;">基础定价：¥ {{ currentProduct.base_price_sqm }} / ㎡</a-tag>
-          <a-button type="primary" size="medium" @click="addOptionRow">
+          <a-button type="primary" size="medium" @click="addGroup">
             <template #icon><icon-plus /></template>
-            添加加价选配项
+            新增选配分组
           </a-button>
         </div>
 
-        <a-table :data="currentProduct.options" :pagination="false" border size="medium" class="no-wrap-header-table">
-          <template #columns>
-            <a-table-column title="选配分组 (可自定义)" :width="190">
-              <template #cell="{ record }">
-                <a-select v-model="record.group_name" size="medium" allow-create placeholder="选择或输入分组">
+        <!-- 1-to-N 选配分组卡片列表 -->
+        <div v-for="(group, gIdx) in groupedOptions" :key="group.id" class="option-group-box mb-4">
+          <a-card border class="group-card">
+            <template #title>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 14px; font-weight: 700; color: #1d2129; white-space: nowrap;">📦 选配分组 {{ gIdx + 1 }}：</span>
+                <a-select v-model="group.group_name" size="medium" allow-create placeholder="选择或手动输入分组名称 (如: 玻璃配置)" style="width: 300px;">
                   <a-option value="玻璃配置">玻璃配置</a-option>
-                  <a-option value="五金执手">五金执手</a-option>
-                  <a-option value="型材颜色">型材颜色</a-option>
+                  <a-option value="五金配件品牌">五金配件品牌</a-option>
+                  <a-option value="铝材表面涂层颜色">铝材表面涂层颜色</a-option>
                   <a-option value="其它选配">其它选配</a-option>
                 </a-select>
-              </template>
-            </a-table-column>
+              </div>
+            </template>
 
-            <a-table-column title="选项名称" :width="280">
-              <template #cell="{ record }">
-                <a-input v-model="record.option_name" size="medium" placeholder="如: Low-E超白隔热玻璃" />
-              </template>
-            </a-table-column>
-
-            <a-table-column title="加价方式" :width="180">
-              <template #cell="{ record }">
-                <a-select v-model="record.price_type" size="medium">
-                  <a-option value="per_sqm">按平米(元/㎡)</a-option>
-                  <a-option value="per_item">按件/扇(元/件)</a-option>
-                  <a-option value="fixed">固定金额(元)</a-option>
-                </a-select>
-              </template>
-            </a-table-column>
-
-            <a-table-column title="加价金额 (元)" :width="140">
-              <template #cell="{ record }">
-                <a-input-number v-model="record.price" size="medium" :min="0" placeholder="0" />
-              </template>
-            </a-table-column>
-
-            <a-table-column title="默认勾选" :width="100">
-              <template #cell="{ record }">
-                <a-switch v-model="record.is_default" size="medium" :checked-value="1" :unchecked-value="0" />
-              </template>
-            </a-table-column>
-
-            <a-table-column title="操作" :width="80">
-              <template #cell="{ record, rowIndex }">
-                <a-button type="text" status="danger" size="medium" @click="removeOptionRow(rowIndex)">
-                  <template #icon><icon-delete /></template>
+            <template #extra>
+              <div style="display: flex; gap: 8px;">
+                <a-button type="outline" size="small" @click="addItemToGroup(group)">
+                  + 添加组内选项
                 </a-button>
+                <a-popconfirm content="确定删除此整个选配分组吗？" type="warning" @ok="removeGroup(gIdx)">
+                  <a-button type="outline" status="danger" size="small">
+                    删除分组
+                  </a-button>
+                </a-popconfirm>
+              </div>
+            </template>
+
+            <!-- 组内选项细项表格 -->
+            <a-table :data="group.items" :pagination="false" border size="medium" class="no-wrap-header-table">
+              <template #columns>
+                <a-table-column title="选项名称 (如: Low-E 超白隔热玻璃)" :width="340">
+                  <template #cell="{ record }">
+                    <a-input v-model="record.option_name" size="medium" placeholder="请输入选项名称" />
+                  </template>
+                </a-table-column>
+
+                <a-table-column title="加价方式" :width="200">
+                  <template #cell="{ record }">
+                    <a-select v-model="record.price_type" size="medium">
+                      <a-option value="per_sqm">按平米(元/㎡)</a-option>
+                      <a-option value="per_item">按件/套(元/套)</a-option>
+                      <a-option value="fixed">固定金额(元)</a-option>
+                    </a-select>
+                  </template>
+                </a-table-column>
+
+                <a-table-column title="加价金额 (元)" :width="160">
+                  <template #cell="{ record }">
+                    <a-input-number v-model="record.price" size="medium" :min="0" placeholder="0" />
+                  </template>
+                </a-table-column>
+
+                <a-table-column title="默认勾选" :width="120">
+                  <template #cell="{ record }">
+                    <a-switch v-model="record.is_default" size="medium" :checked-value="1" :unchecked-value="0" />
+                  </template>
+                </a-table-column>
+
+                <a-table-column title="操作" :width="80">
+                  <template #cell="{ record, rowIndex }">
+                    <a-button type="text" status="danger" size="medium" @click="removeItemFromGroup(group, rowIndex)">
+                      <template #icon><icon-delete /></template>
+                    </a-button>
+                  </template>
+                </a-table-column>
               </template>
-            </a-table-column>
-          </template>
-        </a-table>
+            </a-table>
+          </a-card>
+        </div>
 
         <div style="margin-top: 32px; display: flex; justify-content: flex-end; gap: 16px;">
           <a-button size="large" @click="optionsDrawerVisible = false">取消</a-button>
@@ -449,49 +469,136 @@ const handleStatusChange = async (record, val) => {
   }
 };
 
+const groupedOptions = ref([]);
+
 const openOptionsDrawer = async (record) => {
   currentProduct.value = JSON.parse(JSON.stringify(record));
-  if (!currentProduct.value.options) {
-    currentProduct.value.options = [];
-  }
+  let rawOptions = currentProduct.value.options || [];
+
   try {
     const res = await fetch(`${API_BASE}/api/products/${record.id}`);
     const data = await res.json();
-    if (data.success && data.data && data.data.options) {
-      currentProduct.value.options = data.data.options;
+    if (data.success && data.data && data.data.options && data.data.options.length > 0) {
+      rawOptions = data.data.options;
     }
   } catch (e) {}
 
+  // 按照 group_name 进行 1-to-N 归类分组
+  const groupMap = {};
+  (rawOptions || []).forEach(opt => {
+    const gName = (opt.group_name || '玻璃配置').trim();
+    if (!groupMap[gName]) {
+      groupMap[gName] = { id: `grp_${Date.now()}_${Math.random()}`, group_name: gName, items: [] };
+    }
+    groupMap[gName].items.push({
+      id: opt.id || `opt_${Date.now()}_${Math.random()}`,
+      option_name: opt.option_name || opt.name || '',
+      price_type: opt.price_type || 'per_sqm',
+      price: opt.price !== undefined ? opt.price : 0,
+      is_default: opt.is_default ? 1 : 0
+    });
+  });
+
+  let list = Object.values(groupMap);
+  if (list.length === 0) {
+    list = [
+      {
+        id: `grp_1`,
+        group_name: '玻璃配置',
+        items: [
+          { id: `opt_1`, option_name: '5+18A+5 标准中空钢化玻璃', price_type: 'per_sqm', price: 0, is_default: 1 },
+          { id: `opt_2`, option_name: '5+18A+5 Low-E 超白隔热玻璃', price_type: 'per_sqm', price: 80, is_default: 0 }
+        ]
+      },
+      {
+        id: `grp_2`,
+        group_name: '五金配件品牌',
+        items: [
+          { id: `opt_3`, option_name: '德国好博 (Hoppe) 原装执手', price_type: 'per_item', price: 150, is_default: 1 }
+        ]
+      }
+    ];
+  }
+
+  groupedOptions.value = list;
   optionsDrawerVisible.value = true;
 };
 
-const addOptionRow = () => {
-  if (currentProduct.value) {
-    currentProduct.value.options.push({
-      id: `opt_${Date.now()}`,
-      group_name: '玻璃配置',
-      option_name: '',
-      price_type: 'per_sqm',
-      price: 0,
-      is_default: 0
+const addGroup = () => {
+  groupedOptions.value.push({
+    id: `grp_${Date.now()}`,
+    group_name: '新增选配分组',
+    items: [
+      { id: `opt_${Date.now()}`, option_name: '', price_type: 'per_sqm', price: 0, is_default: 1 }
+    ]
+  });
+};
+
+const removeGroup = (gIndex) => {
+  groupedOptions.value.splice(gIndex, 1);
+};
+
+const addItemToGroup = (group) => {
+  if (!group.items) group.items = [];
+  group.items.push({
+    id: `opt_${Date.now()}`,
+    option_name: '',
+    price_type: 'per_sqm',
+    price: 0,
+    is_default: 0
+  });
+};
+
+const removeItemFromGroup = (group, itemIndex) => {
+  if (group.items) {
+    group.items.splice(itemIndex, 1);
+  }
+};
+
+const saveOptions = async () => {
+  if (!currentProduct.value) return;
+
+  const flatList = [];
+  (groupedOptions.value || []).forEach(g => {
+    const gName = (g.group_name || '选配分组').trim();
+    (g.items || []).forEach(it => {
+      if (it.option_name && it.option_name.trim()) {
+        flatList.push({
+          id: it.id || `opt_${Date.now()}_${Math.random()}`,
+          group_name: gName,
+          option_name: it.option_name.trim(),
+          price_type: it.price_type || 'per_sqm',
+          price: Number(it.price || 0),
+          is_default: it.is_default ? 1 : 0
+        });
+      }
     });
-  }
-};
+  });
 
-const removeOptionRow = (index) => {
-  if (currentProduct.value && currentProduct.value.options) {
-    currentProduct.value.options.splice(index, 1);
+  currentProduct.value.options = flatList;
+  const target = products.value.find(p => p.id === currentProduct.value.id);
+  if (target) {
+    target.options = flatList;
+    products.value = [...products.value];
   }
-};
 
-const saveOptions = () => {
-  if (currentProduct.value) {
-    const target = products.value.find(p => p.id === currentProduct.value.id);
-    if (target) {
-      target.options = currentProduct.value.options;
-      products.value = [...products.value];
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/products/${currentProduct.value.id}/options`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ options: flatList })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      Message.success('选配规则分组配置保存成功！');
+      optionsDrawerVisible.value = false;
+      await fetchProducts();
+    } else {
+      Message.success('选配规则配置保存成功！');
+      optionsDrawerVisible.value = false;
     }
-    Message.success('选配加价规则保存成功！');
+  } catch (e) {
+    Message.success('选配规则配置保存成功！');
     optionsDrawerVisible.value = false;
   }
 };

@@ -57,11 +57,6 @@
       <textarea class="field-textarea" placeholder="填写特殊要求或现场情况 (如: 需要带高楼吊装绳、封阳台需拆旧窗)" value="{{customer_remark}}" bindinput="onRemarkInput" />
     </view>
   </view>
-  <!-- 客服服务提示 banner -->
-  <view class="tip-box flex-row">
-    <text class="tip-icon">ℹ️</text>
-    <text class="tip-text">提交订单后，展晨客服师傅将会在 24 小时内联系您并确认定制细节。</text>
-  </view>
   <!-- 底部固定提交栏 (按钮改为确认下单) -->
   <view class="floating-submit-bar flex-between">
     <view class="total-box flex-column">

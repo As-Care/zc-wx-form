@@ -57,47 +57,6 @@ app.post('/api/upload', async (c) => {
   }
 });
 
-/**
- * R2 对象存储资源公开读取代理 (处理 /upload/* 与 /common/* 资源访问)
- */
-app.get('/upload/:path{.+}', async (c) => {
-  const path = c.req.param('path');
-  const key = `upload/${path}`;
-  if (c.env.BUCKET) {
-    try {
-      const object = await c.env.BUCKET.get(key);
-      if (object) {
-        const headers = new Headers();
-        object.writeHttpMetadata(headers);
-        headers.set('etag', object.httpMetadata?.etag || object.etag);
-        headers.set('Cache-Control', 'public, max-age=31536000');
-        headers.set('Access-Control-Allow-Origin', '*');
-        return new Response(object.body, { headers });
-      }
-    } catch (e) {}
-  }
-  return c.text('R2 Object Not Found', 404);
-});
-
-app.get('/common/:path{.+}', async (c) => {
-  const path = c.req.param('path');
-  const key = `common/${path}`;
-  if (c.env.BUCKET) {
-    try {
-      const object = await c.env.BUCKET.get(key);
-      if (object) {
-        const headers = new Headers();
-        object.writeHttpMetadata(headers);
-        headers.set('etag', object.httpMetadata?.etag || object.etag);
-        headers.set('Cache-Control', 'public, max-age=31536000');
-        headers.set('Access-Control-Allow-Origin', '*');
-        return new Response(object.body, { headers });
-      }
-    } catch (e) {}
-  }
-  return c.text('R2 Object Not Found', 404);
-});
-
 // ----------------------------------------------------
 // 1. 微信小程序 官方鉴权与个人资料 (Auth & User Profile)
 // ----------------------------------------------------

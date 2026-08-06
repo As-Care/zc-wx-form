@@ -126,15 +126,7 @@
     <!-- 修改客户资料 Modal 弹窗 -->
     <a-modal v-model:visible="modalVisible" title="修改小程序客户个人资料" :on-before-ok="handleBeforeSaveUser">
       <a-form :model="editForm" layout="vertical">
-        <a-form-item label="客户姓名/昵称" required>
-          <a-input v-model="editForm.nickname" placeholder="请输入客户姓名或备注" />
-        </a-form-item>
-
-        <a-form-item label="联系电话">
-          <a-input v-model="editForm.phone" placeholder="请输入手机号" />
-        </a-form-item>
-
-        <!-- 客户微信头像上传 -->
+        <!-- 客户微信头像上传 (挪至最上方) -->
         <a-form-item label="客户微信头像">
           <div class="luxury-upload-card">
             <a-spin :loading="uploading" tip="正在上传中">
@@ -170,13 +162,21 @@
               >
                 <template #upload-button>
                   <div class="upload-dropzone">
-                    <icon-plus style="font-size: 20px; color: #C5A880;" />
+                    <icon-plus style="font-size: 16px; color: #C5A880;" />
                     <span class="upload-title">上传头像</span>
                   </div>
                 </template>
               </a-upload>
             </a-spin>
           </div>
+        </a-form-item>
+
+        <a-form-item label="客户姓名/昵称" required>
+          <a-input v-model="editForm.nickname" placeholder="请输入客户姓名或备注" />
+        </a-form-item>
+
+        <a-form-item label="联系电话">
+          <a-input v-model="editForm.phone" placeholder="请输入手机号" />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -437,8 +437,8 @@ body[arco-theme='dark'] .addr-detail {
 }
 
 .upload-dropzone {
-  width: 76px;
-  height: 76px;
+  width: 54px;
+  height: 54px;
   border: 1.5px dashed rgba(197, 168, 128, 0.6);
   background: rgba(197, 168, 128, 0.04);
   border-radius: 50%;
@@ -450,14 +450,14 @@ body[arco-theme='dark'] .addr-detail {
 }
 
 .upload-title {
-  font-size: 10px;
+  font-size: 9px;
   color: #86909c;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .avatar-preview-box {
-  width: 76px;
-  height: 76px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
   overflow: hidden;
   position: relative;
@@ -488,15 +488,15 @@ body[arco-theme='dark'] .addr-detail {
 }
 
 .mask-icon {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.25);
   color: #ffffff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 11px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
