@@ -2,7 +2,7 @@
   <div class="users-view">
     <div class="header-bar flex-between mb-4">
       <h2 class="view-title">小程序注册客户列表</h2>
-      <a-button type="primary" @click="fetchUsers">
+      <a-button class="btn-champagne-primary" @click="fetchUsers">
         <template #icon><icon-refresh /></template>
         刷新客户列表
       </a-button>
@@ -34,10 +34,10 @@
 
         <a-table-column title="下单数量" :width="130">
           <template #cell="{ record }">
-            <a-tag color="gold" style="font-weight: 600;">
-              <template #icon><icon-history /></template>
+            <span class="champagne-tag count-badge">
+              <icon-history style="margin-right: 4px;" />
               {{ record.order_count || 0 }} 单
-            </a-tag>
+            </span>
           </template>
         </a-table-column>
 
@@ -49,7 +49,7 @@
 
         <a-table-column title="角色身份" :width="120">
           <template #cell="{ record }">
-            <a-tag color="blue">微信客户</a-tag>
+            <span class="champagne-tag role-badge">微信客户</span>
           </template>
         </a-table-column>
 
@@ -58,7 +58,7 @@
         <a-table-column title="操作" :width="230">
           <template #cell="{ record }">
             <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
-              <a-button type="outline" size="small" @click="viewCustomerDetails(record)">
+              <a-button class="btn-champagne-outline" size="small" @click="viewCustomerDetails(record)">
                 查看详情
               </a-button>
               <a-button type="outline" size="small" status="warning" @click="editUser(record)">
@@ -509,5 +509,49 @@ body[arco-theme='dark'] .addr-detail {
 .mask-icon-delete:hover {
   background: #f53f3f;
   color: #ffffff;
+}
+
+.champagne-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #C5A880;
+  background: rgba(197, 168, 128, 0.12);
+  border: 1px solid rgba(197, 168, 128, 0.35);
+  padding: 2px 10px;
+  border-radius: 6px;
+}
+
+.champagne-tag.count-badge {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.champagne-tag.role-badge {
+  color: #A38458;
+  background: rgba(197, 168, 128, 0.08);
+  border-color: rgba(197, 168, 128, 0.25);
+}
+
+.btn-champagne-primary {
+  background-color: #C5A880 !important;
+  border-color: #C5A880 !important;
+  color: #ffffff !important;
+}
+
+.btn-champagne-primary:hover {
+  background-color: #b3956d !important;
+  border-color: #b3956d !important;
+}
+
+.btn-champagne-outline {
+  color: #C5A880 !important;
+  border-color: #C5A880 !important;
+  background: transparent !important;
+}
+
+.btn-champagne-outline:hover {
+  background: rgba(197, 168, 128, 0.1) !important;
 }
 </style>

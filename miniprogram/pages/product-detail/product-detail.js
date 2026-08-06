@@ -396,6 +396,15 @@ Page({
   preventBubble() {},
 
   confirmOrder() {
+    const savedUser = wx.getStorageSync('zc_user_info');
+    if (!savedUser || !savedUser.phone) {
+      wx.showToast({ title: '请先登录绑定手机号', icon: 'none', duration: 1500 });
+      setTimeout(() => {
+        wx.navigateTo({ url: '/pages/login/login' });
+      }, 1000);
+      return;
+    }
+
     if (!this.validateSets()) {
       this.setData({ showPreviewModal: false });
       return;

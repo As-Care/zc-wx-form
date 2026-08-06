@@ -167,20 +167,91 @@ app.post('/api/user/profile', async (c) => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `).run();
+async function mergeDuplicateUsersByPhone(db: any) {
+  try {
+    // 1. 将孤立/分散订单根据下单联系电话 customer_phone 重定向关联到手机号对应的已有主用户
+    await db.prepare(`
+      UPDATE orders 
+      SET user_id = (
+        SELECT u.id FROM users u 
+        WHERE u.phone = orders.customer_phone AND u.phone IS NOT NULL AND u.phone != '' 
+        ORDER BY u.created_at ASC LIMIT 1
+      )
+      WHERE customer_phone IS NOT NULL AND customer_phone != '' 
+        AND customer_phone IN (SELECT phone FROM users WHERE phone IS NOT NULL AND phone != '')
+    `).run();
+
+    // 2. 查找拥有重复手机号的用户记录 (COUNT > 1)
+    const { results: dupes } = await db.prepare(`
+      SELECT phone, COUNT(*) as cnt 
+      FROM users 
+      WHERE phone IS NOT NULL AND phone != '' 
+      GROUP BY phone 
+      HAVING cnt > 1
+    `).all<{ phone: string; cnt: number }>();
+
+    for (const dup of dupes || []) {
+      const { results: phoneUsers } = await db.prepare(
+        'SELECT * FROM users WHERE phone = ? ORDER BY (CASE WHEN openid LIKE "wx_openid_usr_%" THEN 2 WHEN openid LIKE "wx_openid_demo_%" THEN 3 ELSE 1 END), created_at ASC'
+      ).bind(dup.phone).all<any>();
+
+      if (phoneUsers && phoneUsers.length > 1) {
+        const primaryUser = phoneUsers[0];
+        const duplicateIds = phoneUsers.slice(1).map(u => u.id);
+
+        for (const dupId of duplicateIds) {
+          await db.prepare('UPDATE orders SET user_id = ? WHERE user_id = ?').bind(primaryUser.id, dupId).run();
+          await db.prepare('UPDATE user_addresses SET user_id = ? WHERE user_id = ?').bind(primaryUser.id, dupId).run();
+          await db.prepare('DELETE FROM users WHERE id = ?').bind(dupId).run();
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Merge duplicate users failed:', e);
+  }
+}
+
+/**
+ * 客户端更新/同步用户信息 (支持自动合并相同手机号的散客账号)
+ * POST /api/user/sync
+ */
+app.post('/api/user/sync', async (c) => {
+  const db = c.env.DB;
+  if (!db) return c.json({ success: false, message: 'DB 未绑定' }, 500);
+
+  const body = await c.req.json();
+  const { id, nickname, avatar_url, phone } = body;
+
+  if (!id) return c.json({ success: false, message: '缺少用户 ID' }, 400);
+
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        openid TEXT,
+        nickname TEXT,
+        avatar_url TEXT,
+        phone TEXT,
+        role TEXT DEFAULT 'customer',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
   } catch (e) {}
 
-  // 手机号唯一性校验：不允许不同客户绑定重复手机号
+  // 若传入的手机号已被其他客户绑定，自动执行主辅合并
   if (phone && phone.trim()) {
     const cleanPhone = phone.trim();
     const existing = await db.prepare(
-      'SELECT id, nickname FROM users WHERE phone = ? AND id != ? AND openid != ? AND openid != ?'
-    ).bind(cleanPhone, id, id, `wx_openid_${id}`).first<{ id: string; nickname: string }>();
+      'SELECT * FROM users WHERE phone = ? AND id != ?'
+    ).bind(cleanPhone, id).first<any>();
 
     if (existing) {
-      return c.json({ 
-        success: false, 
-        message: `联系电话【${cleanPhone}】已被客户【${existing.nickname || existing.id}】绑定，手机号必须唯一！` 
-      }, 400);
+      await db.prepare('UPDATE orders SET user_id = ? WHERE user_id = ?').bind(existing.id, id).run();
+      await db.prepare('UPDATE user_addresses SET user_id = ? WHERE user_id = ?').bind(existing.id, id).run();
+      await db.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
+
+      const mergedUser = await db.prepare('SELECT * FROM users WHERE id = ?').bind(existing.id).first<any>();
+      return c.json({ success: true, user: mergedUser });
     }
   }
 
@@ -198,11 +269,15 @@ app.post('/api/user/profile', async (c) => {
 });
 
 /**
- * 获取全量微信客户列表 (供管理后台 Users.vue 包含订单数与默认安装地址)
+ * 获取全量微信客户列表 (自动清洗归并相同手机号的客户与订单)
  * GET /api/users
  */
 app.get('/api/users', async (c) => {
   const db = c.env.DB;
+
+  // 1. 自动执行全量手机号合并与订单关联重重定向清洗
+  await mergeDuplicateUsersByPhone(db);
+
   const { results: users } = await db.prepare('SELECT * FROM users ORDER BY created_at DESC').all<any>();
 
   // 动态建表容错
@@ -224,22 +299,31 @@ app.get('/api/users', async (c) => {
   } catch (e) {}
 
   for (const user of users || []) {
-    // 统计订单数量
+    // 强按 user.id 与 下单手机号 customer_phone 统计关联订单
     try {
-      const countRes = await db.prepare('SELECT COUNT(*) as count FROM orders WHERE user_id = ?').bind(user.id).first<{ count: number }>();
+      const countRes = await db.prepare(
+        'SELECT COUNT(DISTINCT id) as count FROM orders WHERE user_id = ? OR (customer_phone IS NOT NULL AND customer_phone != "" AND customer_phone = ?)'
+      ).bind(user.id, user.phone || '').first<{ count: number }>();
       user.order_count = countRes ? countRes.count : 0;
     } catch (e) {
       user.order_count = 0;
     }
 
-    // 查询该客户的默认/最新地址
+    // 查询该客户保存的默认地址，未保存时取该客户下单时的最新安装地址
     try {
-      const addressRes = await db.prepare('SELECT * FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC, created_at DESC LIMIT 1').bind(user.id).first<any>();
+      const addressRes = await db.prepare(
+        'SELECT * FROM user_addresses WHERE user_id = ? OR (phone IS NOT NULL AND phone != "" AND phone = ?) ORDER BY is_default DESC, created_at DESC LIMIT 1'
+      ).bind(user.id, user.phone || '').first<any>();
+
       if (addressRes) {
         user.address = `${addressRes.province || ''}${addressRes.city || ''}${addressRes.district || ''}${addressRes.detail_address || ''}`;
         user.address_detail = addressRes;
       } else {
-        user.address = '暂无保存地址';
+        const latestOrder = await db.prepare(
+          'SELECT install_address FROM orders WHERE (user_id = ? OR customer_phone = ?) AND install_address IS NOT NULL AND install_address != "" ORDER BY created_at DESC LIMIT 1'
+        ).bind(user.id, user.phone || '').first<{ install_address: string }>();
+
+        user.address = (latestOrder && latestOrder.install_address) ? latestOrder.install_address : '暂无保存地址';
       }
     } catch (e) {
       user.address = '暂无保存地址';
@@ -662,7 +746,10 @@ app.post('/api/orders', async (c) => {
     items: rawItems
   } = body;
 
-  const customSets = (rawCustomSets && rawCustomSets.length > 0) ? rawCustomSets : (rawItems || []);
+  const cleanPhone = (customer_phone || '').trim();
+  if (!cleanPhone || !/^1[3-9]\d{9}$/.test(cleanPhone)) {
+    return c.json({ success: false, message: '必须提供有效的手机号码方可提交订单' }, 400);
+  }
 
   if (!customSets || !Array.isArray(customSets) || customSets.length === 0) {
     return c.json({ success: false, message: '请至少添加一套门窗定制配置' }, 400);
@@ -683,9 +770,44 @@ app.post('/api/orders', async (c) => {
   const orderNo = `ZC${dateStr}${Math.floor(1000 + Math.random() * 9000)}`;
 
   // 外键安全校验与容错: 防止 invalid user_id / product_id 触发 SQLite 外键约束异常
+  // 以下单联系电话 (customer_phone) 作为订单与客户账号的唯一关键强绑定
   let validUserId: string | null = null;
+  const cleanPhone = (customer_phone || '').trim();
   const rawUserId = (user_id || '').trim();
-  if (rawUserId) {
+
+  if (cleanPhone) {
+    try {
+      let targetUser = await db.prepare('SELECT * FROM users WHERE phone = ? LIMIT 1').bind(cleanPhone).first<User>();
+
+      if (!targetUser && rawUserId) {
+        const currentU = await db.prepare('SELECT * FROM users WHERE id = ?').bind(rawUserId).first<User>();
+        if (currentU) {
+          if (!currentU.phone) {
+            await db.prepare('UPDATE users SET phone = ?, nickname = COALESCE(NULLIF(nickname, ""), ?) WHERE id = ?')
+              .bind(cleanPhone, customer_name || '客户', currentU.id).run();
+            currentU.phone = cleanPhone;
+          }
+          targetUser = currentU;
+        }
+      }
+
+      if (!targetUser) {
+        const autoUserId = `usr_${cleanPhone}`;
+        await db.prepare(`
+          INSERT INTO users (id, openid, nickname, phone, role)
+          VALUES (?, ?, ?, ?, 'customer')
+          ON CONFLICT(id) DO UPDATE SET
+            phone = excluded.phone,
+            nickname = COALESCE(NULLIF(users.nickname, ""), excluded.nickname)
+        `).bind(autoUserId, `wx_openid_${autoUserId}`, customer_name || '客户', cleanPhone).run();
+        targetUser = await db.prepare('SELECT * FROM users WHERE id = ?').bind(autoUserId).first<User>();
+      }
+
+      if (targetUser) {
+        validUserId = targetUser.id;
+      }
+    } catch (e) {}
+  } else if (rawUserId) {
     try {
       const u = await db.prepare('SELECT id FROM users WHERE id = ?').bind(rawUserId).first<{ id: string }>();
       if (u) validUserId = u.id;

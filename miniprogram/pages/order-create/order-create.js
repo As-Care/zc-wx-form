@@ -13,6 +13,15 @@ Page({
   },
 
   onLoad() {
+    const savedUser = wx.getStorageSync('zc_user_info');
+    if (!savedUser || !savedUser.phone) {
+      wx.showToast({ title: '请先登录绑定手机号', icon: 'none', duration: 1500 });
+      setTimeout(() => {
+        wx.redirectTo({ url: '/pages/login/login' });
+      }, 1000);
+      return;
+    }
+
     const draft = wx.getStorageSync('orderDraft');
     if (draft) {
       let setsList = [];
@@ -37,7 +46,9 @@ Page({
       this.setData({
         draft,
         setsList,
-        displayTotalPrice
+        displayTotalPrice,
+        customer_name: savedUser.nickname || this.data.customer_name || '',
+        customer_phone: savedUser.phone || this.data.customer_phone || ''
       });
     } else {
       wx.navigateBack();
@@ -45,11 +56,19 @@ Page({
   },
 
   onShow() {
+    const savedUser = wx.getStorageSync('zc_user_info');
+    if (savedUser && savedUser.phone) {
+      this.setData({
+        customer_name: this.data.customer_name || savedUser.nickname || '',
+        customer_phone: this.data.customer_phone || savedUser.phone || ''
+      });
+    }
+
     const selected = wx.getStorageSync('selectedOrderAddress');
     if (selected) {
       this.setData({
-        customer_name: selected.name || this.data.customer_name || '',
-        customer_phone: selected.phone || this.data.customer_phone || '',
+        customer_name: selected.name || this.data.customer_name || (savedUser && savedUser.nickname) || '',
+        customer_phone: selected.phone || this.data.customer_phone || (savedUser && savedUser.phone) || '',
         install_address: `${selected.province || ''}${selected.city || ''}${selected.district || ''}${selected.detail_address || ''}`
       });
       wx.removeStorageSync('selectedOrderAddress');
@@ -90,8 +109,9 @@ Page({
       wx.showToast({ title: '请填写联系人姓名', icon: 'none', duration: 2000 });
       return;
     }
-    if (!this.data.customer_phone || !this.data.customer_phone.trim()) {
-      wx.showToast({ title: '请填写联系电话', icon: 'none', duration: 2000 });
+    const phoneTrim = (this.data.customer_phone || '').trim();
+    if (!phoneTrim || !/^1[3-9]\d{9}$/.test(phoneTrim)) {
+      wx.showToast({ title: '请填写有效的手机号码', icon: 'none', duration: 2000 });
       return;
     }
     if (!this.data.install_address || !this.data.install_address.trim()) {
