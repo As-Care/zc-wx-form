@@ -1,11 +1,11 @@
 // 展晨门窗 双栏分类页 Page 逻辑
-const { request, mockData } = require('../../utils/request');
+const { request } = require('../../utils/request');
 
 Page({
   data: {
     categories: [],
     activeCatId: '',
-    activeCatName: '断桥铝系统窗',
+    activeCatName: '门窗分类',
     allProducts: [],
     productList: [],
     loading: false
@@ -17,20 +17,24 @@ Page({
 
   fetchData() {
     request({ url: '/api/categories' }).then(res => {
-      let categories = (res.success && res.data && res.data.length > 0) ? res.data : mockData.categories;
+      let categories = (res.success && Array.isArray(res.data)) ? res.data : [];
       this.initSelectedCategory(categories);
     }).catch(() => {
-      this.initSelectedCategory(mockData.categories);
+      this.initSelectedCategory([]);
     });
   },
 
   initSelectedCategory(categories) {
+    if (!categories || categories.length === 0) {
+      this.setData({ categories: [], productList: [] });
+      return;
+    }
+
     const app = getApp();
     const globalCatId = app && app.globalData ? app.globalData.selectedCatId : null;
     const globalCatName = app && app.globalData ? app.globalData.selectedCatName : null;
     const storedCat = globalCatId || wx.getStorageSync('selectedCategory');
     
-    // 如果有首页透传进来的 target catId / catName，优先使用它
     let activeCat = null;
     if (storedCat) {
       activeCat = categories.find(c => c.id === storedCat || c.name === storedCat || c.sub_title === storedCat);
@@ -39,23 +43,24 @@ Page({
       activeCat = categories.find(c => c.name === globalCatName || c.sub_title === globalCatName);
     }
     if (!activeCat) {
-      activeCat = categories[0] || { id: 'cat_1', name: '断桥铝系统窗' };
+      activeCat = categories[0];
     }
 
     this.setData({
       categories,
-      activeCatId: activeCat.id,
-      activeCatName: activeCat.name || activeCat.sub_title || '门窗商品'
+      activeCatId: activeCat ? activeCat.id : '',
+      activeCatName: activeCat ? (activeCat.name || activeCat.sub_title) : '门窗商品'
     });
     
-    // 消费完毕后清空透传标志
     wx.removeStorageSync('selectedCategory');
     if (app && app.globalData) {
       app.globalData.selectedCatId = null;
       app.globalData.selectedCatName = null;
     }
 
-    this.fetchProducts(activeCat.id, activeCat.name);
+    if (activeCat) {
+      this.fetchProducts(activeCat.id, activeCat.name);
+    }
   },
 
   fetchProducts(catId, catName) {
@@ -65,14 +70,10 @@ Page({
       if (res.success && Array.isArray(res.data)) {
         this.setData({ productList: res.data });
       } else {
-        const allMock = mockData.products || [];
-        const filtered = allMock.filter(p => p.category_id === catId || p.category_name === catName || (p.name && catName && p.name.includes(catName)));
-        this.setData({ productList: filtered });
+        this.setData({ productList: [] });
       }
     }).catch(() => {
-      const allMock = mockData.products || [];
-      const filtered = allMock.filter(p => p.category_id === catId || p.category_name === catName || (p.name && catName && p.name.includes(catName)));
-      this.setData({ productList: filtered });
+      this.setData({ productList: [] });
     }).finally(() => {
       this.setData({ loading: false });
     });

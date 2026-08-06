@@ -53,29 +53,25 @@ Page({
 
   fetchCategories() {
     return request({ url: '/api/categories' }).then(res => {
-      if (res.success && res.data && res.data.length > 0) {
+      if (res.success && Array.isArray(res.data)) {
         this.setData({ categories: res.data });
       } else {
-        const mock = require('../../utils/request').mockData;
-        this.setData({ categories: mock.categories || [] });
+        this.setData({ categories: [] });
       }
     }).catch(() => {
-      const mock = require('../../utils/request').mockData;
-      this.setData({ categories: mock.categories || [] });
+      this.setData({ categories: [] });
     });
   },
 
   fetchProducts() {
     return request({ url: '/api/products' }).then(res => {
-      if (res.success && res.data && res.data.length > 0) {
+      if (res.success && Array.isArray(res.data)) {
         this.setData({ products: res.data });
       } else {
-        const mock = require('../../utils/request').mockData;
-        this.setData({ products: mock.products || [] });
+        this.setData({ products: [] });
       }
     }).catch(() => {
-      const mock = require('../../utils/request').mockData;
-      this.setData({ products: mock.products || [] });
+      this.setData({ products: [] });
     });
   },
 

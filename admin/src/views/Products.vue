@@ -238,126 +238,128 @@
       :width="1100"
       :footer="false"
     >
-      <div v-if="currentProduct">
-        <div class="drawer-header mb-4">
-          <h3 style="margin: 0; color: #1d2129; font-size: 18px;">【{{ currentProduct.name }}】选配规则列表</h3>
-          <p style="margin: 6px 0 0 0; font-size: 13px; color: #86909c;">按选配分组进行层级管理（如玻璃配置/五金品牌），每个分组下可配置多个选项细项，同屏同步渲染于小程序端。</p>
-        </div>
+      <a-spin :loading="drawerLoading" tip="正在同步拉取最全选配规则..." style="width: 100%; display: block; min-height: 380px;">
+        <div v-if="currentProduct">
+          <div class="drawer-header mb-4">
+            <h3 style="margin: 0; color: #1d2129; font-size: 18px;">【{{ currentProduct.name }}】选配规则列表</h3>
+            <p style="margin: 6px 0 0 0; font-size: 13px; color: #86909c;">按选配分组进行层级管理（如玻璃配置/五金品牌），每个分组下可配置多个选项细项，同屏同步渲染于小程序端。</p>
+          </div>
 
-        <div class="mb-4 flex-between">
-          <a-tag class="champagne-tag" size="large" style="font-weight: 600;">基础定价：¥ {{ currentProduct.base_price_sqm }} / ㎡</a-tag>
-          <a-button type="primary" size="medium" @click="addGroup">
-            <template #icon><icon-plus /></template>
-            新增选配分组
-          </a-button>
-        </div>
+          <div class="mb-4 flex-between">
+            <a-tag class="champagne-tag" size="large" style="font-weight: 600;">基础定价：¥ {{ currentProduct.base_price_sqm }} / ㎡</a-tag>
+            <a-button type="primary" size="medium" @click="addGroup">
+              <template #icon><icon-plus /></template>
+              新增选配分组
+            </a-button>
+          </div>
 
-        <!-- 1-to-N 选配分组卡片列表 -->
-        <div v-for="(group, gIdx) in groupedOptions" :key="group.id" class="option-group-box mb-4">
-          <a-card border class="group-card">
-            <template #title>
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-size: 14px; font-weight: 700; color: #1d2129; white-space: nowrap;">📦 选配分组 {{ gIdx + 1 }}：</span>
-                <a-select v-model="group.group_name" size="medium" allow-create placeholder="选择或手动输入分组名称" style="width: 300px;">
-                  <a-option value="玻璃配置">玻璃配置</a-option>
-                  <a-option value="门锁配置">门锁配置</a-option>
-                  <a-option value="铝材配置">铝材配置</a-option>
-                  <a-option value="颜色配置">颜色配置 (支持上传配图)</a-option>
-                  <a-option value="开门方向">开门方向</a-option>
-                  <a-option value="开门内外">开门内外</a-option>
-                  <a-option value="其它选配">其它选配</a-option>
-                </a-select>
-              </div>
-            </template>
-
-            <template #extra>
-              <div style="display: flex; gap: 8px;">
-                <a-button type="outline" size="small" @click="addItemToGroup(group)">
-                  + 添加组内选项
-                </a-button>
-                <a-popconfirm content="确定删除此整个选配分组吗？" type="warning" @ok="removeGroup(gIdx)">
-                  <a-button type="outline" status="danger" size="small">
-                    删除分组
-                  </a-button>
-                </a-popconfirm>
-              </div>
-            </template>
-
-            <!-- 组内选项细项表格 -->
-            <a-table :data="group.items" :pagination="false" border size="medium" class="no-wrap-header-table">
-              <template #columns>
-                <a-table-column title="选项名称 (如: 琉璃白 / 双层钢化玻璃)" :width="260">
-                  <template #cell="{ record }">
-                    <a-input v-model="record.option_name" size="medium" placeholder="请输入选项名称" />
-                  </template>
-                </a-table-column>
-
-                <a-table-column title="选项示图/色卡 (可选)" :width="160">
-                  <template #cell="{ record }">
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                      <a-popover v-if="record.image_url" trigger="hover">
-                        <img :src="record.image_url" style="width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e6eb; cursor: pointer;" />
-                        <template #content>
-                          <img :src="record.image_url" style="max-width: 160px; max-height: 160px; border-radius: 6px;" />
-                        </template>
-                      </a-popover>
-                      <a-upload
-                        action="https://zc-api.carelife.top/api/upload"
-                        :show-file-list="false"
-                        @success="(fileItem) => onOptionImgUploadSuccess(record, fileItem)"
-                      >
-                        <template #upload-button>
-                          <a-button type="outline" size="mini">
-                            {{ record.image_url ? '更换' : '上传图' }}
-                          </a-button>
-                        </template>
-                      </a-upload>
-                      <a-button v-if="record.image_url" type="text" status="danger" size="mini" @click="record.image_url = ''">
-                        <icon-delete />
-                      </a-button>
-                    </div>
-                  </template>
-                </a-table-column>
-
-                <a-table-column title="加价方式" :width="180">
-                  <template #cell="{ record }">
-                    <a-select v-model="record.price_type" size="medium">
-                      <a-option value="fixed">固定金额(元)</a-option>
-                      <a-option value="per_sqm">按平米(元/㎡)</a-option>
-                      <a-option value="per_item">按件/套(元/套)</a-option>
-                    </a-select>
-                  </template>
-                </a-table-column>
-
-                <a-table-column title="加价金额 (元)" :width="140">
-                  <template #cell="{ record }">
-                    <a-input-number v-model="record.price" size="medium" :min="0" placeholder="0" />
-                  </template>
-                </a-table-column>
-
-                <a-table-column title="默认勾选" :width="110">
-                  <template #cell="{ record }">
-                    <a-switch v-model="record.is_default" size="medium" :checked-value="1" :unchecked-value="0" />
-                  </template>
-                </a-table-column>
-
-                <a-table-column title="操作" :width="70">
-                  <template #cell="{ record, rowIndex }">
-                    <a-button type="text" status="danger" size="medium" @click="removeItemFromGroup(group, rowIndex)">
-                      <template #icon><icon-delete /></template>
-                    </a-button>
-                  </template>
-                </a-table-column>
+          <!-- 1-to-N 选配分组卡片列表 -->
+          <div v-for="(group, gIdx) in groupedOptions" :key="group.id" class="option-group-box mb-4">
+            <a-card border class="group-card">
+              <template #title>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <span style="font-size: 14px; font-weight: 700; color: #1d2129; white-space: nowrap;">📦 选配分组 {{ gIdx + 1 }}：</span>
+                  <a-select v-model="group.group_name" size="medium" allow-create placeholder="选择或手动输入分组名称" style="width: 300px;">
+                    <a-option value="玻璃配置">玻璃配置</a-option>
+                    <a-option value="门锁配置">门锁配置</a-option>
+                    <a-option value="铝材配置">铝材配置</a-option>
+                    <a-option value="颜色配置">颜色配置</a-option>
+                    <a-option value="开门方向">开门方向</a-option>
+                    <a-option value="开门内外">开门内外</a-option>
+                    <a-option value="其它选配">其它选配</a-option>
+                  </a-select>
+                </div>
               </template>
-            </a-table>
-          </a-card>
-        </div>
 
-        <div style="margin-top: 32px; display: flex; justify-content: flex-end; gap: 16px;">
-          <a-button size="large" @click="optionsDrawerVisible = false">取消</a-button>
-          <a-button type="primary" size="large" @click="saveOptions">保存选配规则配置</a-button>
+              <template #extra>
+                <div style="display: flex; gap: 8px;">
+                  <a-button type="outline" size="small" @click="addItemToGroup(group)">
+                    + 添加组内选项
+                  </a-button>
+                  <a-popconfirm content="确定删除此整个选配分组吗？" type="warning" @ok="removeGroup(gIdx)">
+                    <a-button type="outline" status="danger" size="small">
+                      删除分组
+                    </a-button>
+                  </a-popconfirm>
+                </div>
+              </template>
+
+              <!-- 组内选项细项表格 -->
+              <a-table :data="group.items" :pagination="false" border size="medium" class="no-wrap-header-table">
+                <template #columns>
+                  <a-table-column title="选项名称 (如: 琉璃白 / 双层钢化玻璃)" :width="260">
+                    <template #cell="{ record }">
+                      <a-input v-model="record.option_name" size="medium" placeholder="请输入选项名称" />
+                    </template>
+                  </a-table-column>
+
+                  <a-table-column title="选项示图/色卡 (可选)" :width="160">
+                    <template #cell="{ record }">
+                      <div style="display: flex; align-items: center; gap: 6px;">
+                        <a-popover v-if="record.image_url" trigger="hover">
+                          <img :src="record.image_url" style="width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e6eb; cursor: pointer;" />
+                          <template #content>
+                            <img :src="record.image_url" style="max-width: 160px; max-height: 160px; border-radius: 6px;" />
+                          </template>
+                        </a-popover>
+                        <a-upload
+                          action="https://zc-api.carelife.top/api/upload"
+                          :show-file-list="false"
+                          @success="(fileItem) => onOptionImgUploadSuccess(record, fileItem)"
+                        >
+                          <template #upload-button>
+                            <a-button type="outline" size="mini">
+                              {{ record.image_url ? '更换' : '上传图' }}
+                            </a-button>
+                          </template>
+                        </a-upload>
+                        <a-button v-if="record.image_url" type="text" status="danger" size="mini" @click="record.image_url = ''">
+                          <icon-delete />
+                        </a-button>
+                      </div>
+                    </template>
+                  </a-table-column>
+
+                  <a-table-column title="加价方式" :width="180">
+                    <template #cell="{ record }">
+                      <a-select v-model="record.price_type" size="medium">
+                        <a-option value="fixed">固定金额(元)</a-option>
+                        <a-option value="per_sqm">按平米(元/㎡)</a-option>
+                        <a-option value="per_item">按件/套(元/套)</a-option>
+                      </a-select>
+                    </template>
+                  </a-table-column>
+
+                  <a-table-column title="加价金额 (元)" :width="140">
+                    <template #cell="{ record }">
+                      <a-input-number v-model="record.price" size="medium" :min="0" placeholder="0" />
+                    </template>
+                  </a-table-column>
+
+                  <a-table-column title="默认勾选" :width="110">
+                    <template #cell="{ record }">
+                      <a-switch v-model="record.is_default" size="medium" :checked-value="1" :unchecked-value="0" />
+                    </template>
+                  </a-table-column>
+
+                  <a-table-column title="操作" :width="70">
+                    <template #cell="{ record, rowIndex }">
+                      <a-button type="text" status="danger" size="medium" @click="removeItemFromGroup(group, rowIndex)">
+                        <template #icon><icon-delete /></template>
+                      </a-button>
+                    </template>
+                  </a-table-column>
+                </template>
+              </a-table>
+            </a-card>
+          </div>
+
+          <div style="margin-top: 32px; display: flex; justify-content: flex-end; gap: 16px;">
+            <a-button size="large" @click="optionsDrawerVisible = false">取消</a-button>
+            <a-button type="primary" size="large" @click="saveOptions">保存选配规则配置</a-button>
+          </div>
         </div>
-      </div>
+      </a-spin>
     </a-drawer>
   </div>
 </template>
@@ -429,6 +431,7 @@ const tableLoading = ref(true);
 
 const modalVisible = ref(false);
 const optionsDrawerVisible = ref(false);
+const drawerLoading = ref(false);
 const currentProduct = ref(null);
 const uploading = ref(false);
 
@@ -548,19 +551,7 @@ const onOptionImgUploadSuccess = (record, fileItem) => {
 
 const groupedOptions = ref([]);
 
-const openOptionsDrawer = async (record) => {
-  currentProduct.value = JSON.parse(JSON.stringify(record));
-  let rawOptions = currentProduct.value.options || [];
-
-  try {
-    const res = await fetch(`${API_BASE}/api/products/${record.id}`);
-    const data = await res.json();
-    if (data.success && data.data && data.data.options && data.data.options.length > 0) {
-      rawOptions = data.data.options;
-    }
-  } catch (e) {}
-
-  // 按照 group_name 进行 1-to-N 归类分组
+const parseGroupsFromOptions = (rawOptions) => {
   const groupMap = {};
   (rawOptions || []).forEach(opt => {
     const gName = (opt.group_name || '玻璃配置').trim();
@@ -628,9 +619,29 @@ const openOptionsDrawer = async (record) => {
       }
     ];
   }
+  return list;
+};
 
-  groupedOptions.value = list;
+const openOptionsDrawer = (record) => {
+  // 1. 立即设置当前商品并弹出抽屉，零延迟响应
+  currentProduct.value = JSON.parse(JSON.stringify(record));
+  groupedOptions.value = parseGroupsFromOptions(currentProduct.value.options);
   optionsDrawerVisible.value = true;
+  drawerLoading.value = true;
+
+  // 2. 抽屉内异步请求后台最新规则，加载完成后关闭 loading 遮罩
+  fetch(`${API_BASE}/api/products/${record.id}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.success && data.data && data.data.options && data.data.options.length > 0) {
+        currentProduct.value.options = data.data.options;
+        groupedOptions.value = parseGroupsFromOptions(data.data.options);
+      }
+    })
+    .catch(() => {})
+    .finally(() => {
+      drawerLoading.value = false;
+    });
 };
 
 const addGroup = () => {

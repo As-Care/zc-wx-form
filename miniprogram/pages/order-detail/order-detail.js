@@ -1,5 +1,5 @@
 // 展晨门窗 订单详情与流转时间轴 Page 逻辑
-const { request, mockData } = require('../../utils/request');
+const { request } = require('../../utils/request');
 
 const STATUS_INFO_MAP = {
   'pending_review': {
@@ -46,22 +46,12 @@ Page({
           width_mm: 2400,
           height_mm: 2100,
           actual_area: 5.04,
-          billed_area: 5.04,
-          unit_price: 680,
-          item_subtotal: 3830.4,
-          options_summary: [
-            { groupTitle: '玻璃配置', option_name: '5+18A+5 标准中空钢化玻璃' },
-            { groupTitle: '五金配件品牌', option_name: '德国好博 (Hoppe) 原装执手' },
-            { groupTitle: '铝材表面喷涂颜色', option_name: '氟碳雅致黑' }
-          ]
-        }
-      ]
-    },
+    order: null,
     steps: []
   },
 
   onLoad(options) {
-    if (options.id) {
+    if (options && options.id) {
       this.setData({ orderId: options.id });
       this.fetchDetail(options.id);
     } else {
@@ -70,34 +60,33 @@ Page({
   },
 
   fetchDetail(id) {
-    const target = mockData.orders.find(o => o.id === id) || mockData.orders[0];
-    if (target) {
-      const statusInfo = STATUS_INFO_MAP[target.status] || {
-        text: '待复核',
-        desc: '正在等待接单员复核'
-      };
+    if (!id) return;
+    request({ url: `/api/orders/${id}` }).then(res => {
+      if (res.success && res.data) {
+        const target = res.data;
+        const statusInfo = STATUS_INFO_MAP[target.status] || {
+          text: '待复核',
+          desc: '正在等待接单员复核'
+        };
 
-      const items = (target.items || []).map((it, idx) => ({
-        ...it,
-        label: it.label || `【care-26-08-05-${idx + 1}】`,
-        actual_area: it.actual_area || it.billed_area || 5.04,
-        options_summary: it.options_summary || [
-          { groupTitle: '玻璃配置', option_name: '5+18A+5 标准中空钢化玻璃' },
-          { groupTitle: '五金配件品牌', option_name: '德国好博 (Hoppe) 原装执手' },
-          { groupTitle: '铝材表面喷涂颜色', option_name: '氟碳雅致黑' }
-        ]
-      }));
+        const items = (target.items || []).map((it, idx) => ({
+          ...it,
+          label: it.label || `【套系-${idx + 1}】`,
+          actual_area: it.actual_area || it.billed_area || 0,
+          options_summary: it.options_summary || []
+        }));
 
-      this.setData({
-        order: {
-          ...target,
-          statusText: statusInfo.text,
-          statusDesc: statusInfo.desc,
-          items
-        }
-      });
-      this.updateSteps(target.status);
-    }
+        this.setData({
+          order: {
+            ...target,
+            statusText: statusInfo.text,
+            statusDesc: statusInfo.desc,
+            items
+          }
+        });
+        this.updateSteps(target.status);
+      }
+    });
   },
 
   updateSteps(currentStatus) {

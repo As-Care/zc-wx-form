@@ -1308,6 +1308,34 @@ app.post('/api/admin/products', async (c) => {
     isActive
   ).run();
 
+  // 若新建商品尚未绑定选配规则，自动填充用户指定的 6 大标准化默认分组与细项规则
+  try {
+    const { results: existingOpts } = await db.prepare('SELECT id FROM product_options WHERE product_id = ?').bind(id).all();
+    if (!existingOpts || existingOpts.length === 0) {
+      const defaultOptions = [
+        { group_name: '玻璃配置', option_name: '双层玻璃', price_type: 'fixed', price: 0, is_default: 1 },
+        { group_name: '玻璃配置', option_name: '双层钢化玻璃', price_type: 'fixed', price: 50, is_default: 0 },
+        { group_name: '门锁配置', option_name: '默认门锁', price_type: 'fixed', price: 0, is_default: 1 },
+        { group_name: '铝材配置', option_name: '默认铝材', price_type: 'fixed', price: 0, is_default: 1 },
+        { group_name: '颜色配置', option_name: '琉璃白', price_type: 'fixed', price: 0, is_default: 1 },
+        { group_name: '颜色配置', option_name: '深空灰', price_type: 'fixed', price: 0, is_default: 0 },
+        { group_name: '开门方向', option_name: '左锁（左合页）', price_type: 'fixed', price: 0, is_default: 1 },
+        { group_name: '开门方向', option_name: '右锁（左合页）', price_type: 'fixed', price: 0, is_default: 0 },
+        { group_name: '开门内外', option_name: '内开（朝内打开）', price_type: 'fixed', price: 0, is_default: 1 },
+        { group_name: '开门内外', option_name: '外开（朝外打开）', price_type: 'fixed', price: 0, is_default: 0 }
+      ];
+
+      for (let i = 0; i < defaultOptions.length; i++) {
+        const opt = defaultOptions[i];
+        const optId = `opt_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`;
+        await db.prepare(`
+          INSERT INTO product_options (id, product_id, group_name, option_name, price_type, price, is_default, sort_order, image_url)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, '')
+        `).bind(optId, id, opt.group_name, opt.option_name, opt.price_type, opt.price, opt.is_default, i).run();
+      }
+    }
+  } catch (e) {}
+
   return c.json({ success: true, id, message: '保存成功' });
 });
 
