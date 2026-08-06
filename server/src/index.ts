@@ -1228,6 +1228,7 @@ app.get('/api/admin/products', async (c) => {
         selectedCats.includes(p.category_name) || selectedCats.includes(p.category_id)
       );
     }
+  }
   for (const prod of list) {
     try {
       const { results: opts } = await db.prepare('SELECT * FROM product_options WHERE product_id = ? ORDER BY sort_order ASC').bind(prod.id).all<any>();
