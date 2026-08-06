@@ -280,11 +280,9 @@
                   <a-button type="outline" size="small" @click="addItemToGroup(group)">
                     + 添加组内选项
                   </a-button>
-                  <a-popconfirm content="确定删除此整个选配分组吗？" type="warning" @ok="removeGroup(gIdx)">
-                    <a-button type="outline" status="danger" size="small">
-                      删除分组
-                    </a-button>
-                  </a-popconfirm>
+                  <a-button type="outline" status="danger" size="small" @click="removeGroup(gIdx)">
+                    删除分组
+                  </a-button>
                 </div>
               </template>
 
@@ -328,28 +326,23 @@
                     <template #cell="{ record }">
                       <a-select v-model="record.price_type" size="medium">
                         <a-option value="fixed">固定金额(元)</a-option>
-                        <a-option value="per_sqm">按平米(元/㎡)</a-option>
-                        <a-option value="per_item">按件/套(元/套)</a-option>
-                      </a-select>
-                    </template>
-                  </a-table-column>
-
-                  <a-table-column title="加价金额 (元)" :width="140">
+                        <a-option value="per_sqm">按面积加价(元/㎡)</a-option>
+                  <a-table-column title="加价金额 (元)" :width="160">
                     <template #cell="{ record }">
-                      <a-input-number v-model="record.price" size="medium" :min="0" placeholder="0" />
+                      <a-input-number v-model="record.price" :min="0" :precision="2" size="medium" placeholder="0" />
                     </template>
                   </a-table-column>
 
-                  <a-table-column title="默认勾选" :width="110">
+                  <a-table-column title="默认勾选" :width="120">
                     <template #cell="{ record }">
-                      <a-switch v-model="record.is_default" size="medium" :checked-value="1" :unchecked-value="0" />
+                      <a-switch v-model="record.is_default" :checked-value="1" :unchecked-value="0" @change="() => handleDefaultSwitch(group, record)" />
                     </template>
                   </a-table-column>
 
-                  <a-table-column title="操作" :width="70">
+                  <a-table-column title="操作" :width="80">
                     <template #cell="{ record, rowIndex }">
-                      <a-button type="text" status="danger" size="medium" @click="removeItemFromGroup(group, rowIndex)">
-                        <template #icon><icon-delete /></template>
+                      <a-button type="text" status="danger" size="small" @click="removeItemFromGroup(group, rowIndex)">
+                        <icon-delete />
                       </a-button>
                     </template>
                   </a-table-column>
@@ -357,12 +350,16 @@
               </a-table>
             </a-card>
           </div>
+
+          <div v-else class="empty-group-box">
+            <a-empty description="暂无选配规则分组，点击右上角【+ 新增选配分组】开始创建" />
+          </div>
         </div>
       </a-spin>
       <template #footer>
         <div style="display: flex; justify-content: flex-end; gap: 16px; width: 100%;">
           <a-button size="large" @click="optionsDrawerVisible = false">取消</a-button>
-          <a-button type="primary" size="large" @click="saveOptions">保存选配规则配置</a-button>
+          <a-button class="btn-champagne-primary" size="large" :loading="savingOptions" @click="saveOptions">保存选配规则配置</a-button>
         </div>
       </template>
     </a-drawer>
@@ -514,6 +511,8 @@ const onOptionImgUploadSuccess = (record, fileItem) => {
 
 const groupedOptions = ref([]);
 
+const savingOptions = ref(false);
+
 const parseGroupsFromOptions = (rawOptions) => {
   const groupMap = {};
   (rawOptions || []).forEach(opt => {
@@ -538,46 +537,46 @@ const parseGroupsFromOptions = (rawOptions) => {
         id: `grp_1_${Date.now()}`,
         group_name: '玻璃配置',
         items: [
-          { id: `opt_1`, option_name: '双层玻璃', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-          { id: `opt_2`, option_name: '双层钢化玻璃', price_type: 'fixed', price: 50, is_default: 0, image_url: '' }
+          { id: `opt_def_1_${Date.now()}`, option_name: '双层玻璃', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+          { id: `opt_def_2_${Date.now()}`, option_name: '双层钢化玻璃', price_type: 'fixed', price: 50, is_default: 0, image_url: '' }
         ]
       },
       {
         id: `grp_2_${Date.now()}`,
         group_name: '门锁配置',
         items: [
-          { id: `opt_3`, option_name: '默认门锁', price_type: 'fixed', price: 0, is_default: 1, image_url: '' }
+          { id: `opt_def_3_${Date.now()}`, option_name: '默认门锁', price_type: 'fixed', price: 0, is_default: 1, image_url: '' }
         ]
       },
       {
         id: `grp_3_${Date.now()}`,
         group_name: '铝材配置',
         items: [
-          { id: `opt_4`, option_name: '默认铝材', price_type: 'fixed', price: 0, is_default: 1, image_url: '' }
+          { id: `opt_def_4_${Date.now()}`, option_name: '默认铝材', price_type: 'fixed', price: 0, is_default: 1, image_url: '' }
         ]
       },
       {
         id: `grp_4_${Date.now()}`,
         group_name: '颜色配置',
         items: [
-          { id: `opt_5`, option_name: '琉璃白', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-          { id: `opt_6`, option_name: '深空灰', price_type: 'fixed', price: 0, is_default: 0, image_url: '' }
+          { id: `opt_def_5_${Date.now()}`, option_name: '琉璃白', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+          { id: `opt_def_6_${Date.now()}`, option_name: '深空灰', price_type: 'fixed', price: 0, is_default: 0, image_url: '' }
         ]
       },
       {
         id: `grp_5_${Date.now()}`,
         group_name: '开门方向',
         items: [
-          { id: `opt_7`, option_name: '左锁（左合页）', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-          { id: `opt_8`, option_name: '右锁（左合页）', price_type: 'fixed', price: 0, is_default: 0, image_url: '' }
+          { id: `opt_def_7_${Date.now()}`, option_name: '左锁（左合页）', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+          { id: `opt_def_8_${Date.now()}`, option_name: '右锁（左合页）', price_type: 'fixed', price: 0, is_default: 0, image_url: '' }
         ]
       },
       {
         id: `grp_6_${Date.now()}`,
         group_name: '开门内外',
         items: [
-          { id: `opt_9`, option_name: '内开（朝内打开）', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-          { id: `opt_10`, option_name: '外开（朝外打开）', price_type: 'fixed', price: 0, is_default: 0, image_url: '' }
+          { id: `opt_def_9_${Date.now()}`, option_name: '内开（朝内打开）', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
+          { id: `opt_def_10_${Date.now()}`, option_name: '外开（朝外打开）', price_type: 'fixed', price: 0, is_default: 0, image_url: '' }
         ]
       }
     ];
@@ -640,34 +639,35 @@ const removeItemFromGroup = (group, itemIndex) => {
 
 const saveOptions = async () => {
   if (!currentProduct.value) return;
-
-  const flatList = [];
-  (groupedOptions.value || []).forEach(g => {
-    const gName = (g.group_name || '选配分组').trim();
-    (g.items || []).forEach(it => {
-      if (it.option_name && it.option_name.trim()) {
-        flatList.push({
-          id: it.id || `opt_${Date.now()}_${Math.random()}`,
-          group_name: gName,
-          group_title: gName,
-          option_name: it.option_name.trim(),
-          price_type: it.price_type || 'fixed',
-          price: Number(it.price || 0),
-          is_default: it.is_default ? 1 : 0,
-          image_url: it.image_url || ''
-        });
-      }
-    });
-  });
-
-  currentProduct.value.options = flatList;
-  const target = products.value.find(p => p.id === currentProduct.value.id);
-  if (target) {
-    target.options = flatList;
-    products.value = [...products.value];
-  }
+  savingOptions.value = true;
 
   try {
+    const flatList = [];
+    (groupedOptions.value || []).forEach(g => {
+      const gName = (g.group_name || '选配分组').trim();
+      (g.items || []).forEach(it => {
+        if (it.option_name && it.option_name.trim()) {
+          flatList.push({
+            id: it.id || `opt_${Date.now()}_${Math.random()}`,
+            group_name: gName,
+            group_title: gName,
+            option_name: it.option_name.trim(),
+            price_type: it.price_type || 'fixed',
+            price: Number(it.price || 0),
+            is_default: it.is_default ? 1 : 0,
+            image_url: it.image_url || ''
+          });
+        }
+      });
+    });
+
+    currentProduct.value.options = flatList;
+    const target = products.value.find(p => p.id === currentProduct.value.id);
+    if (target) {
+      target.options = flatList;
+      products.value = [...products.value];
+    }
+
     const res = await fetch(`${API_BASE}/api/admin/products/${currentProduct.value.id}/options`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -683,6 +683,8 @@ const saveOptions = async () => {
     }
   } catch (e) {
     Message.error('无法连接后端 API 接口，请检查网络');
+  } finally {
+    savingOptions.value = false;
   }
 };
 

@@ -743,10 +743,10 @@ app.post('/api/admin/products/:id/options', async (c) => {
     // 1. 删除该商品原有的选配规则
     await db.prepare('DELETE FROM product_options WHERE product_id = ?').bind(id).run();
 
-    // 2. 批量插入最新的选配规则列表
+    // 2. 批量插入最新的选配规则列表 (为每条插入自动生成绝对唯一的主键 ID，杜绝全局主键冲突)
     for (let i = 0; i < options.length; i++) {
       const opt = options[i];
-      const optId = opt.id || `opt_${Date.now()}_${i}`;
+      const optId = `opt_${id.replace(/[^a-zA-Z0-9]/g, '')}_${Date.now()}_${i}_${Math.floor(1000 + Math.random() * 9000)}`;
       const groupName = opt.group_name || opt.group_title || 'glass';
       const groupTitle = opt.group_title || opt.groupTitle || opt.group_name || groupName || '选配分组';
       const optionName = opt.option_name || opt.name || '';
