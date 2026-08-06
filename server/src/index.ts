@@ -167,6 +167,35 @@ app.post('/api/user/profile', async (c) => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `).run();
+  } catch (e) {}
+
+  if (phone && phone.trim()) {
+    const cleanPhone = phone.trim();
+    const existing = await db.prepare(
+      'SELECT id, nickname FROM users WHERE phone = ? AND id != ? AND openid != ? AND openid != ?'
+    ).bind(cleanPhone, id, id, `wx_openid_${id}`).first<{ id: string; nickname: string }>();
+
+    if (existing) {
+      return c.json({ 
+        success: false, 
+        message: `联系电话【${cleanPhone}】已被客户【${existing.nickname || existing.id}】绑定，手机号必须唯一！` 
+      }, 400);
+    }
+  }
+
+  await db.prepare(`
+    INSERT INTO users (id, openid, nickname, avatar_url, phone, role)
+    VALUES (?, ?, ?, ?, ?, 'customer')
+    ON CONFLICT(id) DO UPDATE SET
+      nickname = COALESCE(excluded.nickname, users.nickname),
+      avatar_url = COALESCE(excluded.avatar_url, users.avatar_url),
+      phone = COALESCE(excluded.phone, users.phone)
+  `).bind(id, `wx_openid_${id}`, nickname || '微信用户', avatar_url || '', phone || '').run();
+
+  const user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<User>();
+  return c.json({ success: true, user });
+});
+
 async function mergeDuplicateUsersByPhone(db: any) {
   try {
     // 1. 将孤立/分散订单根据下单联系电话 customer_phone 重定向关联到手机号对应的已有主用户
@@ -751,6 +780,8 @@ app.post('/api/orders', async (c) => {
     return c.json({ success: false, message: '必须提供有效的手机号码方可提交订单' }, 400);
   }
 
+  const customSets = (rawCustomSets && rawCustomSets.length > 0) ? rawCustomSets : (rawItems || []);
+
   if (!customSets || !Array.isArray(customSets) || customSets.length === 0) {
     return c.json({ success: false, message: '请至少添加一套门窗定制配置' }, 400);
   }
@@ -772,7 +803,6 @@ app.post('/api/orders', async (c) => {
   // 外键安全校验与容错: 防止 invalid user_id / product_id 触发 SQLite 外键约束异常
   // 以下单联系电话 (customer_phone) 作为订单与客户账号的唯一关键强绑定
   let validUserId: string | null = null;
-  const cleanPhone = (customer_phone || '').trim();
   const rawUserId = (user_id || '').trim();
 
   if (cleanPhone) {
