@@ -96,6 +96,31 @@
       </view>
     </view>
   </view>
+  <!-- ④ 现场环境照片上传 (绑定当前套系，允许上传图片，非必填) -->
+  <view class="glass-card options-card">
+    <view class="flex-between mb-2" style="align-items: center;">
+      <text class="card-title" style="margin-bottom: 0;">④ 套系 {{activeSetIndex + 1}} - 现场环境照片</text>
+      <text class="opt-tag-badge">可选 / 非必填</text>
+    </view>
+    <view class="scene-upload-tip mb-3 mt-1">可上传安装现场环境图、洞口尺寸图或特殊工况对比图 (最多6张)</view>
+    <view class="img-upload-grid flex-row mb-4">
+      <view class="img-thumb-box" wx:for="{{customSets[activeSetIndex].scene_images}}" wx:key="*this">
+        <image class="img-thumb" src="{{item}}" mode="aspectFill" bindtap="previewSetSceneImg" data-url="{{item}}" />
+        <view class="img-del-btn flex-center" catchtap="deleteSetSceneImg" data-index="{{index}}">
+          ✕
+        </view>
+      </view>
+      <view class="img-add-btn flex-column flex-center" wx:if="{{!customSets[activeSetIndex].scene_images || customSets[activeSetIndex].scene_images.length < 6}}" bindtap="chooseSetSceneImg">
+        <text class="add-icon">+</text>
+        <text class="add-text">上传照片</text>
+      </view>
+    </view>
+    <!-- 现场施工与工况备注 -->
+    <view class="scene-remark-box flex-column mt-4">
+      <view class="scene-remark-label mb-2">现场施工与工况备注 (可选)</view>
+      <textarea class="scene-remark-textarea" placeholder="填写特殊要求或现场情况 (如: 需要带高楼吊装绳、封阳台需拆旧窗)" value="{{customSets[activeSetIndex].customer_remark}}" bindinput="onSetRemarkInput" />
+    </view>
+  </view>
   <!-- 底部常驻悬浮报价条 (支持多套汇总) -->
   <view class="floating-bar flex-between">
     <view class="price-preview flex-column">
@@ -105,59 +130,6 @@
         <text class="p-val">{{totalSummary.totalPrice}}</text>
       </view>
     </view>
-    <view class="submit-btn btn-gold flex-center" bindtap="openPreviewModal">下单预览</view>
-  </view>
-  <!-- 高奢【下单预览】弹窗 (修复关闭Icon居中与底部总价不超界) -->
-  <view class="modal-mask {{showPreviewModal ? 'show' : ''}}" bindtap="closePreviewModal">
-    <view class="modal-card glass-card flex-column" catchtap="preventBubble">
-      <!-- 弹窗 Header -->
-      <view class="modal-header flex-between">
-        <text class="modal-title">📋 门窗定制下单预览 (共{{totalSummary.totalSets}}套)</text>
-        <view class="close-icon-btn flex-center" bindtap="closePreviewModal">✕</view>
-      </view>
-      <!-- 弹窗可滚动主体 (多套明细罗列) -->
-      <scroll-view class="modal-scroll-body" scroll-y show-scrollbar="{{false}}">
-        <view class="modal-scroll-body-box">
-          <view class="modal-section flex-column" wx:for="{{customSets}}" wx:key="id" wx:for-index="sIdx">
-            <view class="set-title-badge flex-between">
-              <text class="set-b-name">第 {{sIdx + 1}} 套：{{item.label}}</text>
-              <text class="set-b-price">小计: ¥ {{item.calcResult.totalPrice}}</text>
-            </view>
-            <view class="modal-row flex-between">
-              <text class="m-label">规格尺寸 (W×H)</text>
-              <text class="m-val gold-text">{{item.width_mm}} mm × {{item.height_mm}} mm</text>
-            </view>
-            <view class="modal-row flex-between">
-              <text class="m-label">算得面积</text>
-              <text class="m-val">
-                实际 {{item.calcResult.actualArea}} ㎡ (计费 {{item.calcResult.billedArea}} ㎡)
-              </text>
-            </view>
-            <!-- 该套已选选配 -->
-            <view class="m-opt-item flex-between" wx:for="{{item.selectedOptionsSummary}}" wx:for-item="opt" wx:key="id">
-              <text class="m-opt-name">• {{opt.groupTitle}}：{{opt.option_name}}</text>
-              <text class="m-opt-price">{{opt.priceText}}</text>
-            </view>
-            <view class="m-divider" wx:if="{{sIdx < customSets.length - 1}}"></view>
-          </view>
-        </view>
-      </scroll-view>
-      <!-- 弹窗底部固定区：预计总价与确认下单按钮 -->
-      <view class="modal-footer flex-column">
-        <view class="modal-section flex-between total-section">
-          <view class="flex-column">
-            <view class="m-total-label">全套合并预估总价</view>
-            <view class="m-sub-label">
-              共 {{totalSummary.totalSets}} 套 / 计费 {{totalSummary.totalBilledArea}} ㎡
-            </view>
-          </view>
-          <view class="m-total-price-box flex-row">
-            <text class="m-total-sym">¥</text>
-            <text class="m-total-num">{{totalSummary.totalPrice}}</text>
-          </view>
-        </view>
-        <button class="confirm-btn btn-gold" bindtap="confirmOrder">确认下单</button>
-      </view>
-    </view>
+    <view class="submit-btn btn-gold flex-center" bindtap="confirmOrder">下一步: 填写地址下单</view>
   </view>
 </view>

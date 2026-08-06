@@ -7,10 +7,9 @@ Page({
     draft: null,
     setsList: [],
     displayTotalPrice: '0.00',
-    customer_name: '张先生',
-    customer_phone: '13545941637',
-    install_address: '湖北省仙桃市恒迪建材市场A区3号',
-    customer_remark: ''
+    customer_name: '',
+    customer_phone: '',
+    install_address: ''
   },
 
   onLoad() {
@@ -49,8 +48,8 @@ Page({
     const selected = wx.getStorageSync('selectedOrderAddress');
     if (selected) {
       this.setData({
-        customer_name: selected.name || this.data.customer_name,
-        customer_phone: selected.phone || this.data.customer_phone,
+        customer_name: selected.name || this.data.customer_name || '',
+        customer_phone: selected.phone || this.data.customer_phone || '',
         install_address: `${selected.province || ''}${selected.city || ''}${selected.district || ''}${selected.detail_address || ''}`
       });
       wx.removeStorageSync('selectedOrderAddress');
@@ -75,27 +74,61 @@ Page({
     this.setData({ install_address: e.detail.value });
   },
 
-  onRemarkInput(e) {
-    this.setData({ customer_remark: e.detail.value });
+  previewSetImage(e) {
+    const url = e.currentTarget.dataset.url;
+    const setIndex = e.currentTarget.dataset.setindex;
+    const set = this.data.setsList[setIndex];
+    const urls = (set && set.scene_images) || [url];
+    wx.previewImage({
+      current: url,
+      urls
+    });
   },
 
   submitOrder() {
-    if (!this.data.customer_name || !this.data.customer_phone || !this.data.install_address) {
-      wx.showToast({ title: '请完整填写联系信息及安装地址', icon: 'none' });
+    if (!this.data.customer_name || !this.data.customer_name.trim()) {
+      wx.showToast({ title: '请填写联系人姓名', icon: 'none', duration: 2000 });
+      return;
+    }
+    if (!this.data.customer_phone || !this.data.customer_phone.trim()) {
+      wx.showToast({ title: '请填写联系电话', icon: 'none', duration: 2000 });
+      return;
+    }
+    if (!this.data.install_address || !this.data.install_address.trim()) {
+      wx.showToast({ title: '请填写安装详细地址', icon: 'none', duration: 2000 });
       return;
     }
 
     wx.showLoading({ title: '提交订单中...' });
 
+    const allSceneImgs = [];
+    const allRemarks = [];
+
+    this.data.setsList.forEach((set, idx) => {
+      if (set.scene_images && Array.isArray(set.scene_images)) {
+        set.scene_images.forEach(img => {
+          if (img && !allSceneImgs.includes(img)) {
+            allSceneImgs.push(img);
+          }
+        });
+      }
+      if (set.customer_remark && set.customer_remark.trim()) {
+        allRemarks.push(`【${set.label || ('套系' + (idx + 1))}】${set.customer_remark.trim()}`);
+      }
+    });
+
     const itemsPayload = this.data.setsList.map(set => ({
-      product_id: this.data.draft.product_id,
-      product_name: set.label ? `${this.data.draft.product_name} (${set.label})` : this.data.draft.product_name,
+      product_id: (this.data.draft && this.data.draft.product_id) || '',
+      product_name: set.label ? `${(this.data.draft && this.data.draft.product_name) || '门窗商品'} (${set.label})` : ((this.data.draft && this.data.draft.product_name) || '门窗商品'),
       width_mm: set.width_mm,
       height_mm: set.height_mm,
       quantity: 1,
-      base_price_sqm: this.data.draft.base_price_sqm,
-      min_area: this.data.draft.min_area,
-      selected_options: set.selectedOptionsSummary || set.selected_options || []
+      base_price_sqm: (this.data.draft && this.data.draft.base_price_sqm) || 680,
+      min_area: (this.data.draft && this.data.draft.min_area) || 1.5,
+      selected_options: set.selected_options || {},
+      selectedOptionsSummary: set.selectedOptionsSummary || [],
+      scene_images: (set.scene_images || []).join(','),
+      customer_remark: set.customer_remark || ''
     }));
 
     const payload = {
@@ -103,7 +136,13 @@ Page({
       customer_name: this.data.customer_name,
       customer_phone: this.data.customer_phone,
       install_address: this.data.install_address,
-      customer_remark: this.data.customer_remark,
+      customer_remark: allRemarks.join('； '),
+      scene_images: allSceneImgs.join(','),
+      product_id: (this.data.draft && this.data.draft.product_id) || '',
+      product_name: (this.data.draft && this.data.draft.product_name) || '门窗商品',
+      base_price_sqm: (this.data.draft && this.data.draft.base_price_sqm) || 680,
+      min_area: (this.data.draft && this.data.draft.min_area) || 1.5,
+      customSets: itemsPayload,
       items: itemsPayload
     };
 

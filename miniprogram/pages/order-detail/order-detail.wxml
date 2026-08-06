@@ -38,6 +38,17 @@
     </view>
   </view>
 
+  <!-- 现场照片与备注信息卡片 (如果有照片或备注) -->
+  <view class="glass-card scene-card" wx:if="{{(order.scene_images_list && order.scene_images_list.length > 0) || order.customer_remark}}">
+    <text class="card-title">📷 现场照片与备注要求</text>
+    <view class="scene-content flex-column">
+      <view class="scene-img-grid flex-row" wx:if="{{order.scene_images_list && order.scene_images_list.length > 0}}">
+        <image class="scene-img-thumb" wx:for="{{order.scene_images_list}}" wx:key="*this" src="{{item}}" mode="aspectFill" bindtap="previewSceneImg" data-url="{{item}}" />
+      </view>
+      <text class="scene-remark" wx:if="{{order.customer_remark}}">客户现场备注：{{order.customer_remark}}</text>
+    </view>
+  </view>
+
   <!-- 门窗多套定制规格明细拆解 -->
   <view class="glass-card items-card">
     <text class="card-title">② 门窗多套定制规格明细拆解 (共{{order.items.length}}套)</text>

@@ -28,33 +28,7 @@ Page({
     },
     activeSetIndex: 0,
     customSets: [],
-    optionGroups: [
-      {
-        group_name: 'glass',
-        groupTitle: '玻璃配置',
-        options: [
-          { id: 'opt_1', option_name: '5+18A+5 标准中空钢化玻璃', price: 0, price_type: 'per_sqm', priceText: '包含在基础价内' },
-          { id: 'opt_2', option_name: '5+18A+5 Low-E 超白隔热玻璃', price: 80, price_type: 'per_sqm', priceText: '+¥ 80 / ㎡' },
-          { id: 'opt_3', option_name: '5+12A+5+12A+5 三玻两腔降噪玻璃', price: 150, price_type: 'per_sqm', priceText: '+¥ 150 / ㎡' }
-        ]
-      },
-      {
-        group_name: 'hardware',
-        groupTitle: '五金配件品牌',
-        options: [
-          { id: 'opt_4', option_name: '德国好博 (Hoppe) 原装执手', price: 150, price_type: 'per_item', priceText: '+¥ 150 / 套' },
-          { id: 'opt_5', option_name: '德国丝吉利娅 (SIEGEMIA) 隐藏锁扣', price: 220, price_type: 'per_item', priceText: '+¥ 220 / 套' }
-        ]
-      },
-      {
-        group_name: 'color',
-        groupTitle: '铝材表面喷涂颜色',
-        options: [
-          { id: 'opt_6', option_name: '氟碳雅致黑', price: 0, price_type: 'fixed', priceText: '标准配色' },
-          { id: 'opt_7', option_name: '阳极氧化香槟银', price: 50, price_type: 'fixed', priceText: '+¥ 50' }
-        ]
-      }
-    ],
+    optionGroups: [],
     totalSummary: {
       totalSets: 1,
       totalActualArea: 0,
@@ -64,11 +38,65 @@ Page({
     showPreviewModal: false
   },
 
+  parseOptionGroups(rawOptions) {
+    const opts = (rawOptions && rawOptions.length > 0) ? rawOptions : [
+      { id: 'opt_1', group_name: '玻璃配置', option_name: '双层玻璃', price: 0, price_type: 'fixed', is_default: 1, image_url: '' },
+      { id: 'opt_2', group_name: '玻璃配置', option_name: '双层钢化玻璃', price: 50, price_type: 'fixed', is_default: 0, image_url: '' },
+      { id: 'opt_3', group_name: '门锁配置', option_name: '默认门锁', price: 0, price_type: 'fixed', is_default: 1, image_url: '' },
+      { id: 'opt_4', group_name: '铝材配置', option_name: '默认铝材', price: 0, price_type: 'fixed', is_default: 1, image_url: '' },
+      { id: 'opt_5', group_name: '颜色配置', option_name: '琉璃白', price: 0, price_type: 'fixed', is_default: 1, image_url: '' },
+      { id: 'opt_6', group_name: '颜色配置', option_name: '深空灰', price: 0, price_type: 'fixed', is_default: 0, image_url: '' },
+      { id: 'opt_7', group_name: '开门方向', option_name: '左锁（左合页）', price: 0, price_type: 'fixed', is_default: 1, image_url: '' },
+      { id: 'opt_8', group_name: '开门方向', option_name: '右锁（左合页）', price: 0, price_type: 'fixed', is_default: 0, image_url: '' },
+      { id: 'opt_9', group_name: '开门内外', option_name: '内开（朝内打开）', price: 0, price_type: 'fixed', is_default: 1, image_url: '' },
+      { id: 'opt_10', group_name: '开门内外', option_name: '外开（朝外打开）', price: 0, price_type: 'fixed', is_default: 0, image_url: '' }
+    ];
+
+    const groupMap = {};
+    opts.forEach(item => {
+      const gName = (item.group_name || '玻璃配置').trim();
+      if (!groupMap[gName]) {
+        groupMap[gName] = {
+          group_name: gName,
+          groupTitle: gName,
+          options: []
+        };
+      }
+
+      let priceText = '包含在基础价内';
+      if (Number(item.price || 0) > 0) {
+        if (item.price_type === 'per_sqm') {
+          priceText = `+¥ ${item.price} / ㎡`;
+        } else if (item.price_type === 'per_item') {
+          priceText = `+¥ ${item.price} / 套`;
+        } else {
+          priceText = `+¥ ${item.price}`;
+        }
+      } else {
+        priceText = '包含在基础价内';
+      }
+
+      groupMap[gName].options.push({
+        id: item.id || `opt_${Math.random()}`,
+        option_name: item.option_name || item.name || '',
+        price_type: item.price_type || 'fixed',
+        price: Number(item.price || 0),
+        is_default: item.is_default ? 1 : 0,
+        image_url: item.image_url || '',
+        priceText
+      });
+    });
+
+    return Object.values(groupMap);
+  },
+
   onLoad(options) {
-    if (options.id) {
+    if (options && options.id) {
       this.setData({ productId: options.id });
       this.fetchProductDetail(options.id);
     } else {
+      const defaultGroups = this.parseOptionGroups([]);
+      this.setData({ optionGroups: defaultGroups });
       this.initDefaultSets();
     }
   },
@@ -76,7 +104,12 @@ Page({
   fetchProductDetail(id) {
     request({ url: `/api/products/${id}` }).then(res => {
       if (res.success && res.data) {
-        this.setData({ product: res.data });
+        const prod = res.data;
+        const groups = this.parseOptionGroups(prod.options);
+        this.setData({
+          product: prod,
+          optionGroups: groups
+        });
         this.initDefaultSets();
       }
     });
@@ -96,18 +129,100 @@ Page({
     const dateStr = getFormattedDate();
     const defaultLabel = `【${nickname}-${dateStr}-${indexNumber}】`;
 
+    const selected_options = {};
+    (this.data.optionGroups || []).forEach(grp => {
+      const defaultOpt = (grp.options || []).find(o => o.is_default === 1) || (grp.options || [])[0];
+      if (defaultOpt) {
+        selected_options[grp.group_name] = defaultOpt.id;
+      }
+    });
+
     return {
       id: 'set_' + Date.now() + '_' + indexNumber,
       label: defaultLabel,
       width_mm: 2400,
       height_mm: 2100,
-      selected_options: {
-        glass: 'opt_1',
-        hardware: 'opt_4',
-        color: 'opt_6'
-      },
+      selected_options,
+      scene_images: [],
+      customer_remark: '',
       calcResult: {}
     };
+  },
+
+  onSetRemarkInput(e) {
+    const value = e.detail.value;
+    const updatedSets = [...this.data.customSets];
+    const set = updatedSets[this.data.activeSetIndex];
+    if (set) {
+      set.customer_remark = value;
+      this.setData({ customSets: updatedSets });
+    }
+  },
+
+  chooseSetSceneImg() {
+    const activeSet = this.data.customSets[this.data.activeSetIndex];
+    if (!activeSet) return;
+    const currentImgs = activeSet.scene_images || [];
+    if (currentImgs.length >= 6) return;
+
+    wx.chooseMedia({
+      count: 6 - currentImgs.length,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      success: (res) => {
+        const tempFiles = res.tempFiles || [];
+        tempFiles.forEach(file => {
+          wx.showLoading({ title: '上传现场图片...' });
+          wx.uploadFile({
+            url: 'https://zc-api.carelife.top/api/upload',
+            filePath: file.tempFilePath,
+            name: 'file',
+            success: (uploadRes) => {
+              wx.hideLoading();
+              try {
+                const data = JSON.parse(uploadRes.data);
+                if (data.success && data.url) {
+                  const updatedSets = [...this.data.customSets];
+                  const set = updatedSets[this.data.activeSetIndex];
+                  if (!set.scene_images) set.scene_images = [];
+                  set.scene_images.push(data.url);
+                  this.setData({ customSets: updatedSets });
+                  wx.showToast({ title: '上传成功', icon: 'success' });
+                } else {
+                  wx.showToast({ title: '上传失败', icon: 'none' });
+                }
+              } catch (e) {
+                wx.showToast({ title: '上传失败', icon: 'none' });
+              }
+            },
+            fail: () => {
+              wx.hideLoading();
+              wx.showToast({ title: '网络失败', icon: 'none' });
+            }
+          });
+        });
+      }
+    });
+  },
+
+  deleteSetSceneImg(e) {
+    const index = e.currentTarget.dataset.index;
+    const updatedSets = [...this.data.customSets];
+    const set = updatedSets[this.data.activeSetIndex];
+    if (set && set.scene_images) {
+      set.scene_images.splice(index, 1);
+      this.setData({ customSets: updatedSets });
+    }
+  },
+
+  previewSetSceneImg(e) {
+    const url = e.currentTarget.dataset.url;
+    const activeSet = this.data.customSets[this.data.activeSetIndex];
+    const urls = (activeSet && activeSet.scene_images) || [url];
+    wx.previewImage({
+      current: url,
+      urls
+    });
   },
 
   addNewSet() {
@@ -240,7 +355,36 @@ Page({
     });
   },
 
+  validateSets() {
+    const sets = this.data.customSets || [];
+    for (let i = 0; i < sets.length; i++) {
+      const set = sets[i];
+      const setLabel = set.label ? set.label.trim() : '';
+      if (!setLabel) {
+        this.setData({ activeSetIndex: i });
+        wx.showToast({ title: `请填写套系 ${i + 1} 的备注名`, icon: 'none', duration: 2000 });
+        return false;
+      }
+
+      const w = Number(set.width_mm || 0);
+      if (!w || w <= 0) {
+        this.setData({ activeSetIndex: i });
+        wx.showToast({ title: `请填写套系 ${i + 1} 的宽度 (mm)`, icon: 'none', duration: 2000 });
+        return false;
+      }
+
+      const h = Number(set.height_mm || 0);
+      if (!h || h <= 0) {
+        this.setData({ activeSetIndex: i });
+        wx.showToast({ title: `请填写套系 ${i + 1} 的高度 (mm)`, icon: 'none', duration: 2000 });
+        return false;
+      }
+    }
+    return true;
+  },
+
   openPreviewModal() {
+    if (!this.validateSets()) return;
     this.recalculateAll();
     this.setData({ showPreviewModal: true });
   },
@@ -252,6 +396,10 @@ Page({
   preventBubble() {},
 
   confirmOrder() {
+    if (!this.validateSets()) {
+      this.setData({ showPreviewModal: false });
+      return;
+    }
     this.setData({ showPreviewModal: false });
     const orderDraft = {
       product_id: this.data.product.id,

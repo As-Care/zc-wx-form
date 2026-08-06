@@ -1,13 +1,33 @@
 <!-- 展晨门窗 确认定制订单 WXML -->
 <view class="container">
-  <!-- 门窗定制规格明细卡片 (支持多套门窗拆解展示，对齐商品详情数据标引) -->
+  <!-- ① 客户联系人与安装地址信息表单 (放在最顶部) -->
+  <view class="glass-card form-card">
+    <view class="flex-between mb-3" style="align-items: center;">
+      <text class="card-title" style="margin-bottom: 0;">① 联系人与安装地址信息</text>
+      <view class="pick-addr-btn" bindtap="navToPickAddress">选择已存地址 ❯</view>
+    </view>
+    <view class="form-group">
+      <text class="field-label">联系人姓名</text>
+      <input class="field-input" placeholder="请输入您的姓名 (如: 张先生)" value="{{customer_name}}" bindinput="onNameInput" />
+    </view>
+    <view class="form-group">
+      <text class="field-label">联系电话</text>
+      <input class="field-input" type="number" placeholder="请输入您的手机号" value="{{customer_phone}}" bindinput="onPhoneInput" />
+    </view>
+    <view class="form-group">
+      <text class="field-label">安装详细地址</text>
+      <input class="field-input" placeholder="请输入小区/栋数/门牌号 (如: 仙桃市新天地8栋1202)" value="{{install_address}}" bindinput="onAddressInput" />
+    </view>
+  </view>
+
+  <!-- ② 门窗定制规格明细卡片 (全量展示多套配置明细、现场图片与施工备注，放在下面) -->
   <view class="glass-card summary-card">
-    <text class="card-title">① 门窗定制规格明细</text>
+    <text class="card-title">② 门窗定制规格与下单明细</text>
     <!-- 多套门窗规格循环拆解 -->
-    <view class="item-preview-box mb-3" wx:for="{{setsList}}" wx:key="id">
-      <view class="flex-between mb-1">
+    <view class="item-preview-box mb-3" wx:for="{{setsList}}" wx:key="id" wx:for-index="sIdx">
+      <view class="flex-between mb-2">
         <view class="prod-title">{{draft.product_name}}</view>
-        <text class="set-tag">{{item.label || ('套系 ' + (index + 1))}}</text>
+        <text class="set-tag">【{{item.label || ('套系 ' + (sIdx + 1))}}】</text>
       </view>
       <view class="spec-row flex-between">
         <text class="s-label">输入尺寸 (宽 × 高)</text>
@@ -25,6 +45,8 @@
         <text class="s-label">本套预估小计</text>
         <text class="s-val theme-gold-text">¥ {{item.calcResult.totalPrice}}</text>
       </view>
+
+      <!-- 已选选配规则列表 -->
       <view class="divider"></view>
       <text class="sub-title">已选配置明细：</text>
       <view class="opt-tag-list flex-row">
@@ -33,35 +55,27 @@
           <text>{{opt.groupTitle || opt.group_name}}：{{opt.option_name || opt.name}}</text>
         </view>
       </view>
+
+      <!-- 该套上传的现场照片列表 -->
+      <view class="scene-preview-sec flex-column" wx:if="{{item.scene_images && item.scene_images.length > 0}}">
+        <text class="sub-title sec-title">📷 现场环境照片：</text>
+        <view class="scene-img-grid flex-row">
+          <image class="scene-thumb-img" wx:for="{{item.scene_images}}" wx:for-item="sImg" wx:key="*this" src="{{sImg}}" mode="aspectFill" bindtap="previewSetImage" data-url="{{sImg}}" data-setindex="{{sIdx}}" />
+        </view>
+      </view>
+
+      <!-- 该套现场工况与施工备注 -->
+      <view class="scene-remark-sec flex-column" wx:if="{{item.customer_remark}}">
+        <text class="sub-title sec-title">📝 现场施工与工况备注：</text>
+        <text class="remark-text-box">{{item.customer_remark}}</text>
+      </view>
     </view>
   </view>
-  <!-- 客户联系人与安装地址信息表单 (无测量字样) -->
-  <view class="glass-card form-card">
-    <view class="flex-between mb-3" style="align-items: center;">
-      <text class="card-title" style="margin-bottom: 0;">② 联系人与安装地址信息</text>
-      <view class="pick-addr-btn" bindtap="navToPickAddress">选择已存地址 ❯</view>
-    </view>
-    <view class="form-group">
-      <text class="field-label">联系人姓名</text>
-      <input class="field-input" placeholder="请输入您的姓名 (如: 张先生)" value="{{customer_name}}" bindinput="onNameInput" />
-    </view>
-    <view class="form-group">
-      <text class="field-label">联系电话</text>
-      <input class="field-input" type="number" placeholder="请输入您的手机号" value="{{customer_phone}}" bindinput="onPhoneInput" />
-    </view>
-    <view class="form-group">
-      <text class="field-label">安装详细地址</text>
-      <input class="field-input" placeholder="请输入小区/栋数/门牌号 (如: 仙桃市新天地8栋1202)" value="{{install_address}}" bindinput="onAddressInput" />
-    </view>
-    <view class="form-group">
-      <text class="field-label">现场照片/备注说明</text>
-      <textarea class="field-textarea" placeholder="填写特殊要求或现场情况 (如: 需要带高楼吊装绳、封阳台需拆旧窗)" value="{{customer_remark}}" bindinput="onRemarkInput" />
-    </view>
-  </view>
-  <!-- 底部固定提交栏 (按钮改为确认下单) -->
+
+  <!-- 底部固定提交栏 -->
   <view class="floating-submit-bar flex-between">
     <view class="total-box flex-column">
-      <text class="t-sub">预估订单总价</text>
+      <text class="t-sub">共 {{setsList.length}} 套预估总价</text>
       <view class="t-main flex-row">
         <text class="t-sym">¥</text>
         <text class="t-val">{{displayTotalPrice}}</text>

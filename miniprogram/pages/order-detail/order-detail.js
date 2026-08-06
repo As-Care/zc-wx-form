@@ -30,22 +30,6 @@ const ALL_STEPS = [
 Page({
   data: {
     orderId: '',
-    order: {
-      order_no: 'ZC20260804001',
-      status: 'pending_review',
-      statusText: '待复核',
-      statusDesc: '正在等待接单员复核',
-      base_amount: 3427.2,
-      extra_amount: 403.2,
-      special_charges_amount: 0,
-      final_amount: 3830.4,
-      items: [
-        {
-          label: '【care-26-08-05-1】',
-          product_name: '展晨108热桥级系统断桥铝窗',
-          width_mm: 2400,
-          height_mm: 2100,
-          actual_area: 5.04,
     order: null,
     steps: []
   },
@@ -76,11 +60,16 @@ Page({
           options_summary: it.options_summary || []
         }));
 
+        const scene_images_list = typeof target.scene_images === 'string'
+          ? target.scene_images.split(',').map(s => s.trim()).filter(Boolean)
+          : (Array.isArray(target.scene_images) ? target.scene_images : []);
+
         this.setData({
           order: {
             ...target,
             statusText: statusInfo.text,
             statusDesc: statusInfo.desc,
+            scene_images_list,
             items
           }
         });
@@ -122,6 +111,14 @@ Page({
           });
         }
       }
+    });
+  },
+
+  previewSceneImg(e) {
+    const url = e.currentTarget.dataset.url;
+    wx.previewImage({
+      current: url,
+      urls: (this.data.order && this.data.order.scene_images_list) || [url]
     });
   },
 

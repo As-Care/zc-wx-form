@@ -651,16 +651,32 @@ app.post('/api/orders', async (c) => {
     user_id,
     customer_name,
     customer_phone,
+    install_address,
+    customer_remark,
+    scene_images,
     product_id,
     product_name,
     base_price_sqm,
     min_area,
-    customSets
+    customSets: rawCustomSets,
+    items: rawItems
   } = body;
+
+  const customSets = (rawCustomSets && rawCustomSets.length > 0) ? rawCustomSets : (rawItems || []);
 
   if (!customSets || !Array.isArray(customSets) || customSets.length === 0) {
     return c.json({ success: false, message: '请至少添加一套门窗定制配置' }, 400);
   }
+
+  try {
+    await db.prepare('ALTER TABLE orders ADD COLUMN install_address TEXT').run();
+  } catch (e) {}
+  try {
+    await db.prepare('ALTER TABLE orders ADD COLUMN customer_remark TEXT').run();
+  } catch (e) {}
+  try {
+    await db.prepare('ALTER TABLE orders ADD COLUMN scene_images TEXT').run();
+  } catch (e) {}
 
   const orderId = `ord_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -704,17 +720,20 @@ app.post('/api/orders', async (c) => {
   let totalExtraAmount = 0;
   let totalFinalAmount = 0;
 
-  // 插入订单主表记录
+  // 插入订单主表记录 (包含现场图片 scene_images)
   await db.prepare(`
     INSERT INTO orders 
-    (id, order_no, user_id, customer_name, customer_phone, total_sets, total_area, base_amount, extra_amount, special_charges_amount, final_amount, status)
-    VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 'pending_review')
+    (id, order_no, user_id, customer_name, customer_phone, install_address, customer_remark, scene_images, total_sets, total_area, base_amount, extra_amount, special_charges_amount, final_amount, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 'pending_review')
   `).bind(
     orderId,
     orderNo,
     validUserId,
-    customer_name || 'care',
-    customer_phone || '13344443333',
+    customer_name || '客户',
+    customer_phone || '',
+    install_address || '',
+    customer_remark || '',
+    scene_images || '',
     totalSets
   ).run();
 

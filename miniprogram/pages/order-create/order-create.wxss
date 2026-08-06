@@ -88,6 +88,42 @@
   flex-shrink: 0;
 }
 
+.scene-preview-sec {
+  margin-top: 24rpx;
+}
+
+.scene-remark-sec {
+  margin-top: 24rpx;
+}
+
+.sec-title {
+  margin-bottom: 14rpx;
+  display: block;
+}
+
+.scene-img-grid {
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.scene-thumb-img {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 12rpx;
+  border: 1rpx solid rgba(197, 168, 128, 0.35);
+}
+
+.remark-text-box {
+  font-size: 24rpx;
+  color: #F8FAFC;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1rpx solid rgba(197, 168, 128, 0.25);
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+  line-height: 1.5;
+  display: block;
+}
+
 .pick-addr-btn {
   font-size: 22rpx;
   color: #C5A880;
@@ -129,6 +165,62 @@
   box-sizing: border-box;
 }
 
+/* 现场图片上传布局 */
+.img-upload-grid {
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 12rpx;
+}
+
+.img-thumb-box {
+  width: 140rpx;
+  height: 140rpx;
+  position: relative;
+  border-radius: 14rpx;
+  overflow: hidden;
+  border: 1rpx solid rgba(197, 168, 128, 0.4);
+}
+
+.img-thumb {
+  width: 100%;
+  height: 100%;
+}
+
+.img-del-btn {
+  position: absolute;
+  top: 6rpx;
+  right: 6rpx;
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.85);
+  color: #FFFFFF;
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.img-add-btn {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 14rpx;
+  border: 2rpx dashed rgba(197, 168, 128, 0.4);
+  background: rgba(197, 168, 128, 0.08);
+  justify-content: center;
+  align-items: center;
+}
+
+.add-icon {
+  font-size: 40rpx;
+  color: #C5A880;
+  line-height: 1;
+}
+
+.add-text {
+  font-size: 20rpx;
+  color: #C5A880;
+  margin-top: 6rpx;
+}
+
 .floating-submit-bar {
   position: fixed;
   bottom: 0;
@@ -140,6 +232,11 @@
   padding: 20rpx 30rpx calc(20rpx + env(safe-area-inset-bottom));
   padding: 20rpx 30rpx calc(20rpx + constant(safe-area-inset-bottom));
   z-index: 100;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
 }
 
 .t-sub {
@@ -165,13 +262,17 @@
 }
 
 .confirm-btn {
-  margin: 0;
+  margin: 0 !important;
   font-size: 28rpx;
   font-weight: 700;
-  padding: 0 44rpx;
-  height: 76rpx;
-  line-height: 76rpx;
-  border-radius: 38rpx;
+  padding: 0 48rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  border-radius: 40rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mb-3 { margin-bottom: 16rpx; }

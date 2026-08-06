@@ -173,11 +173,24 @@
         </div>
 
         <!-- 👤 客户基本信息 -->
-        <a-card title="👤 客户基本信息" class="mb-4" size="small">
+        <a-card title="👤 客户基本信息与现场照片" class="mb-4" size="small">
           <a-descriptions :column="2" border size="small">
             <a-descriptions-item label="客户姓名">{{ currentOrderDetail.customer_name }}</a-descriptions-item>
             <a-descriptions-item label="联系电话">{{ currentOrderDetail.customer_phone }}</a-descriptions-item>
             <a-descriptions-item label="安装详细地址" :span="2">{{ currentOrderDetail.install_address }}</a-descriptions-item>
+            <a-descriptions-item label="客户现场备注" :span="2" v-if="currentOrderDetail.customer_remark">{{ currentOrderDetail.customer_remark }}</a-descriptions-item>
+            <a-descriptions-item label="现场环境照片" :span="2" v-if="currentOrderDetail.scene_images">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
+                <a-image
+                  v-for="(imgUrl, imgIdx) in (typeof currentOrderDetail.scene_images === 'string' ? currentOrderDetail.scene_images.split(',').filter(Boolean) : currentOrderDetail.scene_images)"
+                  :key="imgIdx"
+                  :src="imgUrl"
+                  width="80"
+                  height="80"
+                  style="object-fit: cover; border-radius: 6px; border: 1px solid #e5e6eb;"
+                />
+              </div>
+            </a-descriptions-item>
           </a-descriptions>
         </a-card>
 

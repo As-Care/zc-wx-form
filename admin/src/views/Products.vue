@@ -236,7 +236,7 @@
       v-model:visible="optionsDrawerVisible"
       title="配置商品加价选配规则 (1个分组包含多个细项配置)"
       :width="1100"
-      :footer="false"
+      :unmount-on-close="true"
     >
       <a-spin :loading="drawerLoading" tip="正在同步拉取最全选配规则..." style="width: 100%; display: block; min-height: 380px;">
         <div v-if="currentProduct">
@@ -353,13 +353,14 @@
               </a-table>
             </a-card>
           </div>
-
-          <div style="margin-top: 32px; display: flex; justify-content: flex-end; gap: 16px;">
-            <a-button size="large" @click="optionsDrawerVisible = false">取消</a-button>
-            <a-button type="primary" size="large" @click="saveOptions">保存选配规则配置</a-button>
-          </div>
         </div>
       </a-spin>
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end; gap: 16px; width: 100%;">
+          <a-button size="large" @click="optionsDrawerVisible = false">取消</a-button>
+          <a-button type="primary" size="large" @click="saveOptions">保存选配规则配置</a-button>
+        </div>
+      </template>
     </a-drawer>
   </div>
 </template>
@@ -446,6 +447,19 @@ const form = ref({
   is_active: 1
 });
 
+const DEFAULT_STANDARD_OPTIONS = [
+  { group_name: '玻璃配置', option_name: '双层玻璃', price_type: 'fixed', price: 0, is_default: 1 },
+  { group_name: '玻璃配置', option_name: '双层钢化玻璃', price_type: 'fixed', price: 50, is_default: 0 },
+  { group_name: '门锁配置', option_name: '默认门锁', price_type: 'fixed', price: 0, is_default: 1 },
+  { group_name: '铝材配置', option_name: '默认铝材', price_type: 'fixed', price: 0, is_default: 1 },
+  { group_name: '颜色配置', option_name: '琉璃白', price_type: 'fixed', price: 0, is_default: 1 },
+  { group_name: '颜色配置', option_name: '深空灰', price_type: 'fixed', price: 0, is_default: 0 },
+  { group_name: '开门方向', option_name: '左锁（左合页）', price_type: 'fixed', price: 0, is_default: 1 },
+  { group_name: '开门方向', option_name: '右锁（左合页）', price_type: 'fixed', price: 0, is_default: 0 },
+  { group_name: '开门内外', option_name: '内开（朝内打开）', price_type: 'fixed', price: 0, is_default: 1 },
+  { group_name: '开门内外', option_name: '外开（朝外打开）', price_type: 'fixed', price: 0, is_default: 0 }
+];
+
 const fetchProducts = async () => {
   tableLoading.value = true;
   try {
@@ -462,7 +476,7 @@ const fetchProducts = async () => {
     if (data.success && data.data) {
       products.value = data.data.map(p => ({
         ...p,
-        options: p.options || [],
+        options: (p.options && p.options.length > 0) ? p.options : DEFAULT_STANDARD_OPTIONS,
         is_active: (p.is_active !== undefined && p.is_active !== null) ? Number(p.is_active) : 1
       }));
     } else {
@@ -716,12 +730,10 @@ const saveOptions = async () => {
       optionsDrawerVisible.value = false;
       await fetchProducts();
     } else {
-      Message.success('选配规则配置保存成功！');
-      optionsDrawerVisible.value = false;
+      Message.error(data.message || `保存失败 (HTTP ${res.status})`);
     }
   } catch (e) {
-    Message.success('选配规则配置保存成功！');
-    optionsDrawerVisible.value = false;
+    Message.error('无法连接后端 API 接口，请检查网络');
   }
 };
 

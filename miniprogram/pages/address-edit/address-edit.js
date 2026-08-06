@@ -5,16 +5,16 @@ const app = getApp();
 Page({
   data: {
     isEditMode: false,
-    region: [],
+    region: ['湖北省', '省直辖县级行政区划', '仙桃市'],
     form: {
       id: '',
       name: '',
       phone: '',
       province: '湖北省',
-      city: '仙桃市',
-      district: '',
+      city: '省直辖县级行政区划',
+      district: '仙桃市',
       detail_address: '',
-      is_default: false
+      is_default: true
     }
   },
 
@@ -25,14 +25,14 @@ Page({
         wx.setNavigationBarTitle({ title: '修改安装/收货地址' });
         this.setData({
           isEditMode: true,
-          region: [editingItem.province || '湖北省', editingItem.city || '仙桃市', editingItem.district || ''],
+          region: [editingItem.province || '湖北省', editingItem.city || '省直辖县级行政区划', editingItem.district || '仙桃市'],
           form: {
             id: editingItem.id,
             name: editingItem.name,
             phone: editingItem.phone,
             province: editingItem.province || '湖北省',
-            city: editingItem.city || '仙桃市',
-            district: editingItem.district || '',
+            city: editingItem.city || '省直辖县级行政区划',
+            district: editingItem.district || '仙桃市',
             detail_address: editingItem.detail_address || '',
             is_default: Boolean(editingItem.is_default)
           }
@@ -42,6 +42,13 @@ Page({
     }
 
     wx.setNavigationBarTitle({ title: '新增安装/收货地址' });
+    this.setData({
+      region: ['湖北省', '省直辖县级行政区划', '仙桃市'],
+      'form.province': '湖北省',
+      'form.city': '省直辖县级行政区划',
+      'form.district': '仙桃市',
+      'form.is_default': true
+    });
   },
 
   onNameInput(e) {
