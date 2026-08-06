@@ -96,11 +96,16 @@ Page({
               : (Array.isArray(target.scene_images) ? target.scene_images : []);
           }
 
-          const itemRemark = it.customer_remark || target.customer_remark || '';
+          const itemRemark = it.remark || '';
+          
+          let cleanLabel = it.label || '';
+          if (cleanLabel.startsWith('【') && cleanLabel.endsWith('】')) {
+            cleanLabel = cleanLabel.substring(1, cleanLabel.length - 1);
+          }
 
           return {
             ...it,
-            label: it.label || `【套系-${idx + 1}】`,
+            label: cleanLabel || `套系-${idx + 1}`,
             actual_area: it.actual_area || it.billed_area || 0,
             options_summary: optsSum,
             scene_images_list: itemSceneImgs,

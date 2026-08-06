@@ -280,7 +280,7 @@ Page({
     const idx = this.data.activeSetIndex;
     const key = `customSets[${idx}].width_mm`;
     this.setData({ [key]: val });
-    this.recalculateAll();
+    this.recalculateAll(idx);
   },
 
   onHeightInput(e) {
@@ -288,7 +288,7 @@ Page({
     const idx = this.data.activeSetIndex;
     const key = `customSets[${idx}].height_mm`;
     this.setData({ [key]: val });
-    this.recalculateAll();
+    this.recalculateAll(idx);
   },
 
   toggleOption(e) {
@@ -298,10 +298,10 @@ Page({
 
     const key = `customSets[${idx}].selected_options.${groupName}`;
     this.setData({ [key]: optionId });
-    this.recalculateAll();
+    this.recalculateAll(idx);
   },
 
-  recalculateAll() {
+  recalculateAll(changedIndex = -1) {
     const { customSets, product, optionGroups } = this.data;
     if (!customSets.length) return;
 
@@ -309,22 +309,33 @@ Page({
     let totalBilledArea = 0;
     let totalPrice = 0;
 
-    const updatedSets = customSets.map(set => {
-      // 组装 selectedOptions 格式供 calculatePrice 使用
+    const setDataPayload = {};
+
+    customSets.forEach((set, idx) => {
+      // 局部更新优化：如果是特定套系修改，且当前套系不需要重算，则直接复用现有结果累加
+      if (typeof changedIndex === 'number' && changedIndex !== -1 && changedIndex !== idx && set.calcResult) {
+        totalActualArea += Number(set.calcResult.actualArea || 0);
+        totalBilledArea += Number(set.calcResult.billedArea || 0);
+        totalPrice += Number(set.calcResult.totalPrice || 0);
+        return;
+      }
+
       const selectedOptionsArr = [];
       optionGroups.forEach(grp => {
         const selectedId = set.selected_options[grp.group_name];
-        const targetOpt = grp.options.find(o => o.id === selectedId) || grp.options[0];
-        selectedOptionsArr.push({
-          id: targetOpt.id,
-          group_name: grp.group_name,
-          groupTitle: grp.groupTitle,
-          option_name: targetOpt.option_name,
-          price_type: targetOpt.price_type,
-          price: targetOpt.price,
-          priceText: targetOpt.priceText,
-          image_url: targetOpt.image_url || ''
-        });
+        const targetOpt = grp.options.find(o => o.id === selectedId || o.option_name === selectedId) || grp.options[0];
+        if (targetOpt) {
+          selectedOptionsArr.push({
+            id: targetOpt.id,
+            group_name: grp.group_name,
+            groupTitle: grp.groupTitle,
+            option_name: targetOpt.option_name,
+            price_type: targetOpt.price_type,
+            price: targetOpt.price,
+            priceText: targetOpt.priceText,
+            image_url: targetOpt.image_url || ''
+          });
+        }
       });
 
       const calc = calculatePrice({
@@ -340,22 +351,18 @@ Page({
       totalBilledArea += Number(calc.billedArea);
       totalPrice += Number(calc.totalPrice);
 
-      return {
-        ...set,
-        calcResult: calc,
-        selectedOptionsSummary: selectedOptionsArr
-      };
+      setDataPayload[`customSets[${idx}].calcResult`] = calc;
+      setDataPayload[`customSets[${idx}].selectedOptionsSummary`] = selectedOptionsArr;
     });
 
-    this.setData({
-      customSets: updatedSets,
-      totalSummary: {
-        totalSets: updatedSets.length,
-        totalActualArea: totalActualArea.toFixed(2),
-        totalBilledArea: totalBilledArea.toFixed(2),
-        totalPrice: totalPrice.toFixed(2)
-      }
-    });
+    setDataPayload.totalSummary = {
+      totalSets: customSets.length,
+      totalActualArea: totalActualArea.toFixed(2),
+      totalBilledArea: totalBilledArea.toFixed(2),
+      totalPrice: totalPrice.toFixed(2)
+    };
+
+    this.setData(setDataPayload);
   },
 
   validateSets() {

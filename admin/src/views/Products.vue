@@ -534,7 +534,7 @@
             >取消</a-button
           >
           <a-button
-            class="btn-champagne-primary"
+            type="primary"
             size="large"
             :loading="savingOptions"
             @click="saveOptions"

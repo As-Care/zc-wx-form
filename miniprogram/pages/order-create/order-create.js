@@ -47,32 +47,44 @@ Page({
         draft,
         setsList,
         displayTotalPrice,
-        customer_name: savedUser.nickname || this.data.customer_name || '',
-        customer_phone: savedUser.phone || this.data.customer_phone || ''
+        customer_name: this.data.customer_name || '',
+        customer_phone: this.data.customer_phone || ''
       });
+      this.fetchDefaultAddress(savedUser);
     } else {
       wx.navigateBack();
     }
   },
 
   onShow() {
-    const savedUser = wx.getStorageSync('zc_user_info');
-    if (savedUser && savedUser.phone) {
-      this.setData({
-        customer_name: this.data.customer_name || savedUser.nickname || '',
-        customer_phone: this.data.customer_phone || savedUser.phone || ''
-      });
-    }
-
     const selected = wx.getStorageSync('selectedOrderAddress');
     if (selected) {
       this.setData({
-        customer_name: selected.name || this.data.customer_name || (savedUser && savedUser.nickname) || '',
-        customer_phone: selected.phone || this.data.customer_phone || (savedUser && savedUser.phone) || '',
+        customer_name: selected.name || '',
+        customer_phone: selected.phone || '',
         install_address: `${selected.province || ''}${selected.city || ''}${selected.district || ''}${selected.detail_address || ''}`
       });
       wx.removeStorageSync('selectedOrderAddress');
     }
+  },
+
+  fetchDefaultAddress(savedUser) {
+    if (this.data.customer_name || this.data.customer_phone || this.data.install_address) return;
+    const userId = (savedUser && savedUser.id) || (app.globalData.userInfo && app.globalData.userInfo.id) || 'user_customer_demo';
+    request({
+      url: `/api/user/addresses?user_id=${userId}`
+    }).then(res => {
+      if (res.success && res.data && res.data.length > 0) {
+        const defaultAddr = res.data.find(addr => addr.is_default === 1 || addr.is_default === true);
+        if (defaultAddr && !this.data.customer_name && !this.data.customer_phone && !this.data.install_address) {
+          this.setData({
+            customer_name: defaultAddr.name || '',
+            customer_phone: defaultAddr.phone || '',
+            install_address: `${defaultAddr.province || ''}${defaultAddr.city || ''}${defaultAddr.district || ''}${defaultAddr.detail_address || ''}`
+          });
+        }
+      }
+    }).catch(err => console.error('Fetch default address error:', err));
   },
 
   navToPickAddress() {

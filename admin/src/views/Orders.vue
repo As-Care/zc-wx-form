@@ -129,7 +129,7 @@
         </a-table-column>
 
         <!-- 左右并排单行按钮样式 -->
-        <a-table-column title="操作" :width="180">
+        <a-table-column title="操作" :width="240">
           <template #cell="{ record }">
             <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
               <a-button type="outline" size="small" @click="viewOrderDetail(record)">
@@ -138,165 +138,27 @@
               <a-button type="outline" status="warning" size="small" @click="openModal(record)">
                 修改状态
               </a-button>
+              <a-popconfirm content="确定要删除该订单吗？删除后无法恢复！" @ok="deleteOrder(record)">
+                <a-button type="outline" status="danger" size="small">
+                  删除
+                </a-button>
+              </a-popconfirm>
             </div>
           </template>
         </a-table-column>
       </template>
     </a-table>
 
-    <!-- 侧滑抽屉：小程序全量订单详情预览 -->
-    <a-drawer
+    <OrderDetailDrawer
       v-model:visible="detailDrawerVisible"
-      title="小程序订单全量规格与核算详情"
-      :width="780"
-      :footer="false"
-    >
-      <div v-if="currentOrderDetail">
-        <!-- 头部状态 banner -->
-        <div class="status-banner mb-4">
-          <div class="flex-between">
-            <div>
-              <span style="font-size: 12px; color: var(--color-text-3);">订单编号：</span>
-              <strong style="font-size: 16px; color: var(--color-text-1);">{{ currentOrderDetail.order_no }}</strong>
-            </div>
-            <a-tag :color="getStatusColor(currentOrderDetail.status)" size="large">
-              {{ getStatusText(currentOrderDetail.status) }}
-            </a-tag>
-          </div>
-          <div style="font-size: 12px; color: var(--color-text-3); margin-top: 6px;">
-            下单时间：{{ currentOrderDetail.created_at || '暂无时间' }}
-          </div>
-        </div>
+      :order="currentOrderDetail"
+    />
 
-        <!-- 👤 客户基本信息 -->
-        <a-card title="👤 客户基本信息" class="mb-4" size="small">
-          <a-descriptions :column="2" border size="small">
-            <a-descriptions-item label="客户姓名">{{ currentOrderDetail.customer_name }}</a-descriptions-item>
-            <a-descriptions-item label="联系电话">{{ currentOrderDetail.customer_phone }}</a-descriptions-item>
-            <a-descriptions-item label="安装详细地址" :span="2">{{ currentOrderDetail.install_address }}</a-descriptions-item>
-          </a-descriptions>
-        </a-card>
-
-        <!-- 📐 门窗多套定制规格明细拆解 -->
-        <a-card title="📐 门窗多套定制规格明细拆解" class="mb-4" size="small">
-          <div
-            v-for="(item, idx) in currentOrderDetail.items"
-            :key="idx"
-            class="item-spec-box mb-3"
-          >
-            <div class="flex-between mb-2">
-              <a-tag color="arcoblue" style="font-weight: 600;">{{ item.label || `套系 ${idx + 1}` }}</a-tag>
-              <strong style="color: #b89768; font-size: 16px;">小计：¥ {{ item.item_subtotal || item.billed_area * item.base_price_sqm }}</strong>
-            </div>
-
-            <h4 style="margin: 4px 0 8px 0; font-size: 15px; color: var(--color-text-1);">{{ item.product_name }}</h4>
-            <div style="font-size: 13px; color: var(--color-text-2); margin-bottom: 8px;">
-              规格尺寸：<strong>{{ item.width_mm }} × {{ item.height_mm }} mm</strong>
-              &nbsp;|&nbsp;
-              实际面积：<strong>{{ item.area_sqm || ((item.width_mm * item.height_mm) / 1000000).toFixed(2) }} ㎡</strong>
-              &nbsp;|&nbsp;
-              计费起步面积：<strong>{{ item.billed_area }} ㎡</strong>
-            </div>
-
-            <!-- 选配明细卡片 (在照片和备注上面) -->
-            <div class="options-detail-panel mb-3" v-if="getItemOptions(item).length > 0">
-              <div class="panel-title">选配升级配置明细：</div>
-              <div v-for="(opt, oIdx) in getItemOptions(item)" :key="oIdx" class="option-row" style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
-                <span class="dot">•</span>
-                <span class="group-label" style="color: var(--color-text-2);">{{ opt.groupTitle || opt.group || opt.group_name || '选配' }}：</span>
-                <img v-if="opt.image_url" :src="opt.image_url" style="width: 20px; height: 20px; object-fit: cover; border-radius: 3px; border: 1px solid var(--color-border);" />
-                <span class="opt-name" style="color: var(--color-text-1);">{{ opt.option_name || opt.name || opt.id }}</span>
-                <span class="opt-price" v-if="opt.priceText" style="color: #ff7d00; margin-left: 4px;">{{ opt.priceText }}</span>
-              </div>
-            </div>
-            <div v-else class="options-detail-panel mb-3" style="color: var(--color-text-3); font-size: 12px; font-style: italic;">
-              暂无特殊选配升级项 (使用基础标配)
-            </div>
-
-            <!-- 1. 单套现场照片 (在配置明细下方，且在备注上方) -->
-            <div v-if="getItemSceneImages(item, currentOrderDetail).length > 0" style="margin-top: 10px; margin-bottom: 8px;">
-              <div style="font-size: 12px; color: var(--color-text-2); font-weight: 600; margin-bottom: 4px;">本套现场环境照片：</div>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <a-image
-                  v-for="(imgUrl, imgIdx) in getItemSceneImages(item, currentOrderDetail)"
-                  :key="imgIdx"
-                  :src="imgUrl"
-                  width="80"
-                  height="80"
-                  style="object-fit: cover; border-radius: 6px; border: 1px solid var(--color-border);"
-                />
-              </div>
-            </div>
-
-            <!-- 2. 单套现场备注 (在照片下方) -->
-            <div v-if="getItemRemark(item, currentOrderDetail)" class="site-remark-box">
-              <strong style="color: #d46b08;">本套现场备注：</strong>{{ getItemRemark(item, currentOrderDetail) }}
-            </div>
-          </div>
-        </a-card>
-
-        <!-- 💰 订单核算金额明细汇总 -->
-        <a-card title="💰 订单核算金额明细拆解" class="mb-4" size="small">
-          <div class="price-summary-box">
-            <div class="price-row flex-between">
-              <span>基础平米总费用：</span>
-              <span>¥ {{ currentOrderDetail.base_amount }}</span>
-            </div>
-            <div class="price-row flex-between">
-              <span>选配升级加价：</span>
-              <span>¥ {{ currentOrderDetail.extra_amount || 0 }}</span>
-            </div>
-            <div class="price-row flex-between" v-if="currentOrderDetail.special_charges_amount > 0">
-              <span style="color: #ff7d00;">商家追加特殊费用 (如吊装/旧窗拆除)：</span>
-              <span style="color: #ff7d00; font-weight: bold;">+ ¥ {{ currentOrderDetail.special_charges_amount }}</span>
-            </div>
-            <a-divider style="margin: 10px 0;" />
-            <div class="price-row flex-between" style="font-size: 18px;">
-              <strong style="color: var(--color-text-1);">订单核算最终总金额：</strong>
-              <strong style="color: #C5A880; font-size: 20px;">¥ {{ currentOrderDetail.final_amount }}</strong>
-            </div>
-          </div>
-        </a-card>
-
-        <!-- 📝 商家备注 -->
-        <a-card title="📝 商家备注" size="small" v-if="currentOrderDetail.admin_remark">
-          <div style="font-size: 13px; color: var(--color-text-1); background: var(--color-fill-2); padding: 12px; border-radius: 8px; border: 1px dashed var(--color-border);">
-            {{ currentOrderDetail.admin_remark }}
-          </div>
-        </a-card>
-
-        <div style="margin-top: 24px; display: flex; justify-content: flex-end;">
-          <a-button type="primary" size="large" @click="detailDrawerVisible = false">关闭详情</a-button>
-        </div>
-      </div>
-    </a-drawer>
-
-    <!-- 修改状态及调价 Modal 弹窗 -->
-    <a-modal v-model:visible="modalVisible" title="展晨门窗 - 订单状态与特殊费用修改" :on-before-ok="handleBeforeSaveOrder">
-      <a-form :model="editForm" layout="vertical">
-        <a-form-item label="订单编号">
-          <a-input v-model="editForm.order_no" readonly />
-        </a-form-item>
-
-        <a-form-item label="一键扭转订单状态">
-          <a-select v-model="editForm.status">
-            <a-option value="pending_review">待复核</a-option>
-            <a-option value="producing">生产中</a-option>
-            <a-option value="installing">待提货</a-option>
-            <a-option value="completed">已完成</a-option>
-            <a-option value="cancelled">已取消</a-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item label="商家补充特殊费用 (元)">
-          <a-input-number v-model="editForm.special_charges_amount" placeholder="如高楼吊装费500元、旧窗拆除费300元" />
-        </a-form-item>
-
-        <a-form-item label="商家订单备注">
-          <a-textarea v-model="editForm.admin_remark" placeholder="填写订单备注、现场测量或客户特殊要求说明" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
+    <StatusUpdateModal
+      v-model:visible="modalVisible"
+      :orderRecord="currentRecord"
+      @refresh="fetchOrders"
+    />
 
   </div>
 </template>
@@ -304,6 +166,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';
+import OrderDetailDrawer from '../components/OrderDetailDrawer.vue';
+import StatusUpdateModal from '../components/StatusUpdateModal.vue';
 
 const API_BASE = 'https://zc-api.carelife.top';
 
@@ -335,13 +199,7 @@ const paginationConfig = computed(() => ({
 // 清空所有静态 Mock 数据，全部从 API 动态获取
 const orders = ref([]);
 
-const editForm = ref({
-  id: '',
-  order_no: '',
-  status: 'pending_review',
-  special_charges_amount: 0,
-  admin_remark: ''
-});
+const currentRecord = ref(null);
 
 const getStatusText = (status) => {
   const map = {
@@ -463,123 +321,25 @@ const viewOrderDetail = async (record) => {
   } catch (e) {}
 };
 
-const getItemRemark = (item, order) => {
-  if (item && (item.remark || item.customer_remark || item.note)) {
-    return item.remark || item.customer_remark || item.note;
-  }
-  return order?.customer_remark || '';
-};
-
-const getItemSceneImages = (item, order) => {
-  let imgs = item?.scene_images || item?.scene_image || item?.images || item?.photos;
-  if (!imgs) {
-    imgs = order?.scene_images;
-  }
-  if (!imgs) return [];
-  if (Array.isArray(imgs)) return imgs;
-  if (typeof imgs === 'string') {
-    try {
-      const parsed = JSON.parse(imgs);
-      if (Array.isArray(parsed)) return parsed;
-    } catch (e) {}
-    return imgs.split(',').map(s => s.trim()).filter(Boolean);
-  }
-  return [];
-};
-
-const KEY_TO_CN_MAP = {
-  'glass': '玻璃配置',
-  'hardware': '门锁配置',
-  'lock': '门锁配置',
-  'aluminum': '铝材配置',
-  'color': '颜色配置',
-  'direction': '开门方向',
-  'open_direction': '开门方向',
-  'open_type': '开门内外',
-  'inside_outside': '开门内外',
-  'screen': '纱窗配置',
-  'flyscreen': '金刚网纱窗'
-};
-
-const formatGroupTitle = (rawTitle) => {
-  if (!rawTitle) return '选配';
-  const key = String(rawTitle).trim().toLowerCase();
-  return KEY_TO_CN_MAP[key] || rawTitle;
-};
-
-const getItemOptions = (item) => {
-  if (!item) return [];
-  let summary = [];
-  if (item.options_summary && Array.isArray(item.options_summary) && item.options_summary.length > 0) {
-    summary = item.options_summary;
-  } else if (item.options_summary_json) {
-    try {
-      summary = JSON.parse(item.options_summary_json);
-    } catch (e) {}
-  }
-  if (Array.isArray(summary) && summary.length > 0) {
-    return summary.map(opt => ({
-      ...opt,
-      groupTitle: opt.groupTitle || opt.group_name || opt.group || '选配',
-      option_name: opt.option_name || opt.name || opt.id || '常规配置'
-    }));
-  }
-
-  let selMap = {};
-  if (item.selected_options_json) {
-    try { selMap = JSON.parse(item.selected_options_json); } catch (e) {}
-  } else if (item.selected_options) {
-    selMap = typeof item.selected_options === 'string' ? JSON.parse(item.selected_options) : item.selected_options;
-  }
-  if (selMap && typeof selMap === 'object') {
-    return Object.keys(selMap).map(grp => {
-      const rawVal = selMap[grp];
-      const optName = typeof rawVal === 'string' ? rawVal : (rawVal && (rawVal.option_name || rawVal.name || rawVal.id));
-      return {
-        groupTitle: grp,
-        option_name: optName || '常规配置',
-        priceText: ''
-      };
-    });
-  }
-  return [];
-};
-
 const openModal = (record) => {
-  editForm.value = {
-    id: record.id,
-    order_no: record.order_no,
-    status: record.status,
-    special_charges_amount: record.special_charges_amount || 0,
-    admin_remark: record.admin_remark || ''
-  };
+  currentRecord.value = { ...record };
   modalVisible.value = true;
 };
 
-const handleBeforeSaveOrder = async () => {
+const deleteOrder = async (record) => {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/orders/${editForm.value.id}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        new_status: editForm.value.status,
-        special_charges_amount: editForm.value.special_charges_amount,
-        admin_remark: editForm.value.admin_remark,
-        operator_name: '展晨总管理'
-      })
+    const res = await fetch(`${API_BASE}/api/orders/${record.id}`, {
+      method: 'DELETE'
     });
     const data = await res.json();
-    if (res.ok && data.success) {
-      Message.success('保存成功！');
-      await fetchOrders();
-      return true;
+    if (data.success) {
+      Message.success('订单已成功删除');
+      fetchOrders();
     } else {
-      Message.error(data.message || `订单状态修改失败 (HTTP ${res.status})`);
-      return false;
+      Message.error(data.message || '删除失败');
     }
-  } catch (e) {
-    Message.error('无法连接后端服务，更新失败');
-    return false;
+  } catch (error) {
+    Message.error('网络请求异常，删除失败');
   }
 };
 
@@ -608,102 +368,5 @@ onMounted(() => {
 
 .mb-4 {
   margin-bottom: 16px;
-}
-
-.mb-3 {
-  margin-bottom: 12px;
-}
-
-.mb-2 {
-  margin-bottom: 8px;
-}
-
-.status-banner {
-  background: rgba(197, 168, 128, 0.08);
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid rgba(197, 168, 128, 0.2);
-}
-
-body[arco-theme='dark'] .status-banner {
-  background: rgba(197, 168, 128, 0.12);
-  border-color: rgba(197, 168, 128, 0.3);
-}
-
-.item-spec-box {
-  background: rgba(0, 0, 0, 0.02);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  padding: 16px;
-}
-
-body[arco-theme='dark'] .item-spec-box {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.12);
-}
-
-.options-detail-panel {
-  background: rgba(197, 168, 128, 0.06);
-  border-radius: 8px;
-  padding: 10px 14px;
-  margin-top: 10px;
-}
-
-body[arco-theme='dark'] .options-detail-panel {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.site-remark-box {
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--color-text-1);
-  background: #fff8e6;
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid #ffe7ba;
-}
-
-body[arco-theme='dark'] .site-remark-box {
-  background: rgba(255, 125, 0, 0.15);
-  border-color: rgba(255, 125, 0, 0.35);
-  color: #f6f6f6;
-}
-
-.panel-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #b89768;
-  margin-bottom: 6px;
-}
-
-.option-row {
-  font-size: 13px;
-  line-height: 1.8;
-  color: var(--color-text-2);
-}
-
-body[arco-theme='dark'] .option-row {
-  color: #cbd5e1;
-}
-
-.option-row .dot {
-  color: #b89768;
-  margin-right: 6px;
-}
-
-.option-row .opt-price {
-  color: #b89768;
-  margin-left: 8px;
-  font-weight: 500;
-}
-
-.price-summary-box .price-row {
-  font-size: 14px;
-  margin-bottom: 8px;
-  color: var(--color-text-2);
-}
-
-body[arco-theme='dark'] .price-summary-box .price-row {
-  color: #cbd5e1;
 }
 </style>

@@ -71,9 +71,11 @@
 
     <!-- 逐套展示明细 -->
     <view class="item-preview-box mb-3" wx:for="{{order.items}}" wx:key="label" wx:for-index="idx">
-      <view class="flex-between mb-2">
-        <view class="prod-title">{{item.product_name || '110断桥铝系统平开窗'}}</view>
-        <text class="set-tag">【 {{item.label || ('套系 ' + (idx + 1))}} 】</text>
+      <view class="mb-2">
+        <view class="prod-title mb-2">{{item.product_name || '110断桥铝系统平开窗'}}</view>
+        <view class="set-tag-wrapper">
+          <text class="set-tag">【 {{item.label || ('套系 ' + (idx + 1))}} 】</text>
+        </view>
       </view>
 
       <view class="spec-row flex-between">
