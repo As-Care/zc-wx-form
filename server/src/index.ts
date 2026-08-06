@@ -2872,11 +2872,15 @@ app.post("/api/admin/products", async (c) => {
         min_area REAL DEFAULT 1,
         sort_order INTEGER DEFAULT 0,
         is_active INTEGER DEFAULT 1,
+        default_width INTEGER,
+        default_height INTEGER,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `,
       )
       .run();
+    await db.prepare("ALTER TABLE products ADD COLUMN default_width INTEGER").run();
+    await db.prepare("ALTER TABLE products ADD COLUMN default_height INTEGER").run();
   } catch (e) {}
 
   const id = body.id || `prod_${Date.now()}`;
@@ -2907,8 +2911,8 @@ app.post("/api/admin/products", async (c) => {
   await db
     .prepare(
       `
-    INSERT INTO products (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+    INSERT INTO products (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active, default_width, default_height)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       category_id = excluded.category_id,
       category_name = excluded.category_name,
@@ -2917,7 +2921,9 @@ app.post("/api/admin/products", async (c) => {
       cover_image = excluded.cover_image,
       base_price_sqm = excluded.base_price_sqm,
       min_area = excluded.min_area,
-      is_active = excluded.is_active
+      is_active = excluded.is_active,
+      default_width = excluded.default_width,
+      default_height = excluded.default_height
   `,
     )
     .bind(
@@ -2932,6 +2938,8 @@ app.post("/api/admin/products", async (c) => {
         ? Number(body.min_area)
         : 1,
       isActive,
+      body.default_width ? Number(body.default_width) : null,
+      body.default_height ? Number(body.default_height) : null,
     )
     .run();
 
@@ -3073,8 +3081,8 @@ app.put("/api/admin/products/:id", async (c) => {
   await db
     .prepare(
       `
-    INSERT INTO products (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+    INSERT INTO products (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active, default_width, default_height)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       category_id = excluded.category_id,
       category_name = excluded.category_name,
@@ -3083,7 +3091,9 @@ app.put("/api/admin/products/:id", async (c) => {
       cover_image = excluded.cover_image,
       base_price_sqm = excluded.base_price_sqm,
       min_area = excluded.min_area,
-      is_active = excluded.is_active
+      is_active = excluded.is_active,
+      default_width = excluded.default_width,
+      default_height = excluded.default_height
   `,
     )
     .bind(
@@ -3098,6 +3108,8 @@ app.put("/api/admin/products/:id", async (c) => {
         ? Number(body.min_area)
         : 1,
       isActive,
+      body.default_width ? Number(body.default_width) : null,
+      body.default_height ? Number(body.default_height) : null,
     )
     .run();
 

@@ -290,6 +290,14 @@
         <a-form-item label="起步计费面积 (㎡)">
           <a-input-number v-model="form.min_area" placeholder="如 1.5" />
         </a-form-item>
+
+        <a-form-item label="默认宽度 (mm)">
+          <a-input-number v-model="form.default_width" placeholder="选填，如 2400" />
+        </a-form-item>
+
+        <a-form-item label="默认高度 (mm)">
+          <a-input-number v-model="form.default_height" placeholder="选填，如 2100" />
+        </a-form-item>
       </a-form>
     </a-modal>
 
@@ -583,6 +591,8 @@ const form = ref({
   base_price_sqm: 680,
   min_area: 1,
   is_active: 1,
+  default_width: null,
+  default_height: null,
 });
 
 const fetchProducts = async () => {
@@ -641,6 +651,8 @@ const openProductModal = () => {
     base_price_sqm: 680,
     min_area: 1,
     is_active: 1,
+    default_width: null,
+    default_height: null,
   };
   uploading.value = false;
   modalVisible.value = true;
@@ -662,6 +674,8 @@ const editProduct = (record) => {
       record.is_active !== undefined && record.is_active !== null
         ? Number(record.is_active)
         : 1,
+    default_width: record.default_width ? Number(record.default_width) : null,
+    default_height: record.default_height ? Number(record.default_height) : null,
   };
   uploading.value = false;
   modalVisible.value = true;

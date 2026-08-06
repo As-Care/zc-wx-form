@@ -143,8 +143,8 @@ Page({
     return {
       id: 'set_' + Date.now() + '_' + indexNumber,
       label: defaultLabel,
-      width_mm: 2400,
-      height_mm: 2100,
+      width_mm: this.data.product.default_width || '',
+      height_mm: this.data.product.default_height || '',
       selected_options,
       scene_images: [],
       customer_remark: '',

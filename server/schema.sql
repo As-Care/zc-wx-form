@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS products (
   min_area DECIMAL(5,2) DEFAULT 1.50,
   is_active INT DEFAULT 1,
   sort_order INT DEFAULT 0,
+  default_width INT,
+  default_height INT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
