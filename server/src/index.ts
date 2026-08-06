@@ -700,17 +700,10 @@ app.get('/api/products', async (c) => {
   }
 });
 
-/**
- * 保存/更新产品的全量选配规则列表
- * POST /api/admin/products/:id/options
- */
-app.post('/api/admin/products/:id/options', async (c) => {
-  const db = c.env.DB;
-  if (!db) return c.json({ success: false, message: 'DB 未绑定' }, 500);
-  const id = c.req.param('id');
-  const body = await c.req.json();
-  const options = body.options || [];
+let productOptionsInitialized = false;
 
+async function initProductOptionsTable(db: any) {
+  if (productOptionsInitialized) return;
   try {
     await db.prepare(`
       CREATE TABLE IF NOT EXISTS product_options (
@@ -725,11 +718,26 @@ app.post('/api/admin/products/:id/options', async (c) => {
         image_url TEXT
       )
     `).run();
+    await db.prepare('ALTER TABLE product_options ADD COLUMN image_url TEXT').run();
+    productOptionsInitialized = true;
+  } catch (e) {
+    productOptionsInitialized = true;
+  }
+}
 
-    try {
-      await db.prepare('ALTER TABLE product_options ADD COLUMN image_url TEXT').run();
-    } catch (e) {}
+/**
+ * 保存/更新产品的全量选配规则列表
+ * POST /api/admin/products/:id/options
+ */
+app.post('/api/admin/products/:id/options', async (c) => {
+  const db = c.env.DB;
+  if (!db) return c.json({ success: false, message: 'DB 未绑定' }, 500);
+  await initProductOptionsTable(db);
+  const id = c.req.param('id');
+  const body = await c.req.json();
+  const options = body.options || [];
 
+  try {
     // 1. 删除该商品原有的选配规则
     await db.prepare('DELETE FROM product_options WHERE product_id = ?').bind(id).run();
 
@@ -821,12 +829,29 @@ app.get('/api/products/:id', async (c) => {
 // 4. 门窗多套定制订单提交与查询 (Orders)
 // ----------------------------------------------------
 
+let ordersTableInitialized = false;
+
+async function initOrdersTable(db: any) {
+  if (ordersTableInitialized) return;
+  try {
+    await db.prepare('ALTER TABLE orders ADD COLUMN install_address TEXT').run();
+  } catch (e) {}
+  try {
+    await db.prepare('ALTER TABLE orders ADD COLUMN customer_remark TEXT').run();
+  } catch (e) {}
+  try {
+    await db.prepare('ALTER TABLE orders ADD COLUMN scene_images TEXT').run();
+  } catch (e) {}
+  ordersTableInitialized = true;
+}
+
 /**
  * 提交门窗定制订单 (支持多套配置)
  * POST /api/orders
  */
 app.post('/api/orders', async (c) => {
   const db = c.env.DB;
+  await initOrdersTable(db);
   const body = await c.req.json();
 
   const {
@@ -854,16 +879,6 @@ app.post('/api/orders', async (c) => {
   if (!customSets || !Array.isArray(customSets) || customSets.length === 0) {
     return c.json({ success: false, message: '请至少添加一套门窗定制配置' }, 400);
   }
-
-  try {
-    await db.prepare('ALTER TABLE orders ADD COLUMN install_address TEXT').run();
-  } catch (e) {}
-  try {
-    await db.prepare('ALTER TABLE orders ADD COLUMN customer_remark TEXT').run();
-  } catch (e) {}
-  try {
-    await db.prepare('ALTER TABLE orders ADD COLUMN scene_images TEXT').run();
-  } catch (e) {}
 
   const orderId = `ord_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
