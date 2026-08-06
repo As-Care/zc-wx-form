@@ -17,7 +17,7 @@
             placeholder="请选择一个或多个分类"
             multiple
             allow-clear
-            style="width: 320px;"
+            style="width: 320px"
           >
             <a-option v-for="cat in categories" :key="cat" :value="cat">
               {{ cat }}
@@ -30,7 +30,7 @@
             v-model="searchForm.name"
             placeholder="输入名称或关键字模糊搜索"
             allow-clear
-            style="width: 240px;"
+            style="width: 240px"
             @keyup.enter="handleSearch"
           />
         </a-form-item>
@@ -51,7 +51,14 @@
     </a-card>
 
     <!-- 门窗商品数据表格 -->
-    <a-table :data="products" :loading="tableLoading" :pagination="{ pageSize: 10 }" border row-key="id" class="no-wrap-header-table">
+    <a-table
+      :data="products"
+      :loading="tableLoading"
+      :pagination="{ pageSize: 10 }"
+      border
+      row-key="id"
+      class="no-wrap-header-table"
+    >
       <template #columns>
         <a-table-column title="商品主图" :width="110">
           <template #cell="{ record }">
@@ -61,10 +68,14 @@
               width="64"
               height="64"
               fit="cover"
-              style="border-radius: 8px; border: 1px solid #e5e6eb; cursor: pointer;"
+              style="
+                border-radius: 8px;
+                border: 1px solid #e5e6eb;
+                cursor: pointer;
+              "
               show-loader
             />
-            <span v-else style="color: #c9cdd4; font-size: 12px;">暂无主图</span>
+            <span v-else style="color: #c9cdd4; font-size: 12px">暂无主图</span>
           </template>
         </a-table-column>
 
@@ -72,32 +83,48 @@
           <template #cell="{ record }">
             <div>
               <strong>{{ record.name }}</strong>
-              <div style="font-size: 12px; color: #86909c; margin-top: 4px;">{{ record.description }}</div>
+              <div style="font-size: 12px; color: #86909c; margin-top: 4px">
+                {{ record.description }}
+              </div>
             </div>
           </template>
         </a-table-column>
 
-        <a-table-column title="所属分类" data-index="category_name" :width="150">
+        <a-table-column
+          title="所属分类"
+          data-index="category_name"
+          :width="150"
+        >
           <template #cell="{ record }">
-            <a-tag class="soft-cat-tag">{{ record.category_name || '门窗分类' }}</a-tag>
+            <a-tag class="soft-cat-tag">{{
+              record.category_name || "门窗分类"
+            }}</a-tag>
           </template>
         </a-table-column>
 
-        <a-table-column title="基础平米单价" data-index="base_price_sqm" :width="140">
+        <a-table-column
+          title="基础平米单价"
+          data-index="base_price_sqm"
+          :width="140"
+        >
           <template #cell="{ record }">
-            <strong style="color: #b89768; font-size: 15px;">¥ {{ record.base_price_sqm }} / ㎡</strong>
+            <strong style="color: #b89768; font-size: 15px"
+              >¥ {{ record.base_price_sqm }} / ㎡</strong
+            >
           </template>
         </a-table-column>
 
         <a-table-column title="起步计费面积" data-index="min_area" :width="120">
-          <template #cell="{ record }">
-            {{ record.min_area }} ㎡
-          </template>
+          <template #cell="{ record }"> {{ record.min_area }} ㎡ </template>
         </a-table-column>
 
         <a-table-column title="选配加价规则" :width="160">
           <template #cell="{ record }">
-            <a-tag color="arcoblue" style="cursor: pointer;" @click="openOptionsDrawer(record)">
+            <a-tag
+              color="arcoblue"
+              style="cursor: pointer"
+              @click="openOptionsDrawer(record)"
+            >
               <template #icon><icon-settings /></template>
               {{ record.options ? record.options.length : 0 }} 项规则 (点击配置)
             </a-tag>
@@ -120,11 +147,28 @@
 
         <a-table-column title="操作" :width="180">
           <template #cell="{ record }">
-            <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
-              <a-button type="outline" size="small" @click="editProduct(record)">
+            <div
+              style="
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                white-space: nowrap;
+                gap: 6px;
+              "
+            >
+              <a-button
+                type="outline"
+                size="small"
+                @click="editProduct(record)"
+              >
                 编辑
               </a-button>
-              <a-button type="outline" size="small" status="warning" @click="openOptionsDrawer(record)">
+              <a-button
+                type="outline"
+                size="small"
+                status="warning"
+                @click="openOptionsDrawer(record)"
+              >
                 选配规则
               </a-button>
             </div>
@@ -134,7 +178,11 @@
     </a-table>
 
     <!-- 新建/修改商品 Modal -->
-    <a-modal v-model:visible="modalVisible" title="配置门窗商品与主图" :on-before-ok="handleBeforeSaveProduct">
+    <a-modal
+      v-model:visible="modalVisible"
+      title="配置门窗商品与主图"
+      :on-before-ok="handleBeforeSaveProduct"
+    >
       <a-form :model="form" layout="vertical">
         <a-form-item
           field="name"
@@ -173,7 +221,7 @@
                     @before-upload="onBeforeUpload"
                     @success="onCoverUploadSuccess"
                     @error="onCoverUploadError"
-                    style="display: inline-block;"
+                    style="display: inline-block"
                   >
                     <template #upload-button>
                       <span class="mask-icon" title="更换主图">
@@ -181,7 +229,11 @@
                       </span>
                     </template>
                   </a-upload>
-                  <span class="mask-icon mask-icon-delete ml-2" title="删除主图" @click.stop="form.cover_image = ''">
+                  <span
+                    class="mask-icon mask-icon-delete ml-2"
+                    title="删除主图"
+                    @click.stop="form.cover_image = ''"
+                  >
                     <icon-delete />
                   </span>
                 </div>
@@ -197,7 +249,7 @@
                 <template #upload-button>
                   <div class="upload-dropzone">
                     <div class="upload-icon-circle">
-                      <icon-plus style="font-size: 22px; color: #C5A880;" />
+                      <icon-plus style="font-size: 22px; color: #c5a880" />
                     </div>
                     <span class="upload-title">点击上传图片</span>
                     <span class="upload-sub">支持 PNG / JPG / WEBP 格式</span>
@@ -214,7 +266,10 @@
           required
           :rules="[{ required: true, message: '请选择所属分类' }]"
         >
-          <a-select v-model="form.category_name" placeholder="请选择分类（必选）">
+          <a-select
+            v-model="form.category_name"
+            placeholder="请选择分类（必选）"
+          >
             <a-option v-for="cat in categories" :key="cat" :value="cat">
               {{ cat }}
             </a-option>
@@ -222,7 +277,10 @@
         </a-form-item>
 
         <a-form-item label="简短描述说明">
-          <a-input v-model="form.description" placeholder="高隔音高隔热，适合高层住宅与阳台封窗" />
+          <a-input
+            v-model="form.description"
+            placeholder="高隔音高隔热，适合高层住宅与阳台封窗"
+          />
         </a-form-item>
 
         <a-form-item label="基础平米单价 (元/㎡)">
@@ -242,15 +300,31 @@
       :width="1100"
       :unmount-on-close="true"
     >
-      <a-spin :loading="drawerLoading" tip="正在同步拉取最全选配规则..." style="width: 100%; display: block; min-height: 380px;">
+      <a-spin
+        :loading="drawerLoading"
+        tip="正在同步拉取最全选配规则..."
+        style="width: 100%; display: block; min-height: 380px"
+      >
         <div v-if="currentProduct">
           <div class="drawer-header mb-4">
-            <h3 style="margin: 0; color: var(--color-text-1); font-size: 18px;">【{{ currentProduct.name }}】选配规则列表</h3>
-            <p style="margin: 6px 0 0 0; font-size: 13px; color: var(--color-text-3);">按选配分组进行层级管理（如玻璃配置/五金品牌），每个分组下可配置多个选项细项，同屏同步渲染于小程序端。</p>
+            <h3 style="margin: 0; color: var(--color-text-1); font-size: 18px">
+              【{{ currentProduct.name }}】选配规则列表
+            </h3>
+            <p
+              style="
+                margin: 6px 0 0 0;
+                font-size: 13px;
+                color: var(--color-text-3);
+              "
+            >
+              按选配分组进行层级管理（如玻璃配置/五金品牌），每个分组下可配置多个选项细项，同屏同步渲染于小程序端。
+            </p>
           </div>
 
           <div class="mb-4 flex-between">
-            <a-tag class="champagne-tag" size="large" style="font-weight: 600;">基础定价：¥ {{ currentProduct.base_price_sqm }} / ㎡</a-tag>
+            <a-tag class="champagne-tag" size="large" style="font-weight: 600"
+              >基础定价：¥ {{ currentProduct.base_price_sqm }} / ㎡</a-tag
+            >
             <a-button type="primary" size="medium" @click="addGroup">
               <template #icon><icon-plus /></template>
               新增选配分组
@@ -258,108 +332,214 @@
           </div>
 
           <!-- 1-to-N 选配分组卡片列表 -->
-          <div v-for="(group, gIdx) in groupedOptions" :key="group.id" class="option-group-box mb-4">
-            <a-card border class="group-card">
-              <template #title>
-                <div style="display: flex; align-items: center; gap: 12px;">
-                  <span style="font-size: 14px; font-weight: 700; color: var(--color-text-1); white-space: nowrap;">📦 选配分组 {{ gIdx + 1 }}：</span>
-                  <a-select v-model="group.group_name" size="medium" allow-create placeholder="选择或手动输入分组名称" style="width: 300px;">
-                    <a-option value="玻璃配置">玻璃配置</a-option>
-                    <a-option value="门锁配置">门锁配置</a-option>
-                    <a-option value="铝材配置">铝材配置</a-option>
-                    <a-option value="颜色配置">颜色配置</a-option>
-                    <a-option value="开门方向">开门方向</a-option>
-                    <a-option value="开门内外">开门内外</a-option>
-                    <a-option value="其它选配">其它选配</a-option>
-                  </a-select>
-                </div>
-              </template>
+          <template v-if="groupedOptions && groupedOptions.length > 0">
+            <div
+              v-for="(group, gIdx) in groupedOptions"
+              :key="group.id"
+              class="option-group-box mb-4"
+            >
+              <a-card border class="group-card">
+                <template #title>
+                  <div style="display: flex; align-items: center; gap: 12px">
+                    <span
+                      style="
+                        font-size: 14px;
+                        font-weight: 700;
+                        color: var(--color-text-1);
+                        white-space: nowrap;
+                      "
+                      >📦 选配分组 {{ gIdx + 1 }}：</span
+                    >
+                    <a-select
+                      v-model="group.group_name"
+                      size="medium"
+                      allow-create
+                      placeholder="选择或手动输入分组名称"
+                      style="width: 300px"
+                    >
+                      <a-option value="玻璃配置">玻璃配置</a-option>
+                      <a-option value="门锁配置">门锁配置</a-option>
+                      <a-option value="铝材配置">铝材配置</a-option>
+                      <a-option value="颜色配置">颜色配置</a-option>
+                      <a-option value="开门方向">开门方向</a-option>
+                      <a-option value="开门内外">开门内外</a-option>
+                      <a-option value="其它选配">其它选配</a-option>
+                    </a-select>
+                  </div>
+                </template>
 
-              <template #extra>
-                <div style="display: flex; gap: 8px;">
-                  <a-button type="outline" size="small" @click="addItemToGroup(group)">
-                    + 添加组内选项
-                  </a-button>
-                  <a-button type="outline" status="danger" size="small" @click="removeGroup(gIdx)">
-                    删除分组
-                  </a-button>
-                </div>
-              </template>
+                <template #extra>
+                  <div style="display: flex; gap: 8px">
+                    <a-button
+                      type="outline"
+                      size="small"
+                      @click="addItemToGroup(group)"
+                    >
+                      + 添加组内选项
+                    </a-button>
+                    <a-button
+                      type="outline"
+                      status="danger"
+                      size="small"
+                      @click="removeGroup(gIdx)"
+                    >
+                      删除分组
+                    </a-button>
+                  </div>
+                </template>
 
-              <!-- 组内选项细项表格 -->
-              <a-table :data="group.items" :pagination="false" border size="medium" class="no-wrap-header-table">
-                <template #columns>
-                  <a-table-column title="选项名称 (如: 琉璃白 / 双层钢化玻璃)" :width="260">
-                    <template #cell="{ record }">
-                      <a-input v-model="record.option_name" size="medium" placeholder="请输入选项名称" />
-                    </template>
-                  </a-table-column>
+                <!-- 组内选项细项表格 -->
+                <a-table
+                  :data="group.items"
+                  :pagination="false"
+                  border
+                  size="medium"
+                  class="no-wrap-header-table"
+                >
+                  <template #columns>
+                    <a-table-column
+                      title="选项名称 (如: 琉璃白 / 双层钢化玻璃)"
+                      :width="260"
+                    >
+                      <template #cell="{ record }">
+                        <a-input
+                          v-model="record.option_name"
+                          size="medium"
+                          placeholder="请输入选项名称"
+                        />
+                      </template>
+                    </a-table-column>
 
-                  <a-table-column title="选项示图/色卡 (可选)" :width="160">
-                    <template #cell="{ record }">
-                      <div style="display: flex; align-items: center; gap: 6px;">
-                        <a-popover v-if="record.image_url" trigger="hover">
-                          <img :src="record.image_url" style="width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e6eb; cursor: pointer;" />
-                          <template #content>
-                            <img :src="record.image_url" style="max-width: 160px; max-height: 160px; border-radius: 6px;" />
-                          </template>
-                        </a-popover>
-                        <a-upload
-                          action="https://zc-api.carelife.top/api/upload"
-                          :show-file-list="false"
-                          @success="(fileItem) => onOptionImgUploadSuccess(record, fileItem)"
+                    <a-table-column title="选项示图/色卡 (可选)" :width="160">
+                      <template #cell="{ record }">
+                        <div style="display: flex; align-items: center; gap: 6px">
+                          <a-popover v-if="record.image_url" trigger="hover">
+                            <img
+                              :src="record.image_url"
+                              style="
+                                width: 32px;
+                                height: 32px;
+                                object-fit: cover;
+                                border-radius: 4px;
+                                border: 1px solid #e5e6eb;
+                                cursor: pointer;
+                              "
+                            />
+                            <template #content>
+                              <img
+                                :src="record.image_url"
+                                style="
+                                  max-width: 160px;
+                                  max-height: 160px;
+                                  border-radius: 6px;
+                                "
+                              />
+                            </template>
+                          </a-popover>
+                          <a-upload
+                            action="https://zc-api.carelife.top/api/upload"
+                            :show-file-list="false"
+                            @success="
+                              (fileItem) =>
+                                onOptionImgUploadSuccess(record, fileItem)
+                            "
+                          >
+                            <template #upload-button>
+                              <a-button type="outline" size="mini">
+                                {{ record.image_url ? "更换" : "上传图" }}
+                              </a-button>
+                            </template>
+                          </a-upload>
+                          <a-button
+                            v-if="record.image_url"
+                            type="text"
+                            status="danger"
+                            size="mini"
+                            @click="record.image_url = ''"
+                          >
+                            <icon-delete />
+                          </a-button>
+                        </div>
+                      </template>
+                    </a-table-column>
+
+                    <a-table-column title="加价方式" :width="180">
+                      <template #cell="{ record }">
+                        <a-select v-model="record.price_type" size="medium">
+                          <a-option value="fixed">固定金额(元)</a-option>
+                          <a-option value="per_sqm">按面积加价(元/㎡)</a-option>
+                          <a-option value="per_item">按套数加价(元/套)</a-option>
+                        </a-select>
+                      </template>
+                    </a-table-column>
+
+                    <a-table-column title="加价金额 (元)" :width="160">
+                      <template #cell="{ record }">
+                        <a-input-number
+                          v-model="record.price"
+                          :min="0"
+                          :precision="2"
+                          size="medium"
+                          placeholder="0"
+                        />
+                      </template>
+                    </a-table-column>
+
+                    <a-table-column title="默认勾选" :width="120">
+                      <template #cell="{ record }">
+                        <a-switch
+                          v-model="record.is_default"
+                          :checked-value="1"
+                          :unchecked-value="0"
+                          @change="() => handleDefaultSwitch(group, record)"
+                        />
+                      </template>
+                    </a-table-column>
+
+                    <a-table-column title="操作" :width="80">
+                      <template #cell="{ record, rowIndex }">
+                        <a-button
+                          type="text"
+                          status="danger"
+                          size="small"
+                          @click="removeItemFromGroup(group, rowIndex)"
                         >
-                          <template #upload-button>
-                            <a-button type="outline" size="mini">
-                              {{ record.image_url ? '更换' : '上传图' }}
-                            </a-button>
-                          </template>
-                        </a-upload>
-                        <a-button v-if="record.image_url" type="text" status="danger" size="mini" @click="record.image_url = ''">
                           <icon-delete />
                         </a-button>
-                      </div>
-                    </template>
-                  </a-table-column>
-
-                  <a-table-column title="加价方式" :width="180">
-                    <template #cell="{ record }">
-                      <a-select v-model="record.price_type" size="medium">
-                        <a-option value="fixed">固定金额(元)</a-option>
-                        <a-option value="per_sqm">按面积加价(元/㎡)</a-option>
-                  <a-table-column title="加价金额 (元)" :width="160">
-                    <template #cell="{ record }">
-                      <a-input-number v-model="record.price" :min="0" :precision="2" size="medium" placeholder="0" />
-                    </template>
-                  </a-table-column>
-
-                  <a-table-column title="默认勾选" :width="120">
-                    <template #cell="{ record }">
-                      <a-switch v-model="record.is_default" :checked-value="1" :unchecked-value="0" @change="() => handleDefaultSwitch(group, record)" />
-                    </template>
-                  </a-table-column>
-
-                  <a-table-column title="操作" :width="80">
-                    <template #cell="{ record, rowIndex }">
-                      <a-button type="text" status="danger" size="small" @click="removeItemFromGroup(group, rowIndex)">
-                        <icon-delete />
-                      </a-button>
-                    </template>
-                  </a-table-column>
-                </template>
-              </a-table>
-            </a-card>
-          </div>
+                      </template>
+                    </a-table-column>
+                  </template>
+                </a-table>
+              </a-card>
+            </div>
+          </template>
 
           <div v-else class="empty-group-box">
-            <a-empty description="暂无选配规则分组，点击右上角【+ 新增选配分组】开始创建" />
+            <a-empty
+              description="暂无选配规则分组，点击右上角【+ 新增选配分组】开始创建"
+            />
           </div>
         </div>
       </a-spin>
       <template #footer>
-        <div style="display: flex; justify-content: flex-end; gap: 16px; width: 100%;">
-          <a-button size="large" @click="optionsDrawerVisible = false">取消</a-button>
-          <a-button class="btn-champagne-primary" size="large" :loading="savingOptions" @click="saveOptions">保存选配规则配置</a-button>
+        <div
+          style="
+            display: flex;
+            justify-content: flex-end;
+            gap: 16px;
+            width: 100%;
+          "
+        >
+          <a-button size="large" @click="optionsDrawerVisible = false"
+            >取消</a-button
+          >
+          <a-button
+            class="btn-champagne-primary"
+            size="large"
+            :loading="savingOptions"
+            @click="saveOptions"
+            >保存选配规则配置</a-button
+          >
         </div>
       </template>
     </a-drawer>
@@ -367,22 +547,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { Message } from '@arco-design/web-vue';
+import { ref, onMounted } from "vue";
+import { Message } from "@arco-design/web-vue";
 
-const API_BASE = 'https://zc-api.carelife.top';
+const API_BASE = "https://zc-api.carelife.top";
 
 const categories = ref([
-  '断桥铝系统窗',
-  '极窄推拉门/平开门',
-  '系统封阳台/阳光房',
-  '金刚网纱窗及配件',
-  '幕墙工程系'
+  "断桥铝系统窗",
+  "极窄推拉门/平开门",
+  "系统封阳台/阳光房",
+  "金刚网纱窗及配件",
+  "幕墙工程系",
 ]);
 
 const searchForm = ref({
   categories: [],
-  name: ''
+  name: "",
 });
 
 const products = ref([]);
@@ -395,14 +575,14 @@ const currentProduct = ref(null);
 const uploading = ref(false);
 
 const form = ref({
-  id: '',
-  name: '',
-  description: '',
-  cover_image: '',
-  category_name: '断桥铝系统窗',
+  id: "",
+  name: "",
+  description: "",
+  cover_image: "",
+  category_name: "断桥铝系统窗",
   base_price_sqm: 680,
   min_area: 1,
-  is_active: 1
+  is_active: 1,
 });
 
 const fetchProducts = async () => {
@@ -410,19 +590,24 @@ const fetchProducts = async () => {
   try {
     const params = new URLSearchParams();
     if (searchForm.value.name && searchForm.value.name.trim()) {
-      params.append('name', searchForm.value.name.trim());
+      params.append("name", searchForm.value.name.trim());
     }
     if (searchForm.value.categories && searchForm.value.categories.length > 0) {
-      params.append('categories', searchForm.value.categories.join(','));
+      params.append("categories", searchForm.value.categories.join(","));
     }
 
-    const res = await fetch(`${API_BASE}/api/admin/products?${params.toString()}`);
+    const res = await fetch(
+      `${API_BASE}/api/admin/products?${params.toString()}`,
+    );
     const data = await res.json();
     if (data.success && Array.isArray(data.data)) {
-      products.value = data.data.map(p => ({
+      products.value = data.data.map((p) => ({
         ...p,
         options: p.options || [],
-        is_active: (p.is_active !== undefined && p.is_active !== null) ? Number(p.is_active) : 1
+        is_active:
+          p.is_active !== undefined && p.is_active !== null
+            ? Number(p.is_active)
+            : 1,
       }));
     } else {
       products.value = [];
@@ -441,21 +626,21 @@ const handleSearch = () => {
 const handleReset = () => {
   searchForm.value = {
     categories: [],
-    name: ''
+    name: "",
   };
   fetchProducts();
 };
 
 const openProductModal = () => {
   form.value = {
-    id: '',
-    name: '',
-    description: '',
-    cover_image: '',
-    category_name: '断桥铝系统窗',
+    id: "",
+    name: "",
+    description: "",
+    cover_image: "",
+    category_name: "断桥铝系统窗",
     base_price_sqm: 680,
     min_area: 1,
-    is_active: 1
+    is_active: 1,
   };
   uploading.value = false;
   modalVisible.value = true;
@@ -465,12 +650,18 @@ const editProduct = (record) => {
   form.value = {
     id: record.id,
     name: record.name,
-    description: record.description || '',
-    cover_image: record.cover_image || '',
-    category_name: record.category_name || '断桥铝系统窗',
+    description: record.description || "",
+    cover_image: record.cover_image || "",
+    category_name: record.category_name || "断桥铝系统窗",
     base_price_sqm: record.base_price_sqm || 680,
-    min_area: (record.min_area !== undefined && record.min_area !== null) ? Number(record.min_area) : 1,
-    is_active: (record.is_active !== undefined && record.is_active !== null) ? Number(record.is_active) : 1
+    min_area:
+      record.min_area !== undefined && record.min_area !== null
+        ? Number(record.min_area)
+        : 1,
+    is_active:
+      record.is_active !== undefined && record.is_active !== null
+        ? Number(record.is_active)
+        : 1,
   };
   uploading.value = false;
   modalVisible.value = true;
@@ -479,23 +670,25 @@ const editProduct = (record) => {
 const handleStatusChange = async (record, val) => {
   try {
     const res = await fetch(`${API_BASE}/api/admin/products`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...record,
-        is_active: val
-      })
+        is_active: val,
+      }),
     });
     const data = await res.json();
     if (res.ok && data.success) {
-      Message.success(`已成功${val === 1 ? '上架' : '下架'}商品【${record.name}】`);
+      Message.success(
+        `已成功${val === 1 ? "上架" : "下架"}商品【${record.name}】`,
+      );
       await fetchProducts();
     } else {
-      Message.error('商品上下架状态保存失败');
+      Message.error("商品上下架状态保存失败");
       record.is_active = val === 1 ? 0 : 1;
     }
   } catch (e) {
-    Message.error('无法连接后端服务');
+    Message.error("无法连接后端服务");
     record.is_active = val === 1 ? 0 : 1;
   }
 };
@@ -506,7 +699,7 @@ const onOptionImgUploadSuccess = (record, fileItem) => {
   } else if (fileItem && fileItem.url) {
     record.image_url = fileItem.url;
   }
-  Message.success('选项示图/色卡上传成功！');
+  Message.success("选项示图/色卡上传成功！");
 };
 
 const groupedOptions = ref([]);
@@ -515,18 +708,22 @@ const savingOptions = ref(false);
 
 const parseGroupsFromOptions = (rawOptions) => {
   const groupMap = {};
-  (rawOptions || []).forEach(opt => {
-    const gName = (opt.group_name || '玻璃配置').trim();
+  (rawOptions || []).forEach((opt) => {
+    const gName = (opt.group_name || "玻璃配置").trim();
     if (!groupMap[gName]) {
-      groupMap[gName] = { id: `grp_${Date.now()}_${Math.random()}`, group_name: gName, items: [] };
+      groupMap[gName] = {
+        id: `grp_${Date.now()}_${Math.random()}`,
+        group_name: gName,
+        items: [],
+      };
     }
     groupMap[gName].items.push({
       id: opt.id || `opt_${Date.now()}_${Math.random()}`,
-      option_name: opt.option_name || opt.name || '',
-      price_type: opt.price_type || 'fixed',
+      option_name: opt.option_name || opt.name || "",
+      price_type: opt.price_type || "fixed",
       price: opt.price !== undefined ? opt.price : 0,
       is_default: opt.is_default ? 1 : 0,
-      image_url: opt.image_url || ''
+      image_url: opt.image_url || "",
     });
   });
 
@@ -535,50 +732,120 @@ const parseGroupsFromOptions = (rawOptions) => {
     list = [
       {
         id: `grp_1_${Date.now()}`,
-        group_name: '玻璃配置',
+        group_name: "玻璃配置",
         items: [
-          { id: `opt_def_1_${Date.now()}`, option_name: '双层玻璃', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-          { id: `opt_def_2_${Date.now()}`, option_name: '双层钢化玻璃', price_type: 'fixed', price: 50, is_default: 0, image_url: '' }
-        ]
+          {
+            id: `opt_def_1_${Date.now()}`,
+            option_name: "双层玻璃",
+            price_type: "fixed",
+            price: 0,
+            is_default: 1,
+            image_url: "",
+          },
+          {
+            id: `opt_def_2_${Date.now()}`,
+            option_name: "双层钢化玻璃",
+            price_type: "fixed",
+            price: 50,
+            is_default: 0,
+            image_url: "",
+          },
+        ],
       },
       {
         id: `grp_2_${Date.now()}`,
-        group_name: '门锁配置',
+        group_name: "门锁配置",
         items: [
-          { id: `opt_def_3_${Date.now()}`, option_name: '默认门锁', price_type: 'fixed', price: 0, is_default: 1, image_url: '' }
-        ]
+          {
+            id: `opt_def_3_${Date.now()}`,
+            option_name: "默认门锁",
+            price_type: "fixed",
+            price: 0,
+            is_default: 1,
+            image_url: "",
+          },
+        ],
       },
       {
         id: `grp_3_${Date.now()}`,
-        group_name: '铝材配置',
+        group_name: "铝材配置",
         items: [
-          { id: `opt_def_4_${Date.now()}`, option_name: '默认铝材', price_type: 'fixed', price: 0, is_default: 1, image_url: '' }
-        ]
+          {
+            id: `opt_def_4_${Date.now()}`,
+            option_name: "默认铝材",
+            price_type: "fixed",
+            price: 0,
+            is_default: 1,
+            image_url: "",
+          },
+        ],
       },
       {
         id: `grp_4_${Date.now()}`,
-        group_name: '颜色配置',
+        group_name: "颜色配置",
         items: [
-          { id: `opt_def_5_${Date.now()}`, option_name: '琉璃白', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-          { id: `opt_def_6_${Date.now()}`, option_name: '深空灰', price_type: 'fixed', price: 0, is_default: 0, image_url: '' }
-        ]
+          {
+            id: `opt_def_5_${Date.now()}`,
+            option_name: "琉璃白",
+            price_type: "fixed",
+            price: 0,
+            is_default: 1,
+            image_url: "",
+          },
+          {
+            id: `opt_def_6_${Date.now()}`,
+            option_name: "深空灰",
+            price_type: "fixed",
+            price: 0,
+            is_default: 0,
+            image_url: "",
+          },
+        ],
       },
       {
         id: `grp_5_${Date.now()}`,
-        group_name: '开门方向',
+        group_name: "开门方向",
         items: [
-          { id: `opt_def_7_${Date.now()}`, option_name: '左锁（左合页）', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-          { id: `opt_def_8_${Date.now()}`, option_name: '右锁（左合页）', price_type: 'fixed', price: 0, is_default: 0, image_url: '' }
-        ]
+          {
+            id: `opt_def_7_${Date.now()}`,
+            option_name: "左锁（左合页）",
+            price_type: "fixed",
+            price: 0,
+            is_default: 1,
+            image_url: "",
+          },
+          {
+            id: `opt_def_8_${Date.now()}`,
+            option_name: "右锁（左合页）",
+            price_type: "fixed",
+            price: 0,
+            is_default: 0,
+            image_url: "",
+          },
+        ],
       },
       {
         id: `grp_6_${Date.now()}`,
-        group_name: '开门内外',
+        group_name: "开门内外",
         items: [
-          { id: `opt_def_9_${Date.now()}`, option_name: '内开（朝内打开）', price_type: 'fixed', price: 0, is_default: 1, image_url: '' },
-          { id: `opt_def_10_${Date.now()}`, option_name: '外开（朝外打开）', price_type: 'fixed', price: 0, is_default: 0, image_url: '' }
-        ]
-      }
+          {
+            id: `opt_def_9_${Date.now()}`,
+            option_name: "内开（朝内打开）",
+            price_type: "fixed",
+            price: 0,
+            is_default: 1,
+            image_url: "",
+          },
+          {
+            id: `opt_def_10_${Date.now()}`,
+            option_name: "外开（朝外打开）",
+            price_type: "fixed",
+            price: 0,
+            is_default: 0,
+            image_url: "",
+          },
+        ],
+      },
     ];
   }
   return list;
@@ -592,9 +859,14 @@ const openOptionsDrawer = (record) => {
 
   // 2. 抽屉内异步请求后台最新规则，加载完成后关闭 loading 遮罩
   fetch(`${API_BASE}/api/products/${record.id}`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.success && data.data && data.data.options && data.data.options.length > 0) {
+    .then((res) => res.json())
+    .then((data) => {
+      if (
+        data.success &&
+        data.data &&
+        data.data.options &&
+        data.data.options.length > 0
+      ) {
         currentProduct.value.options = data.data.options;
         groupedOptions.value = parseGroupsFromOptions(data.data.options);
       }
@@ -608,10 +880,17 @@ const openOptionsDrawer = (record) => {
 const addGroup = () => {
   groupedOptions.value.push({
     id: `grp_${Date.now()}`,
-    group_name: '新增选配分组',
+    group_name: "新增选配分组",
     items: [
-      { id: `opt_${Date.now()}`, option_name: '', price_type: 'fixed', price: 0, is_default: 1, image_url: '' }
-    ]
+      {
+        id: `opt_${Date.now()}`,
+        option_name: "",
+        price_type: "fixed",
+        price: 0,
+        is_default: 1,
+        image_url: "",
+      },
+    ],
   });
 };
 
@@ -623,11 +902,11 @@ const addItemToGroup = (group) => {
   if (!group.items) group.items = [];
   group.items.push({
     id: `opt_${Date.now()}`,
-    option_name: '',
-    price_type: 'fixed',
+    option_name: "",
+    price_type: "fixed",
     price: 0,
     is_default: 0,
-    image_url: ''
+    image_url: "",
   });
 };
 
@@ -643,46 +922,49 @@ const saveOptions = async () => {
 
   try {
     const flatList = [];
-    (groupedOptions.value || []).forEach(g => {
-      const gName = (g.group_name || '选配分组').trim();
-      (g.items || []).forEach(it => {
+    (groupedOptions.value || []).forEach((g) => {
+      const gName = (g.group_name || "选配分组").trim();
+      (g.items || []).forEach((it) => {
         if (it.option_name && it.option_name.trim()) {
           flatList.push({
             id: it.id || `opt_${Date.now()}_${Math.random()}`,
             group_name: gName,
             group_title: gName,
             option_name: it.option_name.trim(),
-            price_type: it.price_type || 'fixed',
+            price_type: it.price_type || "fixed",
             price: Number(it.price || 0),
             is_default: it.is_default ? 1 : 0,
-            image_url: it.image_url || ''
+            image_url: it.image_url || "",
           });
         }
       });
     });
 
     currentProduct.value.options = flatList;
-    const target = products.value.find(p => p.id === currentProduct.value.id);
+    const target = products.value.find((p) => p.id === currentProduct.value.id);
     if (target) {
       target.options = flatList;
       products.value = [...products.value];
     }
 
-    const res = await fetch(`${API_BASE}/api/admin/products/${currentProduct.value.id}/options`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ options: flatList })
-    });
+    const res = await fetch(
+      `${API_BASE}/api/admin/products/${currentProduct.value.id}/options`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ options: flatList }),
+      },
+    );
     const data = await res.json();
     if (res.ok && data.success) {
-      Message.success('选配规则分组配置保存成功！');
+      Message.success("选配规则分组配置保存成功！");
       optionsDrawerVisible.value = false;
       await fetchProducts();
     } else {
       Message.error(data.message || `保存失败 (HTTP ${res.status})`);
     }
   } catch (e) {
-    Message.error('无法连接后端 API 接口，请检查网络');
+    Message.error("无法连接后端 API 接口，请检查网络");
   } finally {
     savingOptions.value = false;
   }
@@ -704,34 +986,34 @@ const onCoverUploadSuccess = (fileItem) => {
 
 const onCoverUploadError = () => {
   uploading.value = false;
-  Message.error('图片上传失败，请重试！');
+  Message.error("图片上传失败，请重试！");
 };
 
 const handleBeforeSaveProduct = async () => {
   if (!form.value.name || !form.value.name.trim()) {
-    Message.warning('【商品名称】为必填项，请输入后再保存！');
+    Message.warning("【商品名称】为必填项，请输入后再保存！");
     return false;
   }
 
   if (!form.value.cover_image) {
-    Message.warning('【商品封面主图】为必填项，请上传图片后再保存！');
+    Message.warning("【商品封面主图】为必填项，请上传图片后再保存！");
     return false;
   }
 
   if (!form.value.category_name) {
-    Message.warning('【所属分类】为必选项，请选择分类后再保存！');
+    Message.warning("【所属分类】为必选项，请选择分类后再保存！");
     return false;
   }
 
   try {
     const res = await fetch(`${API_BASE}/api/admin/products`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form.value)
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form.value),
     });
     const data = await res.json();
     if (res.ok && data.success) {
-      Message.success('保存成功！');
+      Message.success("保存成功！");
       await fetchProducts();
       return true;
     } else {
@@ -739,7 +1021,7 @@ const handleBeforeSaveProduct = async () => {
       return false;
     }
   } catch (e) {
-    Message.error('网络连接异常，保存失败');
+    Message.error("网络连接异常，保存失败");
     return false;
   }
 };
@@ -750,20 +1032,33 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.products-view { display: flex; flex-direction: column; }
-.view-title { font-size: 20px; font-weight: 700; margin: 0; }
-.flex-between { display: flex; justify-content: space-between; align-items: center; }
-.mb-4 { margin-bottom: 16px; }
+.products-view {
+  display: flex;
+  flex-direction: column;
+}
+.view-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mb-4 {
+  margin-bottom: 16px;
+}
 
 .champagne-tag {
   background: rgba(197, 168, 128, 0.12) !important;
-  color: #A38456 !important;
+  color: #a38456 !important;
   border: 1px solid rgba(197, 168, 128, 0.35) !important;
   border-radius: 6px;
 }
-body[arco-theme='dark'] .champagne-tag {
+body[arco-theme="dark"] .champagne-tag {
   background: rgba(197, 168, 128, 0.2) !important;
-  color: #E2C7A0 !important;
+  color: #e2c7a0 !important;
   border-color: rgba(197, 168, 128, 0.4) !important;
 }
 
@@ -808,7 +1103,7 @@ body[arco-theme='dark'] .champagne-tag {
 }
 
 .upload-dropzone:hover {
-  border-color: #C5A880;
+  border-color: #c5a880;
   background: rgba(197, 168, 128, 0.08);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(197, 168, 128, 0.15);
@@ -832,8 +1127,8 @@ body[arco-theme='dark'] .champagne-tag {
   white-space: nowrap;
 }
 
-body[arco-theme='dark'] .upload-title {
-  color: #E2E8F0;
+body[arco-theme="dark"] .upload-title {
+  color: #e2e8f0;
 }
 
 .upload-sub {
@@ -849,7 +1144,7 @@ body[arco-theme='dark'] .upload-title {
   border-radius: 12px;
   overflow: hidden;
   position: relative;
-  border: 1.5px solid #C5A880;
+  border: 1.5px solid #c5a880;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   box-sizing: border-box;
 }
@@ -901,5 +1196,7 @@ body[arco-theme='dark'] .upload-title {
   background: #f53f3f;
   color: #ffffff;
 }
-.ml-2 { margin-left: 8px; }
+.ml-2 {
+  margin-left: 8px;
+}
 </style>

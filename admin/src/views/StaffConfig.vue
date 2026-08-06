@@ -10,7 +10,13 @@
 
     <!-- 接单员列表数据表格 -->
     <a-card title="👥 接单员列表">
-      <a-table :data="receivers" :loading="tableLoading" :pagination="{ pageSize: 10 }" border row-key="id">
+      <a-table
+        :data="receivers"
+        :loading="tableLoading"
+        :pagination="{ pageSize: 10 }"
+        border
+        row-key="id"
+      >
         <template #columns>
           <a-table-column title="接单员姓名" data-index="name" :width="220">
             <template #cell="{ record }">
@@ -20,7 +26,9 @@
 
           <a-table-column title="联系手机号" data-index="phone" :width="180">
             <template #cell="{ record }">
-              <span style="color: #C5A880; font-weight: bold;">{{ record.phone }}</span>
+              <span style="color: #c5a880; font-weight: bold">{{
+                record.phone
+              }}</span>
             </template>
           </a-table-column>
 
@@ -32,9 +40,15 @@
                 width="60"
                 height="60"
                 fit="cover"
-                style="border-radius: 8px; border: 1px solid #C5A880; cursor: pointer;"
+                style="
+                  border-radius: 8px;
+                  border: 1px solid #c5a880;
+                  cursor: pointer;
+                "
               />
-              <span v-else style="color: #c9cdd4; font-size: 12px;">暂无二维码</span>
+              <span v-else style="color: #c9cdd4; font-size: 12px"
+                >暂无二维码</span
+              >
             </template>
           </a-table-column>
 
@@ -46,11 +60,27 @@
 
           <a-table-column title="操作" :width="140">
             <template #cell="{ record }">
-              <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
-                <a-button type="outline" size="small" @click="editReceiver(record)">
+              <div
+                style="
+                  display: flex;
+                  flex-direction: row;
+                  align-items: center;
+                  white-space: nowrap;
+                  gap: 6px;
+                "
+              >
+                <a-button
+                  type="outline"
+                  size="small"
+                  @click="editReceiver(record)"
+                >
                   编辑
                 </a-button>
-                <a-popconfirm content="确定彻底删除此接单员吗？" type="warning" @ok="deleteReceiver(record.id)">
+                <a-popconfirm
+                  content="确定彻底删除此接单员吗？"
+                  type="warning"
+                  @ok="deleteReceiver(record.id)"
+                >
                   <a-button type="outline" status="danger" size="small">
                     删除
                   </a-button>
@@ -63,14 +93,21 @@
     </a-card>
 
     <!-- 新建/编辑接单员 Modal -->
-    <a-modal v-model:visible="modalVisible" title="配置接单员信息与二维码" :on-before-ok="handleBeforeSaveReceiver">
+    <a-modal
+      v-model:visible="modalVisible"
+      title="配置接单员信息与二维码"
+      :on-before-ok="handleBeforeSaveReceiver"
+    >
       <a-form :model="receiverForm" layout="vertical">
         <a-form-item label="接单员姓名" required>
           <a-input v-model="receiverForm.name" placeholder="如：张经理" />
         </a-form-item>
 
         <a-form-item label="联系手机号" required>
-          <a-input v-model="receiverForm.phone" placeholder="请输入接单手机号" />
+          <a-input
+            v-model="receiverForm.phone"
+            placeholder="请输入接单手机号"
+          />
         </a-form-item>
 
         <!-- 微信二维码图片上传区域 -->
@@ -86,7 +123,7 @@
                     @before-upload="onBeforeUpload"
                     @success="onQrUploadSuccess"
                     @error="onQrUploadError"
-                    style="display: inline-block;"
+                    style="display: inline-block"
                   >
                     <template #upload-button>
                       <span class="mask-icon" title="更换二维码">
@@ -94,7 +131,11 @@
                       </span>
                     </template>
                   </a-upload>
-                  <span class="mask-icon mask-icon-delete ml-2" title="删除二维码" @click.stop="receiverForm.qr_code_url = ''">
+                  <span
+                    class="mask-icon mask-icon-delete ml-2"
+                    title="删除二维码"
+                    @click.stop="receiverForm.qr_code_url = ''"
+                  >
                     <icon-delete />
                   </span>
                 </div>
@@ -110,7 +151,7 @@
                 <template #upload-button>
                   <div class="upload-dropzone">
                     <div class="upload-icon-circle">
-                      <icon-plus style="font-size: 22px; color: #C5A880;" />
+                      <icon-plus style="font-size: 22px; color: #c5a880" />
                     </div>
                     <span class="upload-title">点击上传图片</span>
                     <span class="upload-sub">支持 PNG / JPG 格式</span>
@@ -122,15 +163,14 @@
         </a-form-item>
       </a-form>
     </a-modal>
-
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { Message } from '@arco-design/web-vue';
+import { ref, onMounted } from "vue";
+import { Message } from "@arco-design/web-vue";
 
-const API_BASE = 'https://zc-api.carelife.top';
+const API_BASE = "https://zc-api.carelife.top";
 
 const receivers = ref([]);
 const tableLoading = ref(true);
@@ -139,18 +179,18 @@ const modalVisible = ref(false);
 const uploading = ref(false);
 
 const receiverForm = ref({
-  id: '',
-  name: '',
-  phone: '',
-  qr_code_url: ''
+  id: "",
+  name: "",
+  phone: "",
+  qr_code_url: "",
 });
 
 const openReceiverModal = () => {
   receiverForm.value = {
-    id: '',
-    name: '',
-    phone: '',
-    qr_code_url: ''
+    id: "",
+    name: "",
+    phone: "",
+    qr_code_url: "",
   };
   uploading.value = false;
   modalVisible.value = true;
@@ -161,7 +201,7 @@ const editReceiver = (record) => {
     id: record.id,
     name: record.name,
     phone: record.phone,
-    qr_code_url: record.qr_code_url || ''
+    qr_code_url: record.qr_code_url || "",
   };
   uploading.value = false;
   modalVisible.value = true;
@@ -183,28 +223,28 @@ const onQrUploadSuccess = (fileItem) => {
 
 const onQrUploadError = () => {
   uploading.value = false;
-  Message.error('二维码图片上传失败！');
+  Message.error("二维码图片上传失败！");
 };
 
 const handleBeforeSaveReceiver = async () => {
   if (!receiverForm.value.name || !receiverForm.value.name.trim()) {
-    Message.warning('【接单员姓名】为必填项，请输入后再保存！');
+    Message.warning("【接单员姓名】为必填项，请输入后再保存！");
     return false;
   }
   if (!receiverForm.value.phone || !receiverForm.value.phone.trim()) {
-    Message.warning('【联系手机号】为必填项，请输入后再保存！');
+    Message.warning("【联系手机号】为必填项，请输入后再保存！");
     return false;
   }
 
   try {
     const res = await fetch(`${API_BASE}/api/admin/receivers`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(receiverForm.value)
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(receiverForm.value),
     });
     const data = await res.json();
     if (res.ok && data.success) {
-      Message.success('保存成功！');
+      Message.success("保存成功！");
       await fetchReceivers();
       return true;
     } else {
@@ -212,23 +252,25 @@ const handleBeforeSaveReceiver = async () => {
       return false;
     }
   } catch (e) {
-    Message.error('无法连接后端 API 服务，请检查网络设置');
+    Message.error("无法连接后端 API 服务，请检查网络设置");
     return false;
   }
 };
 
 const deleteReceiver = async (id) => {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/receivers/${id}`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE}/api/admin/receivers/${id}`, {
+      method: "DELETE",
+    });
     const data = await res.json();
     if (res.ok && data.success) {
-      Message.success('删除成功！');
+      Message.success("删除成功！");
       await fetchReceivers();
     } else {
       Message.error(data.message || `操作失败 (HTTP ${res.status})`);
     }
   } catch (e) {
-    Message.error('删除操作失败，网络连接错误');
+    Message.error("删除操作失败，网络连接错误");
   }
 };
 
@@ -255,11 +297,26 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.staff-config-view { display: flex; flex-direction: column; }
-.view-title { font-size: 20px; font-weight: 700; margin: 0; }
-.flex-between { display: flex; justify-content: space-between; align-items: center; }
-.mb-4 { margin-bottom: 16px; }
-.mr-2 { margin-right: 8px; }
+.staff-config-view {
+  display: flex;
+  flex-direction: column;
+}
+.view-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mb-4 {
+  margin-bottom: 16px;
+}
+.mr-2 {
+  margin-right: 8px;
+}
 
 /* 奢华精致上传控件样式 */
 .luxury-upload-card {
@@ -285,7 +342,7 @@ onMounted(() => {
 }
 
 .upload-dropzone:hover {
-  border-color: #C5A880;
+  border-color: #c5a880;
   background: rgba(197, 168, 128, 0.08);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(197, 168, 128, 0.15);
@@ -309,8 +366,8 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-body[arco-theme='dark'] .upload-title {
-  color: #E2E8F0;
+body[arco-theme="dark"] .upload-title {
+  color: #e2e8f0;
 }
 
 .upload-sub {
@@ -326,7 +383,7 @@ body[arco-theme='dark'] .upload-title {
   border-radius: 12px;
   overflow: hidden;
   position: relative;
-  border: 1.5px solid #C5A880;
+  border: 1.5px solid #c5a880;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   box-sizing: border-box;
 }
@@ -378,5 +435,7 @@ body[arco-theme='dark'] .upload-title {
   background: #f53f3f;
   color: #ffffff;
 }
-.ml-2 { margin-left: 8px; }
+.ml-2 {
+  margin-left: 8px;
+}
 </style>

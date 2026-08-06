@@ -36,7 +36,23 @@ function formatOptionsSummary(it) {
     try { opts = JSON.parse(it.options_summary_json); } catch (e) { opts = []; }
   }
 
-  return opts || [];
+  if ((!opts || opts.length === 0) && it.selected_options_json) {
+    try {
+      const selMap = JSON.parse(it.selected_options_json);
+      if (selMap && typeof selMap === 'object') {
+        opts = Object.keys(selMap).map(g => {
+          const raw = selMap[g];
+          return { groupTitle: g, option_name: typeof raw === 'string' ? raw : (raw?.option_name || raw?.name || ''), priceText: '' };
+        });
+      }
+    } catch (e) {}
+  }
+
+  return (opts || []).map(o => ({
+    ...o,
+    groupTitle: o.groupTitle || o.group_name || '选配',
+    option_name: o.option_name || o.name || ''
+  })).filter(o => o.option_name);
 }
 
 Page({

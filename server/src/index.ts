@@ -999,17 +999,18 @@ app.post('/api/orders', async (c) => {
 
     // 筛选当前套系选中的选配规则 (完全按下单当时的前端已选中文快照保存，确保与后续商品修改彻底隔离)
     const selectedOptionObjects: ProductOption[] = [];
-    const selectedOptionsSummary: Array<{ groupTitle: string; option_name: string; priceText: string }> = [];
+    const selectedOptionsSummary: Array<{ groupTitle: string; option_name: string; priceText: string; image_url?: string }> = [];
 
     if (Array.isArray(set.selectedOptionsSummary) && set.selectedOptionsSummary.length > 0) {
       set.selectedOptionsSummary.forEach((so: any) => {
         let name = so.option_name || so.name || '';
         const groupTitle = so.groupTitle || so.group_name || '选配';
-        if (name && !name.startsWith('opt_')) {
+        if (name) {
           selectedOptionsSummary.push({
             groupTitle,
             option_name: name,
-            priceText: so.priceText || ''
+            priceText: so.priceText || '',
+            image_url: so.image_url || ''
           });
         }
       });
@@ -1019,8 +1020,13 @@ app.post('/api/orders', async (c) => {
       Object.keys(selectedOptionsMap).forEach(grpKey => {
         const rawVal = selectedOptionsMap[grpKey];
         const optId = typeof rawVal === 'string' ? rawVal : (rawVal && (rawVal.id || rawVal.option_name));
-        const optObj = optId ? optionMap.get(optId) : null;
-        let name = optObj ? optObj.option_name : (typeof rawVal === 'string' ? (rawVal.startsWith('opt_') ? '' : rawVal) : (rawVal?.option_name || rawVal?.name || ''));
+        
+        let optObj = optId ? optionMap.get(optId) : null;
+        if (!optObj && optId) {
+          optObj = (options || []).find(o => o.id === optId || o.option_name === optId || ((o.group_name === grpKey || o.group_title === grpKey) && o.is_default === 1)) || null;
+        }
+
+        let name = optObj ? optObj.option_name : (typeof rawVal === 'string' ? rawVal : (rawVal?.option_name || rawVal?.name || ''));
         let groupTitle = optObj ? (optObj.group_title || optObj.group_name || grpKey) : grpKey;
 
         if (optObj) {
@@ -1036,7 +1042,8 @@ app.post('/api/orders', async (c) => {
           selectedOptionsSummary.push({
             groupTitle,
             option_name: name,
-            priceText: pText
+            priceText: pText,
+            image_url: optObj.image_url || ''
           });
         } else if (name) {
           selectedOptionsSummary.push({
@@ -1247,9 +1254,9 @@ app.get('/api/orders/:id', async (c) => {
           let optName = '';
           let pText = '';
           if (typeof rawVal === 'string') {
-            optName = rawVal.startsWith('opt_') ? '' : rawVal;
+            optName = rawVal;
           } else if (rawVal && typeof rawVal === 'object') {
-            optName = rawVal.option_name || rawVal.name || (rawVal.id && !rawVal.id.startsWith('opt_') ? rawVal.id : '');
+            optName = rawVal.option_name || rawVal.name || rawVal.id || '';
             pText = rawVal.priceText || (rawVal.price > 0 ? `+¥ ${rawVal.price}` : '');
           }
           return {

@@ -520,7 +520,8 @@ const getItemOptions = (item) => {
   if (Array.isArray(summary) && summary.length > 0) {
     return summary.map(opt => ({
       ...opt,
-      groupTitle: formatGroupTitle(opt.groupTitle || opt.group_name || opt.group)
+      groupTitle: opt.groupTitle || opt.group_name || opt.group || '选配',
+      option_name: opt.option_name || opt.name || opt.id || '常规配置'
     }));
   }
 
@@ -535,11 +536,11 @@ const getItemOptions = (item) => {
       const rawVal = selMap[grp];
       const optName = typeof rawVal === 'string' ? rawVal : (rawVal && (rawVal.option_name || rawVal.name || rawVal.id));
       return {
-        groupTitle: formatGroupTitle(grp),
-        option_name: optName || '',
+        groupTitle: grp,
+        option_name: optName || '常规配置',
         priceText: ''
       };
-    }).filter(o => o.option_name);
+    });
   }
   return [];
 };
