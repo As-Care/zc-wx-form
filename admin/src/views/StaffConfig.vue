@@ -44,12 +44,18 @@
             </template>
           </a-table-column>
 
-          <a-table-column title="操作" :width="180">
+          <a-table-column title="操作" :width="140">
             <template #cell="{ record }">
-              <a-button type="text" size="small" class="mr-2" @click="editReceiver(record)">编辑信息/二维码</a-button>
-              <a-popconfirm content="确定删除此接单员吗？" type="warning" @ok="deleteReceiver(record.id)">
-                <a-button type="text" status="danger" size="small">删除</a-button>
-              </a-popconfirm>
+              <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
+                <a-button type="outline" size="small" @click="editReceiver(record)">
+                  编辑
+                </a-button>
+                <a-popconfirm content="确定彻底删除此接单员吗？" type="warning" @ok="deleteReceiver(record.id)">
+                  <a-button type="outline" status="danger" size="small">
+                    删除
+                  </a-button>
+                </a-popconfirm>
+              </div>
             </template>
           </a-table-column>
         </template>

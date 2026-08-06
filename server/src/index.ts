@@ -57,6 +57,47 @@ app.post('/api/upload', async (c) => {
   }
 });
 
+/**
+ * R2 对象存储资源公开读取代理 (处理 /upload/* 与 /common/* 资源访问)
+ */
+app.get('/upload/:path{.+}', async (c) => {
+  const path = c.req.param('path');
+  const key = `upload/${path}`;
+  if (c.env.BUCKET) {
+    try {
+      const object = await c.env.BUCKET.get(key);
+      if (object) {
+        const headers = new Headers();
+        object.writeHttpMetadata(headers);
+        headers.set('etag', object.httpMetadata?.etag || object.etag);
+        headers.set('Cache-Control', 'public, max-age=31536000');
+        headers.set('Access-Control-Allow-Origin', '*');
+        return new Response(object.body, { headers });
+      }
+    } catch (e) {}
+  }
+  return c.text('R2 Object Not Found', 404);
+});
+
+app.get('/common/:path{.+}', async (c) => {
+  const path = c.req.param('path');
+  const key = `common/${path}`;
+  if (c.env.BUCKET) {
+    try {
+      const object = await c.env.BUCKET.get(key);
+      if (object) {
+        const headers = new Headers();
+        object.writeHttpMetadata(headers);
+        headers.set('etag', object.httpMetadata?.etag || object.etag);
+        headers.set('Cache-Control', 'public, max-age=31536000');
+        headers.set('Access-Control-Allow-Origin', '*');
+        return new Response(object.body, { headers });
+      }
+    } catch (e) {}
+  }
+  return c.text('R2 Object Not Found', 404);
+});
+
 // ----------------------------------------------------
 // 1. 微信小程序 官方鉴权与个人资料 (Auth & User Profile)
 // ----------------------------------------------------
@@ -169,6 +210,21 @@ app.post('/api/user/profile', async (c) => {
     `).run();
   } catch (e) {}
 
+  // 手机号唯一性校验：不允许不同客户绑定重复手机号
+  if (phone && phone.trim()) {
+    const cleanPhone = phone.trim();
+    const existing = await db.prepare(
+      'SELECT id, nickname FROM users WHERE phone = ? AND id != ? AND openid != ? AND openid != ?'
+    ).bind(cleanPhone, id, id, `wx_openid_${id}`).first<{ id: string; nickname: string }>();
+
+    if (existing) {
+      return c.json({ 
+        success: false, 
+        message: `联系电话【${cleanPhone}】已被客户【${existing.nickname || existing.id}】绑定，手机号必须唯一！` 
+      }, 400);
+    }
+  }
+
   await db.prepare(`
     INSERT INTO users (id, openid, nickname, avatar_url, phone, role)
     VALUES (?, ?, ?, ?, ?, 'customer')
@@ -232,6 +288,51 @@ app.get('/api/users', async (c) => {
   }
 
   return c.json({ success: true, data: users || [] });
+});
+
+/**
+ * 删除客户档案
+ * DELETE /api/admin/users/:id
+ */
+app.delete('/api/admin/users/:id', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+
+  try {
+    const user = await db.prepare('SELECT * FROM users WHERE id = ? OR openid = ?').bind(id, id).first<any>();
+    const userId = user ? user.id : id;
+    const openid = user ? user.openid : id;
+    const phone = user ? user.phone : '';
+
+    // 1. 级联删除该客户保存的所有收货/安装地址
+    await db.prepare('DELETE FROM user_addresses WHERE user_id = ? OR user_id = ?').bind(userId, openid).run();
+
+    // 2. 查找该客户关联的所有订单 ID
+    let sql = 'SELECT id FROM orders WHERE user_id = ? OR user_id = ?';
+    const params: any[] = [userId, openid];
+    if (phone) {
+      sql += ' OR customer_phone = ?';
+      params.push(phone);
+    }
+    const { results: userOrders } = await db.prepare(sql).bind(...params).all<{ id: string }>();
+    const orderIds = (userOrders || []).map(o => o.id);
+
+    // 3. 级联删除订单商品明细项与状态扭转日志
+    for (const oId of orderIds) {
+      await db.prepare('DELETE FROM order_items WHERE order_id = ?').bind(oId).run();
+      await db.prepare('DELETE FROM order_status_logs WHERE order_id = ?').bind(oId).run();
+    }
+
+    // 4. 级联删除订单主表记录
+    for (const oId of orderIds) {
+      await db.prepare('DELETE FROM orders WHERE id = ?').bind(oId).run();
+    }
+
+    // 5. 彻底删除客户主档案
+    await db.prepare('DELETE FROM users WHERE id = ? OR openid = ?').bind(userId, openid).run();
+  } catch (e) {}
+
+  return c.json({ success: true, message: '客户档案及其历史订单与地址已全量清理完毕！' });
 });
 
 /**
@@ -413,7 +514,7 @@ app.get('/api/products', async (c) => {
         description TEXT,
         cover_image TEXT,
         base_price_sqm REAL DEFAULT 680,
-        min_area REAL DEFAULT 1.5,
+        min_area REAL DEFAULT 1,
         sort_order INTEGER DEFAULT 0,
         is_active INTEGER DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -627,7 +728,7 @@ app.post('/api/orders', async (c) => {
       height_mm: height,
       quantity: 1,
       base_price_sqm: base_price_sqm || product?.base_price_sqm || 680,
-      min_area: min_area || product?.min_area || 1.5,
+      min_area: min_area || product?.min_area || 1,
       selected_options: selectedOptionObjects.map(o => ({ price_type: o.price_type, price: o.price }))
     });
 
@@ -946,12 +1047,22 @@ app.get('/api/admin/categories', async (c) => {
     `).run();
   } catch (e) {}
 
+  const nameQuery = (c.req.query('name') || c.req.query('keyword') || '').trim().toLowerCase();
+
   const { results } = await db.prepare(`
     SELECT * FROM categories 
     ORDER BY sort_order ASC, created_at DESC
-  `).all<Category>();
+  `).all<any>();
 
-  return c.json({ success: true, data: results || [], categories: results || [] });
+  let list = results || [];
+  if (nameQuery) {
+    list = list.filter((cat: any) =>
+      (cat.name && cat.name.toLowerCase().includes(nameQuery)) ||
+      (cat.sub_title && cat.sub_title.toLowerCase().includes(nameQuery))
+    );
+  }
+
+  return c.json({ success: true, data: list, categories: list });
 });
 
 /**
@@ -1061,7 +1172,7 @@ app.get('/api/admin/products', async (c) => {
         description TEXT,
         cover_image TEXT,
         base_price_sqm REAL DEFAULT 680,
-        min_area REAL DEFAULT 1.5,
+        min_area REAL DEFAULT 1,
         sort_order INTEGER DEFAULT 0,
         is_active INTEGER DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -1116,7 +1227,7 @@ app.post('/api/admin/products', async (c) => {
         description TEXT,
         cover_image TEXT,
         base_price_sqm REAL DEFAULT 680,
-        min_area REAL DEFAULT 1.5,
+        min_area REAL DEFAULT 1,
         sort_order INTEGER DEFAULT 0,
         is_active INTEGER DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -1165,7 +1276,7 @@ app.post('/api/admin/products', async (c) => {
     body.description || '',
     body.cover_image || '',
     body.base_price_sqm || 680,
-    body.min_area || 1.5,
+    (body.min_area !== undefined && body.min_area !== null) ? Number(body.min_area) : 1,
     isActive
   ).run();
 
@@ -1215,7 +1326,7 @@ app.put('/api/admin/products/:id', async (c) => {
     body.description || '',
     body.cover_image || '',
     body.base_price_sqm || 680,
-    body.min_area || 1.5,
+    (body.min_area !== undefined && body.min_area !== null) ? Number(body.min_area) : 1,
     isActive
   ).run();
 

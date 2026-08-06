@@ -55,16 +55,21 @@
 
         <a-table-column title="注册时间" data-index="created_at" :width="180" />
 
-        <a-table-column title="操作" :width="240">
+        <a-table-column title="操作" :width="230">
           <template #cell="{ record }">
-            <a-button type="outline" size="small" class="mr-2" @click="viewCustomerDetails(record)">
-              <template #icon><icon-eye /></template>
-              查看详情
-            </a-button>
-            <a-button type="outline" size="small" status="warning" @click="editUser(record)">
-              <template #icon><icon-edit /></template>
-              修改资料
-            </a-button>
+            <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
+              <a-button type="outline" size="small" @click="viewCustomerDetails(record)">
+                查看详情
+              </a-button>
+              <a-button type="outline" size="small" status="warning" @click="editUser(record)">
+                修改资料
+              </a-button>
+              <a-popconfirm content="确定彻底删除此客户档案吗？" type="warning" @ok="deleteUser(record.id)">
+                <a-button type="outline" status="danger" size="small">
+                  删除
+                </a-button>
+              </a-popconfirm>
+            </div>
           </template>
         </a-table-column>
       </template>
@@ -302,6 +307,15 @@ const handleBeforeSaveUser = async () => {
     return false;
   }
 
+  if (editForm.value.phone && editForm.value.phone.trim()) {
+    const cleanPhone = editForm.value.phone.trim();
+    const dup = users.value.find(u => u.id !== editForm.value.id && u.phone === cleanPhone);
+    if (dup) {
+      Message.warning(`【联系电话】${cleanPhone} 已被客户【${dup.nickname || '其他客户'}】绑定，不可重复！`);
+      return false;
+    }
+  }
+
   try {
     const res = await fetch(`${API_BASE}/api/user/profile`, {
       method: 'POST',
@@ -325,6 +339,21 @@ const handleBeforeSaveUser = async () => {
   } catch (e) {
     Message.error('无法连接后端服务');
     return false;
+  }
+};
+
+const deleteUser = async (id) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/users/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      Message.success('客户档案已成功删除！');
+      await fetchUsers();
+    } else {
+      Message.error(data.message || `删除失败 (HTTP ${res.status})`);
+    }
+  } catch (e) {
+    Message.error('无法连接后端服务');
   }
 };
 

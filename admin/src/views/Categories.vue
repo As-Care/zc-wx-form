@@ -8,6 +8,34 @@
       </a-button>
     </div>
 
+    <!-- 搜索与多维度筛选面板 -->
+    <a-card class="search-panel mb-4">
+      <a-form :model="searchForm" layout="inline">
+        <a-form-item label="分类名称/标签">
+          <a-input
+            v-model="searchForm.name"
+            placeholder="输入名称或关键字模糊搜索"
+            allow-clear
+            style="width: 260px;"
+            @keyup.enter="handleSearch"
+          />
+        </a-form-item>
+
+        <a-form-item>
+          <a-space>
+            <a-button type="primary" @click="handleSearch">
+              <template #icon><icon-search /></template>
+              查询
+            </a-button>
+            <a-button @click="resetSearch">
+              <template #icon><icon-refresh /></template>
+              重置
+            </a-button>
+          </a-space>
+        </a-form-item>
+      </a-form>
+    </a-card>
+
     <!-- 分类数据表格 -->
     <a-table :data="categories" :loading="tableLoading" :pagination="{ pageSize: 10 }" border row-key="id">
       <template #columns>
@@ -37,15 +65,36 @@
           </template>
         </a-table-column>
 
-        <a-table-column title="排序权重" :width="130">
+        <a-table-column title="排序权重" :width="190">
           <template #cell="{ record }">
-            <a-input-number
-              v-model="record.sort_order"
-              size="small"
-              :min="0"
-              style="width: 86px;"
-              @change="handleQuickSortChange(record)"
-            />
+            <div style="display: flex; align-items: center;">
+              <!-- 编辑态：出现输入框 + 保存/取消按键 -->
+              <template v-if="record.is_editing_sort">
+                <a-input-number
+                  v-model="record.editing_sort_order"
+                  size="small"
+                  :min="0"
+                  style="width: 76px; margin-right: 6px;"
+                />
+                <a-button type="primary" size="small" status="success" style="margin-right: 4px;" @click="saveSortChange(record)">
+                  保存
+                </a-button>
+                <a-button type="text" size="small" style="color: #86909c; padding: 0 2px;" @click="cancelEditSort(record)">
+                  取消
+                </a-button>
+              </template>
+
+              <!-- 常规展示态：呈现数字与右侧【修改】按钮 -->
+              <template v-else>
+                <a-tag color="arcoblue" style="font-weight: bold; margin-right: 8px;">
+                  {{ record.sort_order }}
+                </a-tag>
+                <a-button type="text" size="small" style="color: #C5A880; font-weight: 600;" @click="startEditSort(record)">
+                  <template #icon><icon-edit /></template>
+                  修改
+                </a-button>
+              </template>
+            </div>
           </template>
         </a-table-column>
 
@@ -63,18 +112,18 @@
           </template>
         </a-table-column>
 
-        <a-table-column title="操作" :width="180">
+        <a-table-column title="操作" :width="140">
           <template #cell="{ record }">
-            <a-button type="outline" size="small" class="mr-2" @click="editCategory(record)">
-              <template #icon><icon-edit /></template>
-              编辑
-            </a-button>
-            <a-popconfirm content="确定彻底删除此门窗分类吗？" type="warning" @ok="deleteCategory(record.id)">
-              <a-button type="outline" status="danger" size="small">
-                <template #icon><icon-delete /></template>
-                删除
+            <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
+              <a-button type="outline" size="small" @click="editCategory(record)">
+                编辑
               </a-button>
-            </a-popconfirm>
+              <a-popconfirm content="确定彻底删除此门窗分类吗？" type="warning" @ok="deleteCategory(record.id)">
+                <a-button type="outline" status="danger" size="small">
+                  删除
+                </a-button>
+              </a-popconfirm>
+            </div>
           </template>
         </a-table-column>
       </template>
@@ -165,6 +214,10 @@ const DEFAULT_CATEGORIES = [
   { id: 'cat_5', name: '幕墙工程系', sub_title: '幕墙工程系', icon_url: '', sort_order: 5, is_active: 1 }
 ];
 
+const searchForm = ref({
+  name: ''
+});
+
 const categories = ref([]);
 const tableLoading = ref(true);
 
@@ -180,13 +233,33 @@ const form = ref({
   is_active: 1
 });
 
+const handleSearch = () => {
+  fetchCategories();
+};
+
+const resetSearch = () => {
+  searchForm.value.name = '';
+  fetchCategories();
+};
+
 const fetchCategories = async () => {
   tableLoading.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/admin/categories`);
+    const params = new URLSearchParams();
+    if (searchForm.value.name && searchForm.value.name.trim()) {
+      params.append('name', searchForm.value.name.trim());
+    }
+    const res = await fetch(`${API_BASE}/api/admin/categories?${params.toString()}`);
     const data = await res.json();
-    const list = data.data || data.categories;
-    if (data.success && list && list.length > 0) {
+    let list = data.data || data.categories;
+    if (data.success && list) {
+      if (searchForm.value.name && searchForm.value.name.trim()) {
+        const kw = searchForm.value.name.trim().toLowerCase();
+        list = list.filter(c => 
+          (c.name && c.name.toLowerCase().includes(kw)) ||
+          (c.sub_title && c.sub_title.toLowerCase().includes(kw))
+        );
+      }
       categories.value = list.map(c => ({
         ...c,
         sort_order: (c.sort_order !== undefined && c.sort_order !== null) ? Number(c.sort_order) : 0,
@@ -268,16 +341,28 @@ const handleBeforeSaveCategory = async () => {
   }
 };
 
-const handleQuickSortChange = async (record) => {
+const startEditSort = (record) => {
+  record.editing_sort_order = record.sort_order !== undefined ? Number(record.sort_order) : 0;
+  record.is_editing_sort = true;
+};
+
+const cancelEditSort = (record) => {
+  record.is_editing_sort = false;
+};
+
+const saveSortChange = async (record) => {
+  const newSort = Number(record.editing_sort_order || 0);
   try {
     const res = await fetch(`${API_BASE}/api/admin/categories/${record.id}/sort`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sort_order: record.sort_order })
+      body: JSON.stringify({ sort_order: newSort })
     });
     const data = await res.json();
     if (res.ok && data.success) {
       Message.success('排序更正成功！');
+      record.sort_order = newSort;
+      record.is_editing_sort = false;
       await fetchCategories();
     } else {
       Message.error(data.message || '排序更正失败');

@@ -133,16 +133,14 @@
         </a-table-column>
 
         <!-- 左右并排单行按钮样式 -->
-        <a-table-column title="操作" :width="230">
+        <a-table-column title="操作" :width="180">
           <template #cell="{ record }">
-            <div style="display: flex; gap: 8px; align-items: center;">
+            <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
               <a-button type="outline" size="small" @click="viewOrderDetail(record)">
-                <template #icon><icon-eye /></template>
-                订单详情
+                查看详情
               </a-button>
               <a-button type="outline" status="warning" size="small" @click="openModal(record)">
-                <template #icon><icon-edit /></template>
-                修改状态/改价
+                修改状态
               </a-button>
             </div>
           </template>

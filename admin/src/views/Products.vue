@@ -118,10 +118,16 @@
           </template>
         </a-table-column>
 
-        <a-table-column title="操作" :width="200">
+        <a-table-column title="操作" :width="180">
           <template #cell="{ record }">
-            <a-button type="text" size="small" @click="editProduct(record)">修改价格/主图</a-button>
-            <a-button type="text" status="warning" size="small" @click="openOptionsDrawer(record)">加价选配</a-button>
+            <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
+              <a-button type="outline" size="small" @click="editProduct(record)">
+                编辑
+              </a-button>
+              <a-button type="outline" size="small" status="warning" @click="openOptionsDrawer(record)">
+                选配规则
+              </a-button>
+            </div>
           </template>
         </a-table-column>
       </template>
@@ -239,7 +245,7 @@
         </div>
 
         <div class="mb-4 flex-between">
-          <a-tag color="gold" size="large" style="font-weight: 600;">基础定价：¥ {{ currentProduct.base_price_sqm }} / ㎡</a-tag>
+          <a-tag class="champagne-tag" size="large" style="font-weight: 600;">基础定价：¥ {{ currentProduct.base_price_sqm }} / ㎡</a-tag>
           <a-button type="primary" size="medium" @click="addOptionRow">
             <template #icon><icon-plus /></template>
             添加加价选配项
@@ -321,8 +327,8 @@ const categories = ref([
 ]);
 
 const DEFAULT_PRODUCTS = [
-  { id: 'prod_1', category_id: 'cat_1', category_name: '断桥铝系统窗', name: '110断桥铝系统平开窗', description: '壁厚1.8mm，配LOW-E双玻中空，德国好博/施格兰五金', cover_image: 'https://zc-oss.carelife.top/common/prod-110.png', base_price_sqm: 880, min_area: 1.5, is_active: 1 },
-  { id: 'prod_2', category_id: 'cat_2', category_name: '极窄推拉门/平开门', name: '极窄边框推拉门 (磁吸静音)', description: '极简2.0cm极窄边框，高强度铝钛合金，静音缓冲滑轮', cover_image: 'https://zc-oss.carelife.top/common/prod-narrow-door.png', base_price_sqm: 750, min_area: 1.5, is_active: 1 }
+  { id: 'prod_1', category_id: 'cat_1', category_name: '断桥铝系统窗', name: '110断桥铝系统平开窗', description: '壁厚1.8mm，配LOW-E双玻中空，德国好博/施格兰五金', cover_image: 'https://zc-oss.carelife.top/common/prod-110.png', base_price_sqm: 880, min_area: 1, is_active: 1 },
+  { id: 'prod_2', category_id: 'cat_2', category_name: '极窄推拉门/平开门', name: '极窄边框推拉门 (磁吸静音)', description: '极简2.0cm极窄边框，高强度铝钛合金，静音缓冲滑轮', cover_image: 'https://zc-oss.carelife.top/common/prod-narrow-door.png', base_price_sqm: 750, min_area: 1, is_active: 1 }
 ];
 
 const searchForm = ref({
@@ -345,7 +351,7 @@ const form = ref({
   cover_image: '',
   category_name: '断桥铝系统窗',
   base_price_sqm: 680,
-  min_area: 1.5,
+  min_area: 1,
   is_active: 1
 });
 
@@ -397,7 +403,7 @@ const openProductModal = () => {
     cover_image: '',
     category_name: '断桥铝系统窗',
     base_price_sqm: 680,
-    min_area: 1.5,
+    min_area: 1,
     is_active: 1
   };
   uploading.value = false;
@@ -412,7 +418,7 @@ const editProduct = (record) => {
     cover_image: record.cover_image || '',
     category_name: record.category_name || '断桥铝系统窗',
     base_price_sqm: record.base_price_sqm || 680,
-    min_area: record.min_area || 1.5,
+    min_area: (record.min_area !== undefined && record.min_area !== null) ? Number(record.min_area) : 1,
     is_active: (record.is_active !== undefined && record.is_active !== null) ? Number(record.is_active) : 1
   };
   uploading.value = false;
@@ -556,6 +562,18 @@ onMounted(() => {
 .view-title { font-size: 20px; font-weight: 700; margin: 0; }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .mb-4 { margin-bottom: 16px; }
+
+.champagne-tag {
+  background: rgba(197, 168, 128, 0.12) !important;
+  color: #A38456 !important;
+  border: 1px solid rgba(197, 168, 128, 0.35) !important;
+  border-radius: 6px;
+}
+body[arco-theme='dark'] .champagne-tag {
+  background: rgba(197, 168, 128, 0.2) !important;
+  color: #E2C7A0 !important;
+  border-color: rgba(197, 168, 128, 0.4) !important;
+}
 
 :deep(.no-wrap-header-table .arco-table-th-item) {
   white-space: nowrap !important;
