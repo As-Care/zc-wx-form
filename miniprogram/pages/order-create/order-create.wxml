@@ -1,9 +1,9 @@
 <!-- 展晨门窗 确认定制订单 WXML -->
 <view class="container">
-  <!-- ① 客户联系人与安装地址信息表单 (放在最顶部) -->
+  <!-- ① 客户联系人与收货地址信息表单 (放在最顶部) -->
   <view class="glass-card form-card">
     <view class="flex-between mb-3" style="align-items: center;">
-      <text class="card-title" style="margin-bottom: 0;">① 联系人与安装地址信息</text>
+      <text class="card-title" style="margin-bottom: 0;">① 联系人与收货地址信息</text>
       <view class="pick-addr-btn" bindtap="navToPickAddress">选择已存地址 ❯</view>
     </view>
     <view class="form-group">
@@ -15,20 +15,19 @@
       <input class="field-input" type="number" placeholder="请输入您的手机号" value="{{customer_phone}}" bindinput="onPhoneInput" />
     </view>
     <view class="form-group">
-      <text class="field-label">安装详细地址</text>
+      <text class="field-label">收货详细地址</text>
       <input class="field-input" placeholder="请输入小区/栋数/门牌号 (如: 仙桃市新天地8栋1202)" value="{{install_address}}" bindinput="onAddressInput" />
     </view>
   </view>
-
   <!-- ② 门窗定制规格明细卡片 (全量展示多套配置明细、现场图片与施工备注，放在下面) -->
   <view class="glass-card summary-card">
     <text class="card-title">② 门窗定制规格与下单明细</text>
     <!-- 多套门窗规格循环拆解 -->
     <view class="item-preview-box mb-3" wx:for="{{setsList}}" wx:key="id" wx:for-index="sIdx">
       <view class="mb-2">
-        <view class="prod-title mb-2">{{draft.product_name}}</view>
+        <view class="prod-title">{{draft.product_name}}</view>
         <view class="set-tag-wrapper">
-          <text class="set-tag">【{{item.label || ('套系 ' + (sIdx + 1))}}】</text>
+          <text class="set-tag">{{item.label || ('套系 ' + (sIdx + 1))}}</text>
         </view>
       </view>
       <view class="spec-row flex-between">
@@ -47,7 +46,6 @@
         <text class="s-label">本套预估小计</text>
         <text class="s-val theme-gold-text">¥ {{item.calcResult.totalPrice}}</text>
       </view>
-
       <!-- 已选选配规则列表 -->
       <view class="divider"></view>
       <text class="sub-title">已选配置明细：</text>
@@ -57,7 +55,6 @@
           <text>{{opt.groupTitle || opt.group_name}}：{{opt.option_name || opt.name}}</text>
         </view>
       </view>
-
       <!-- 该套上传的现场照片列表 -->
       <view class="scene-preview-sec flex-column" wx:if="{{item.scene_images && item.scene_images.length > 0}}">
         <text class="sub-title sec-title">📷 现场环境照片：</text>
@@ -65,7 +62,6 @@
           <image class="scene-thumb-img" wx:for="{{item.scene_images}}" wx:for-item="sImg" wx:key="*this" src="{{sImg}}" mode="aspectFill" bindtap="previewSetImage" data-url="{{sImg}}" data-setindex="{{sIdx}}" />
         </view>
       </view>
-
       <!-- 该套现场工况与施工备注 -->
       <view class="scene-remark-sec flex-column" wx:if="{{item.customer_remark}}">
         <text class="sub-title sec-title">📝 现场施工与工况备注：</text>
@@ -73,7 +69,6 @@
       </view>
     </view>
   </view>
-
   <!-- 底部固定提交栏 -->
   <view class="floating-submit-bar flex-between">
     <view class="total-box flex-column">

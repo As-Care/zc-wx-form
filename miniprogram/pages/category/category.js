@@ -18,9 +18,10 @@ Page({
   fetchData() {
     request({ url: '/api/categories' }).then(res => {
       let categories = (res.success && Array.isArray(res.data)) ? res.data : [];
+      categories.unshift({ id: 'all', name: '全部' });
       this.initSelectedCategory(categories);
     }).catch(() => {
-      this.initSelectedCategory([]);
+      this.initSelectedCategory([{ id: 'all', name: '全部' }]);
     });
   },
 
@@ -65,7 +66,10 @@ Page({
 
   fetchProducts(catId, catName) {
     this.setData({ loading: true });
-    const queryParam = catId || catName || '';
+    let queryParam = catId || catName || '';
+    if (catId === 'all') {
+      queryParam = '';
+    }
     request({ url: `/api/products?category_id=${encodeURIComponent(queryParam)}` }).then(res => {
       if (res.success && Array.isArray(res.data)) {
         this.setData({ productList: res.data });

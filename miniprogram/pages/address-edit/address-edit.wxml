@@ -1,46 +1,40 @@
 <!-- 展晨门窗 新增/修改地址 WXML -->
 <view class="container">
-
   <view class="glass-card form-card">
     <view class="form-group">
       <view class="field-label">联系人姓名</view>
       <input class="field-input" placeholder="请输入联系人姓名 (如: 张先生)" value="{{form.name}}" bindinput="onNameInput" />
     </view>
-
     <view class="form-group">
       <view class="field-label">联系电话</view>
       <input class="field-input" type="number" placeholder="请输入联系手机号" value="{{form.phone}}" bindinput="onPhoneInput" />
     </view>
-
     <view class="form-group">
       <view class="field-label">省/市/区 (选填)</view>
       <picker mode="region" bindchange="onRegionChange" value="{{region}}">
         <view class="picker-input flex-between">
-          <view wx:if="{{region && region.length > 0}}">{{region[0]}} {{region[1]}} {{region[2]}}</view>
+          <view wx:if="{{region && region.length > 0}}">
+            {{region[0]}} {{region[1]}} {{region[2]}}
+          </view>
           <view wx:else style="color: #64748B;">点击选择省市区</view>
           <view style="color: #C5A880;">▾</view>
         </view>
       </picker>
     </view>
-
     <view class="form-group">
-      <view class="field-label">详细安装/收货地址</view>
+      <view class="field-label">详细收货/安装货地址</view>
       <textarea class="field-textarea" placeholder="请输入小区/街道/门牌号 (如: 恒迪建材市场A区3号1202室)" value="{{form.detail_address}}" bindinput="onDetailInput" />
     </view>
-
     <view class="divider"></view>
-
     <view class="switch-row flex-between">
       <view class="flex-column">
-        <view class="switch-title">设为默认安装/收货地址</view>
+        <view class="switch-title">设为默认收货/安装地址</view>
         <view class="switch-sub">下单时将优先自动填充此地址</view>
       </view>
       <switch checked="{{form.is_default}}" color="#C5A880" bindchange="onDefaultSwitch" />
     </view>
   </view>
-
   <view class="floating-btn-bar">
     <view class="save-btn btn-gold flex-center" bindtap="saveAddress">保存地址</view>
   </view>
-
 </view>

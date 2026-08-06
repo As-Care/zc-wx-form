@@ -19,7 +19,8 @@ Page({
   },
 
   fetchAddresses() {
-    const userId = (app.globalData.userInfo && app.globalData.userInfo.id) || 'user_customer_demo';
+    const savedUser = wx.getStorageSync('zc_user_info');
+    const userId = (savedUser && savedUser.id) || (app.globalData.userInfo && app.globalData.userInfo.id) || 'user_customer_demo';
     wx.showLoading({ title: '加载地址中...' });
 
     request({
@@ -48,7 +49,8 @@ Page({
 
   setDefaultAddress(e) {
     const id = e.currentTarget.dataset.id;
-    const userId = (app.globalData.userInfo && app.globalData.userInfo.id) || 'user_customer_demo';
+    const savedUser = wx.getStorageSync('zc_user_info');
+    const userId = (savedUser && savedUser.id) || (app.globalData.userInfo && app.globalData.userInfo.id) || 'user_customer_demo';
 
     wx.showLoading({ title: '设置中...' });
     request({

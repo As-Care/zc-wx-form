@@ -301,27 +301,9 @@ const viewCustomerDetails = async (record) => {
     const data = await res.json();
     if (data.success && data.data && data.data.length > 0) {
       userAddresses.value = data.data;
-    } else if (record.address && record.address !== '暂无保存地址') {
-      userAddresses.value = [{
-        id: 'addr_default',
-        name: record.nickname || '客户',
-        phone: record.phone || '已绑定',
-        detail_address: record.address,
-        is_default: 1
-      }];
-    } else {
-      userAddresses.value = [];
     }
-  } catch (e) {
-    if (record.address && record.address !== '暂无保存地址') {
-      userAddresses.value = [{
-        id: 'addr_default',
-        name: record.nickname || '客户',
-        phone: record.phone || '已绑定',
-        detail_address: record.address,
-        is_default: 1
-      }];
-    }
+  } catch (error) {
+    Message.error('获取地址失败');
   } finally {
     addressLoading.value = false;
   }

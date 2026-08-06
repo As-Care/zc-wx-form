@@ -182,122 +182,137 @@
       v-model:visible="modalVisible"
       title="配置门窗商品与主图"
       :on-before-ok="handleBeforeSaveProduct"
+      width="860px"
     >
       <a-form :model="form" layout="vertical">
-        <a-form-item
-          field="name"
-          label="商品名称"
-          required
-          :rules="[{ required: true, message: '商品名称为必填项' }]"
-        >
-          <a-input v-model="form.name" placeholder="请输入商品全称（必填）" />
-        </a-form-item>
+        <a-row :gutter="24">
+          <!-- 左侧栏：基础信息 -->
+          <a-col :span="12">
+            <a-form-item
+              field="name"
+              label="商品名称"
+              required
+              :rules="[{ required: true, message: '商品名称为必填项' }]"
+            >
+              <a-input v-model="form.name" placeholder="请输入商品全称（必填）" />
+            </a-form-item>
 
-        <a-form-item label="上下架状态" required>
-          <a-switch
-            v-model="form.is_active"
-            :checked-value="1"
-            :unchecked-value="0"
-          >
-            <template #checked>已上架</template>
-            <template #unchecked>已下架</template>
-          </a-switch>
-        </a-form-item>
+            <a-form-item label="上下架状态" required>
+              <a-switch
+                v-model="form.is_active"
+                :checked-value="1"
+                :unchecked-value="0"
+              >
+                <template #checked>已上架</template>
+                <template #unchecked>已下架</template>
+              </a-switch>
+            </a-form-item>
 
-        <a-form-item
-          field="cover_image"
-          label="商品封面主图"
-          required
-          :rules="[{ required: true, message: '请上传商品封面主图' }]"
-        >
-          <div class="luxury-upload-card">
-            <a-spin :loading="uploading" tip="正在上传中">
-              <div v-if="form.cover_image" class="cover-preview-box">
-                <img :src="form.cover_image" class="cover-img" />
-                <div class="cover-hover-mask">
+            <a-form-item
+              field="category_name"
+              label="所属分类"
+              required
+              :rules="[{ required: true, message: '请选择所属分类' }]"
+            >
+              <a-select
+                v-model="form.category_name"
+                placeholder="请选择分类（必选）"
+              >
+                <a-option v-for="cat in categories" :key="cat" :value="cat">
+                  {{ cat }}
+                </a-option>
+              </a-select>
+            </a-form-item>
+
+            <a-form-item label="简短描述说明">
+              <a-textarea
+                v-model="form.description"
+                placeholder="高隔音高隔热，适合高层住宅与阳台封窗"
+                :auto-size="{ minRows: 3, maxRows: 5 }"
+              />
+            </a-form-item>
+
+            <a-form-item label="基础平米单价 (元/㎡)">
+              <a-input-number v-model="form.base_price_sqm" placeholder="如 680" />
+            </a-form-item>
+          </a-col>
+
+          <!-- 右侧栏：图片与计费配置 -->
+          <a-col :span="12">
+            <a-form-item
+              field="cover_image"
+              label="商品封面主图"
+              required
+              :rules="[{ required: true, message: '请上传商品封面主图' }]"
+            >
+              <div class="luxury-upload-card">
+                <a-spin :loading="uploading" tip="正在上传中">
+                  <div v-if="form.cover_image" class="cover-preview-box">
+                    <img :src="form.cover_image" class="cover-img" />
+                    <div class="cover-hover-mask">
+                      <a-upload
+                        action="https://zc-api.carelife.top/api/upload"
+                        :show-file-list="false"
+                        @before-upload="onBeforeUpload"
+                        @success="onCoverUploadSuccess"
+                        @error="onCoverUploadError"
+                        style="display: inline-block"
+                      >
+                        <template #upload-button>
+                          <span class="mask-icon" title="更换主图">
+                            <icon-camera />
+                          </span>
+                        </template>
+                      </a-upload>
+                      <span
+                        class="mask-icon mask-icon-delete ml-2"
+                        title="删除主图"
+                        @click.stop="form.cover_image = ''"
+                      >
+                        <icon-delete />
+                      </span>
+                    </div>
+                  </div>
                   <a-upload
+                    v-else
                     action="https://zc-api.carelife.top/api/upload"
                     :show-file-list="false"
                     @before-upload="onBeforeUpload"
                     @success="onCoverUploadSuccess"
                     @error="onCoverUploadError"
-                    style="display: inline-block"
                   >
                     <template #upload-button>
-                      <span class="mask-icon" title="更换主图">
-                        <icon-camera />
-                      </span>
+                      <div class="upload-dropzone">
+                        <div class="upload-icon-circle">
+                          <icon-plus style="font-size: 22px; color: #c5a880" />
+                        </div>
+                        <span class="upload-title">点击上传图片</span>
+                        <span class="upload-sub">支持 PNG / JPG / WEBP 格式</span>
+                      </div>
                     </template>
                   </a-upload>
-                  <span
-                    class="mask-icon mask-icon-delete ml-2"
-                    title="删除主图"
-                    @click.stop="form.cover_image = ''"
-                  >
-                    <icon-delete />
-                  </span>
-                </div>
+                </a-spin>
               </div>
-              <a-upload
-                v-else
-                action="https://zc-api.carelife.top/api/upload"
-                :show-file-list="false"
-                @before-upload="onBeforeUpload"
-                @success="onCoverUploadSuccess"
-                @error="onCoverUploadError"
-              >
-                <template #upload-button>
-                  <div class="upload-dropzone">
-                    <div class="upload-icon-circle">
-                      <icon-plus style="font-size: 22px; color: #c5a880" />
-                    </div>
-                    <span class="upload-title">点击上传图片</span>
-                    <span class="upload-sub">支持 PNG / JPG / WEBP 格式</span>
-                  </div>
-                </template>
-              </a-upload>
-            </a-spin>
-          </div>
-        </a-form-item>
+            </a-form-item>
 
-        <a-form-item
-          field="category_name"
-          label="所属分类"
-          required
-          :rules="[{ required: true, message: '请选择所属分类' }]"
-        >
-          <a-select
-            v-model="form.category_name"
-            placeholder="请选择分类（必选）"
-          >
-            <a-option v-for="cat in categories" :key="cat" :value="cat">
-              {{ cat }}
-            </a-option>
-          </a-select>
-        </a-form-item>
+            <a-row :gutter="16">
+              <a-col :span="12">
+                <a-form-item label="默认宽度 (mm)">
+                  <a-input-number v-model="form.default_width" placeholder="选填，如 2400" />
+                </a-form-item>
+              </a-col>
+              <a-col :span="12">
+                <a-form-item label="默认高度 (mm)">
+                  <a-input-number v-model="form.default_height" placeholder="选填，如 2100" />
+                </a-form-item>
+              </a-col>
+            </a-row>
 
-        <a-form-item label="简短描述说明">
-          <a-input
-            v-model="form.description"
-            placeholder="高隔音高隔热，适合高层住宅与阳台封窗"
-          />
-        </a-form-item>
-
-        <a-form-item label="基础平米单价 (元/㎡)">
-          <a-input-number v-model="form.base_price_sqm" placeholder="如 680" />
-        </a-form-item>
-
-        <a-form-item label="起步计费面积 (㎡)">
-          <a-input-number v-model="form.min_area" placeholder="如 1.5" />
-        </a-form-item>
-
-        <a-form-item label="默认宽度 (mm)">
-          <a-input-number v-model="form.default_width" placeholder="选填，如 2400" />
-        </a-form-item>
-
-        <a-form-item label="默认高度 (mm)">
-          <a-input-number v-model="form.default_height" placeholder="选填，如 2100" />
-        </a-form-item>
+            <a-form-item label="起步计费面积 (㎡)">
+              <a-input-number v-model="form.min_area" placeholder="如 1.5" />
+            </a-form-item>
+          </a-col>
+        </a-row>
       </a-form>
     </a-modal>
 
@@ -927,6 +942,18 @@ const addItemToGroup = (group) => {
 const removeItemFromGroup = (group, itemIndex) => {
   if (group.items) {
     group.items.splice(itemIndex, 1);
+  }
+};
+
+const handleDefaultSwitch = (group, record) => {
+  if (record.is_default === 1) {
+    if (group && group.items) {
+      group.items.forEach(item => {
+        if (item.id !== record.id) {
+          item.is_default = 0;
+        }
+      });
+    }
   }
 };
 

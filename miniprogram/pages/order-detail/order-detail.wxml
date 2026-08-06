@@ -1,6 +1,5 @@
 <!-- 展晨门窗 订单详情与流转时间轴 WXML -->
 <view class="container">
-
   <!-- 顶部状态提示 (黑曜石高奢卡片，移除原锤子Icon) -->
   <view class="glass-card status-banner-card flex-between">
     <view class="s-text-box flex-column">
@@ -11,11 +10,9 @@
       <text class="s-subtitle">{{order.statusDesc}}</text>
     </view>
   </view>
-
   <!-- 可视化进度时间轴 -->
   <view class="glass-card timeline-card">
     <text class="card-title">① 订单排产与提货进度时间轴</text>
-
     <view class="timeline flex-between">
       <view class="step-item flex-column {{step.active ? 'active' : ''}}" wx:for="{{steps}}" wx:key="name" wx:for-item="step">
         <view class="node-circle flex-row">
@@ -25,10 +22,9 @@
       </view>
     </view>
   </view>
-
   <!-- 👤 客户信息与安装地址卡片 -->
   <view class="glass-card customer-card" wx:if="{{order.customer_name || order.order_no}}">
-    <text class="card-title">👤 客户信息与安装地址</text>
+    <text class="card-title">👤 客户信息与收货/安装地址</text>
     <view class="c-info-grid flex-column">
       <view class="info-row flex-between" wx:if="{{order.order_no}}">
         <text class="info-label">订单编号</text>
@@ -47,12 +43,11 @@
         <text class="info-val gold-text">{{order.customer_phone}}</text>
       </view>
       <view class="info-row flex-between" wx:if="{{order.install_address}}">
-        <text class="info-label">安装地址</text>
+        <text class="info-label">收货/安装地址</text>
         <text class="info-val address-text">{{order.install_address}}</text>
       </view>
     </view>
   </view>
-
   <!-- 特殊费用核算通知 (如果有) -->
   <view class="glass-card special-charge-card" wx:if="{{order.special_charges_amount > 0 || order.admin_remark}}">
     <text class="card-title">⚠️ 商家复核说明与补充收费</text>
@@ -64,20 +59,17 @@
       </view>
     </view>
   </view>
-
   <!-- 门窗多套定制规格明细拆解 -->
   <view class="glass-card items-card">
     <text class="card-title">② 门窗多套定制规格明细拆解 (共{{order.items.length}}套)</text>
-
     <!-- 逐套展示明细 -->
     <view class="item-preview-box mb-3" wx:for="{{order.items}}" wx:key="label" wx:for-index="idx">
       <view class="mb-2">
         <view class="prod-title mb-2">{{item.product_name || '110断桥铝系统平开窗'}}</view>
-        <view class="set-tag-wrapper">
-          <text class="set-tag">【 {{item.label || ('套系 ' + (idx + 1))}} 】</text>
+        <view class="set-tag-wrapper mb-2">
+          <text class="set-tag">{{item.label || ('套系 ' + (idx + 1))}}</text>
         </view>
       </view>
-
       <view class="spec-row flex-between">
         <text class="s-label">输入尺寸 (宽 × 高)</text>
         <text class="s-val">{{item.width_mm}} × {{item.height_mm}} mm</text>
@@ -94,18 +86,18 @@
         <text class="s-label">本套预估小计</text>
         <text class="s-val theme-gold-text">¥ {{item.item_subtotal}}</text>
       </view>
-
       <view class="divider"></view>
-
       <!-- 已选配置明细 -->
       <text class="sub-title">已选配置明细：</text>
       <view class="opt-tag-list flex-row mt-1">
         <view class="opt-tag flex-row" wx:for="{{item.options_summary}}" wx:for-item="opt" wx:key="groupTitle">
           <image wx:if="{{opt.image_url}}" class="opt-tag-img" src="{{opt.image_url}}" mode="aspectFill" />
-          <text>{{opt.groupTitle || opt.group_name}}：{{opt.option_name || opt.name}} <text wx:if="{{opt.priceText}}" style="color: #94A3B8;">({{opt.priceText}})</text></text>
+          <text>
+            {{opt.groupTitle || opt.group_name}}：{{opt.option_name || opt.name}}
+            <text wx:if="{{opt.priceText}}" style="color: #94A3B8;">({{opt.priceText}})</text>
+          </text>
         </view>
       </view>
-
       <!-- 该套上传的现场照片列表 -->
       <view class="scene-preview-sec flex-column" wx:if="{{item.scene_images_list && item.scene_images_list.length > 0}}">
         <text class="sub-title sec-title">📷 现场环境照片：</text>
@@ -113,14 +105,12 @@
           <image class="scene-thumb-img" wx:for="{{item.scene_images_list}}" wx:for-item="sImg" wx:key="*this" src="{{sImg}}" mode="aspectFill" bindtap="previewItemSceneImg" data-url="{{sImg}}" data-idx="{{idx}}" />
         </view>
       </view>
-
       <!-- 该套现场工况与施工备注 -->
       <view class="scene-remark-sec flex-column" wx:if="{{item.customer_remark}}">
         <text class="sub-title sec-title">📝 现场施工与工况备注：</text>
         <text class="remark-text-box">{{item.customer_remark}}</text>
       </view>
     </view>
-
     <!-- 汇总金额拆解 -->
     <view class="summary-breakdown flex-column">
       <view class="b-row flex-between">
@@ -141,11 +131,9 @@
       </view>
     </view>
   </view>
-
   <!-- 联系客服与拨号 (支持选择拨打或复制号码) -->
   <view class="bottom-action-bar flex-between">
     <button class="call-store-btn" bindtap="makePhoneCall">📞 拨打/复制联系电话</button>
     <button class="nav-back-btn btn-gold" bindtap="navBackOrders">返回订单列表</button>
   </view>
-
 </view>

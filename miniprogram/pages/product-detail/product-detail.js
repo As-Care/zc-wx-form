@@ -105,6 +105,7 @@ Page({
   },
 
   fetchProductDetail(id) {
+    wx.showLoading({ title: '加载配置中...', mask: true });
     request({ url: `/api/products/${id}` }).then(res => {
       if (res.success && res.data) {
         const prod = res.data;
@@ -115,6 +116,8 @@ Page({
         });
         this.initDefaultSets();
       }
+    }).finally(() => {
+      wx.hideLoading();
     });
   },
 

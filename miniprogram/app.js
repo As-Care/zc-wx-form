@@ -2,8 +2,8 @@
 
 App({
   globalData: {
-    // 指向 Cloudflare Workers 后端（本地开发或线上地址）
-    baseUrl: 'http://127.0.0.1:8787', 
+    // 指向 Cloudflare Workers 后端（线上地址）
+    baseUrl: 'https://zc-api.carelife.top', 
     userInfo: null,
     token: null,
     // 官方门店品牌信息

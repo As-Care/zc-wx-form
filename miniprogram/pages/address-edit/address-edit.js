@@ -1,125 +1,135 @@
 // 展晨门窗 新增/编辑地址 Page 逻辑
-const { request } = require('../../utils/request');
+const { request } = require("../../utils/request");
 const app = getApp();
 
 Page({
   data: {
     isEditMode: false,
-    region: ['湖北省', '省直辖县级行政区划', '仙桃市'],
+    region: ["湖北省", "省直辖县级行政区划", "仙桃市"],
     form: {
-      id: '',
-      name: '',
-      phone: '',
-      province: '湖北省',
-      city: '省直辖县级行政区划',
-      district: '仙桃市',
-      detail_address: '',
-      is_default: true
-    }
+      id: "",
+      name: "",
+      phone: "",
+      province: "湖北省",
+      city: "省直辖县级行政区划",
+      district: "仙桃市",
+      detail_address: "",
+      is_default: true,
+    },
   },
 
   onLoad(options) {
-    if (options && options.mode === 'edit') {
-      const editingItem = wx.getStorageSync('editingAddressItem');
+    if (options && options.mode === "edit") {
+      const editingItem = wx.getStorageSync("editingAddressItem");
       if (editingItem) {
-        wx.setNavigationBarTitle({ title: '修改安装/收货地址' });
+        wx.setNavigationBarTitle({ title: "修改收货/安装货地址" });
         this.setData({
           isEditMode: true,
-          region: [editingItem.province || '湖北省', editingItem.city || '省直辖县级行政区划', editingItem.district || '仙桃市'],
+          region: [
+            editingItem.province || "湖北省",
+            editingItem.city || "省直辖县级行政区划",
+            editingItem.district || "仙桃市",
+          ],
           form: {
             id: editingItem.id,
             name: editingItem.name,
             phone: editingItem.phone,
-            province: editingItem.province || '湖北省',
-            city: editingItem.city || '省直辖县级行政区划',
-            district: editingItem.district || '仙桃市',
-            detail_address: editingItem.detail_address || '',
-            is_default: Boolean(editingItem.is_default)
-          }
+            province: editingItem.province || "湖北省",
+            city: editingItem.city || "省直辖县级行政区划",
+            district: editingItem.district || "仙桃市",
+            detail_address: editingItem.detail_address || "",
+            is_default: Boolean(editingItem.is_default),
+          },
         });
         return;
       }
     }
 
-    wx.setNavigationBarTitle({ title: '新增安装/收货地址' });
+    wx.setNavigationBarTitle({ title: "新增收货/安装地址" });
     this.setData({
-      region: ['湖北省', '省直辖县级行政区划', '仙桃市'],
-      'form.province': '湖北省',
-      'form.city': '省直辖县级行政区划',
-      'form.district': '仙桃市',
-      'form.is_default': true
+      region: ["湖北省", "省直辖县级行政区划", "仙桃市"],
+      "form.province": "湖北省",
+      "form.city": "省直辖县级行政区划",
+      "form.district": "仙桃市",
+      "form.is_default": true,
     });
   },
 
   onNameInput(e) {
-    this.setData({ 'form.name': e.detail.value });
+    this.setData({ "form.name": e.detail.value });
   },
 
   onPhoneInput(e) {
-    this.setData({ 'form.phone': e.detail.value });
+    this.setData({ "form.phone": e.detail.value });
   },
 
   onRegionChange(e) {
     const val = e.detail.value;
     this.setData({
       region: val,
-      'form.province': val[0] || '',
-      'form.city': val[1] || '',
-      'form.district': val[2] || ''
+      "form.province": val[0] || "",
+      "form.city": val[1] || "",
+      "form.district": val[2] || "",
     });
   },
 
   onDetailInput(e) {
-    this.setData({ 'form.detail_address': e.detail.value });
+    this.setData({ "form.detail_address": e.detail.value });
   },
 
   onDefaultSwitch(e) {
-    this.setData({ 'form.is_default': e.detail.value });
+    this.setData({ "form.is_default": e.detail.value });
   },
 
   saveAddress() {
     const { name, phone, detail_address } = this.data.form;
     if (!name || !name.trim()) {
-      wx.showToast({ title: '请填写联系人姓名', icon: 'none' });
+      wx.showToast({ title: "请填写联系人姓名", icon: "none" });
       return;
     }
     if (!phone || !phone.trim()) {
-      wx.showToast({ title: '请填写联系电话', icon: 'none' });
+      wx.showToast({ title: "请填写联系电话", icon: "none" });
       return;
     }
     if (!detail_address || !detail_address.trim()) {
-      wx.showToast({ title: '请填写详细地址', icon: 'none' });
+      wx.showToast({ title: "请填写详细地址", icon: "none" });
       return;
     }
 
-    const userId = (app.globalData.userInfo && app.globalData.userInfo.id) || 'user_customer_demo';
-    wx.showLoading({ title: '保存中...' });
+    const savedUser = wx.getStorageSync("zc_user_info");
+    const userId =
+      (savedUser && savedUser.id) ||
+      (app.globalData.userInfo && app.globalData.userInfo.id) ||
+      "user_customer_demo";
+    wx.showLoading({ title: "保存中..." });
 
     const payload = {
       ...this.data.form,
-      user_id: userId
+      user_id: userId,
     };
 
     request({
-      url: '/api/user/addresses',
-      method: 'POST',
-      data: payload
-    }).then(res => {
-      wx.hideLoading();
-      if (res.success) {
-        wx.showToast({ title: '保存成功！', icon: 'success' });
+      url: "/api/user/addresses",
+      method: "POST",
+      data: payload,
+    })
+      .then((res) => {
+        wx.hideLoading();
+        if (res.success) {
+          wx.showToast({ title: "保存成功！", icon: "success" });
+          setTimeout(() => {
+            wx.navigateBack();
+          }, 1000);
+        } else {
+          wx.showToast({ title: res.message || "保存失败", icon: "none" });
+        }
+      })
+      .catch(() => {
+        wx.hideLoading();
+        wx.showToast({ title: "地址已保存！", icon: "success" });
         setTimeout(() => {
           wx.navigateBack();
         }, 1000);
-      } else {
-        wx.showToast({ title: res.message || '保存失败', icon: 'none' });
-      }
-    }).catch(() => {
-      wx.hideLoading();
-      wx.showToast({ title: '地址已保存！', icon: 'success' });
-      setTimeout(() => {
-        wx.navigateBack();
-      }, 1000);
-    });
-  }
+      });
+  },
 });

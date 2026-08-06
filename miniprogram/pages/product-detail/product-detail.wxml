@@ -73,12 +73,16 @@
       <view class="area-line"></view>
       <view class="area-item flex-column">
         <text class="a-label">本套计费面积</text>
-        <text class="a-val theme-gold-text">{{customSets[activeSetIndex].calcResult.billedArea}} ㎡</text>
+        <text class="a-val theme-gold-text">
+          {{customSets[activeSetIndex].calcResult.billedArea}} ㎡
+        </text>
       </view>
       <view class="area-line"></view>
       <view class="area-item flex-column">
         <text class="a-label">本套预估小计</text>
-        <text class="a-val theme-gold-text">¥ {{customSets[activeSetIndex].calcResult.totalPrice}}</text>
+        <text class="a-val theme-gold-text">
+          ¥ {{customSets[activeSetIndex].calcResult.totalPrice}}
+        </text>
       </view>
     </view>
   </view>
@@ -102,7 +106,7 @@
       <text class="card-title" style="margin-bottom: 0;">④ 套系 {{activeSetIndex + 1}} - 现场环境照片</text>
       <text class="opt-tag-badge">可选 / 非必填</text>
     </view>
-    <view class="scene-upload-tip mb-3 mt-1">可上传安装现场环境图、洞口尺寸图或特殊工况对比图 (最多6张)</view>
+    <view class="scene-upload-tip mb-3 mt-1">上传安装现场环境图、洞口尺寸图或特殊工况图 (最多6张)</view>
     <view class="img-upload-grid flex-row mb-4">
       <view class="img-thumb-box" wx:for="{{customSets[activeSetIndex].scene_images}}" wx:key="*this">
         <image class="img-thumb" src="{{item}}" mode="aspectFill" bindtap="previewSetSceneImg" data-url="{{item}}" />

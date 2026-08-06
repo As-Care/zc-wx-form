@@ -622,6 +622,7 @@ app.get("/api/user/addresses", async (c) => {
     )
     .bind(userId)
     .all();
+
   return c.json({ success: true, data: results || [] });
 });
 
