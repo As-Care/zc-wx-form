@@ -119,7 +119,7 @@
     </a-drawer>
 
     <!-- 修改客户资料 Modal 弹窗 -->
-    <a-modal v-model:visible="modalVisible" title="修改小程序客户个人资料" @ok="handleSaveUser">
+    <a-modal v-model:visible="modalVisible" title="修改小程序客户个人资料" :on-before-ok="handleBeforeSaveUser">
       <a-form :model="editForm" layout="vertical">
         <a-form-item label="客户姓名/昵称" required>
           <a-input v-model="editForm.nickname" placeholder="请输入客户姓名或备注" />
@@ -296,21 +296,10 @@ const onAvatarUploadError = () => {
   Message.error('客户头像上传失败！');
 };
 
-const handleSaveUser = async () => {
+const handleBeforeSaveUser = async () => {
   if (!editForm.value.nickname || !editForm.value.nickname.trim()) {
     Message.warning('【客户姓名/昵称】不能为空！');
-    return;
-  }
-
-  const idx = users.value.findIndex(u => u.id === editForm.value.id);
-  if (idx !== -1) {
-    users.value[idx] = {
-      ...users.value[idx],
-      nickname: editForm.value.nickname,
-      avatar_url: editForm.value.avatar_url,
-      phone: editForm.value.phone
-    };
-    users.value = [...users.value];
+    return false;
   }
 
   try {
@@ -327,13 +316,15 @@ const handleSaveUser = async () => {
     const data = await res.json();
     if (res.ok && data.success) {
       Message.success('保存成功！');
-      modalVisible.value = false;
       await fetchUsers();
+      return true;
     } else {
       Message.error(data.message || `保存失败 (HTTP ${res.status})`);
+      return false;
     }
   } catch (e) {
     Message.error('无法连接后端服务');
+    return false;
   }
 };
 

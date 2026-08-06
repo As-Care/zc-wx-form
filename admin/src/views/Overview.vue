@@ -13,7 +13,9 @@
       <a-grid-item>
         <a-card class="stat-box" hoverable>
           <a-statistic title="定制订单总数" :value="128" show-group-separator>
-            <template #prefix><icon-file-text style="color: #C5A880;" /></template>
+            <template #prefix
+              ><icon-file-text style="color: #c5a880"
+            /></template>
             <template #suffix>单</template>
           </a-statistic>
         </a-card>
@@ -21,7 +23,9 @@
       <a-grid-item>
         <a-card class="stat-box" hoverable>
           <a-statistic title="待复核/待报价" :value="12" show-group-separator>
-            <template #prefix><icon-clock-circle style="color: #EAB308;" /></template>
+            <template #prefix
+              ><icon-clock-circle style="color: #eab308"
+            /></template>
             <template #suffix>单</template>
           </a-statistic>
         </a-card>
@@ -29,7 +33,9 @@
       <a-grid-item>
         <a-card class="stat-box" hoverable>
           <a-statistic title="排产及制作中" :value="34" show-group-separator>
-            <template #prefix><icon-settings style="color: #60A5FA;" /></template>
+            <template #prefix
+              ><icon-settings style="color: #60a5fa"
+            /></template>
             <template #suffix>单</template>
           </a-statistic>
         </a-card>
@@ -37,7 +43,9 @@
       <a-grid-item>
         <a-card class="stat-box" hoverable>
           <a-statistic title="已完成交付" :value="82" show-group-separator>
-            <template #prefix><icon-check-circle style="color: #4ADE80;" /></template>
+            <template #prefix
+              ><icon-check-circle style="color: #4ade80"
+            /></template>
             <template #suffix>单</template>
           </a-statistic>
         </a-card>
@@ -74,10 +82,22 @@
       <a-grid-item>
         <a-card title="📍 门店信息与服务标准">
           <div class="store-details">
-            <p><strong>品牌旗舰店：</strong> 展晨门窗 (湖北仙桃恒迪建材市场2期14栋1-107)</p>
-            <p><strong>官方咨询热线：</strong> <span style="color: #b89768; font-weight: bold;">13545941637</span></p>
-            <p><strong>品牌资质背书：</strong> 20+年专业门窗制造经验 / 50000+ 成功案例 / ISO9001 质量管理体系认证</p>
-            <p><strong>算价规则基准：</strong> 默认起步计费面积 1.5 ㎡，支持按平米/按件/固定金额选配加价与商家现场复核改价。</p>
+            <p>
+              <strong>品牌旗舰店：</strong> 展晨门窗
+              (湖北仙桃恒迪建材市场2期14栋1-107)
+            </p>
+            <p>
+              <strong>官方咨询热线：</strong>
+              <span style="color: #b89768; font-weight: bold">13545941637</span>
+            </p>
+            <p>
+              <strong>品牌资质背书：</strong> 20+年专业门窗制造经验 / 50000+
+              成功案例 / ISO9001 质量管理体系认证
+            </p>
+            <p>
+              <strong>算价规则基准：</strong> 默认起步计费面积 1.5
+              ㎡，支持按平米/按件/固定金额选配加价与商家现场复核改价。
+            </p>
           </div>
         </a-card>
       </a-grid-item>
@@ -86,8 +106,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-import * as echarts from 'echarts';
+import { ref, onMounted, onBeforeUnmount } from "vue";
+import * as echarts from "echarts";
 
 const lineChartRef = ref(null);
 const pieChartRef = ref(null);
@@ -98,13 +118,13 @@ let pieChartInstance = null;
 let barChartInstance = null;
 
 // 监听日间/夜间模式切换自动更新图表色彩
-const getIsDark = () => document.body.getAttribute('arco-theme') === 'dark';
+const getIsDark = () => document.body.getAttribute("arco-theme") === "dark";
 
 const initCharts = () => {
   const isDark = getIsDark();
-  const textColor = isDark ? '#E2E8F0' : '#1D2129';
-  const axisLineColor = isDark ? 'rgba(255, 255, 255, 0.15)' : '#E5E6EB';
-  const splitLineColor = isDark ? 'rgba(255, 255, 255, 0.06)' : '#F2F3F5';
+  const textColor = isDark ? "#E2E8F0" : "#1D2129";
+  const axisLineColor = isDark ? "rgba(255, 255, 255, 0.15)" : "#E5E6EB";
+  const splitLineColor = isDark ? "rgba(255, 255, 255, 0.06)" : "#F2F3F5";
 
   // 1. 初始化近7天走势折线图 (Legend 置于右上角防止与 X 轴重叠)
   if (lineChartRef.value) {
@@ -113,62 +133,62 @@ const initCharts = () => {
     }
     lineChartInstance.setOption({
       tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'cross' }
+        trigger: "axis",
+        axisPointer: { type: "cross" },
       },
       legend: {
-        top: '0%',
-        right: '2%',
-        data: ['新建定制订单', '完成交付订单'],
-        textStyle: { color: textColor, fontSize: 12 }
+        top: "0%",
+        right: "2%",
+        data: ["新建定制订单", "完成交付订单"],
+        textStyle: { color: textColor, fontSize: 12 },
       },
       grid: {
-        top: '18%',
-        left: '3%',
-        right: '4%',
-        bottom: '4%',
-        containLabel: true
+        top: "18%",
+        left: "3%",
+        right: "4%",
+        bottom: "4%",
+        containLabel: true,
       },
       xAxis: {
-        type: 'category',
+        type: "category",
         boundaryGap: false,
-        data: ['07-30', '07-31', '08-01', '08-02', '08-03', '08-04', '08-05'],
+        data: ["07-30", "07-31", "08-01", "08-02", "08-03", "08-04", "08-05"],
         axisLine: { lineStyle: { color: axisLineColor } },
-        axisLabel: { color: textColor, fontSize: 11 }
+        axisLabel: { color: textColor, fontSize: 11 },
       },
       yAxis: {
-        type: 'value',
+        type: "value",
         splitLine: { lineStyle: { color: splitLineColor } },
-        axisLabel: { color: textColor, fontSize: 11 }
+        axisLabel: { color: textColor, fontSize: 11 },
       },
       series: [
         {
-          name: '新建定制订单',
-          type: 'line',
+          name: "新建定制订单",
+          type: "line",
           smooth: true,
           data: [8, 12, 15, 11, 18, 22, 26],
-          itemStyle: { color: '#C5A880' },
+          itemStyle: { color: "#C5A880" },
           areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(197, 168, 128, 0.35)' },
-              { offset: 1, color: 'rgba(197, 168, 128, 0.02)' }
-            ])
-          }
+              { offset: 0, color: "rgba(197, 168, 128, 0.35)" },
+              { offset: 1, color: "rgba(197, 168, 128, 0.02)" },
+            ]),
+          },
         },
         {
-          name: '完成交付订单',
-          type: 'line',
+          name: "完成交付订单",
+          type: "line",
           smooth: true,
           data: [5, 8, 10, 9, 14, 16, 20],
-          itemStyle: { color: '#4ADE80' },
+          itemStyle: { color: "#4ADE80" },
           areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(74, 222, 128, 0.25)' },
-              { offset: 1, color: 'rgba(74, 222, 128, 0.02)' }
-            ])
-          }
-        }
-      ]
+              { offset: 0, color: "rgba(74, 222, 128, 0.25)" },
+              { offset: 1, color: "rgba(74, 222, 128, 0.02)" },
+            ]),
+          },
+        },
+      ],
     });
   }
 
@@ -179,45 +199,61 @@ const initCharts = () => {
     }
     pieChartInstance.setOption({
       tooltip: {
-        trigger: 'item',
-        formatter: '{b}: {c}单 ({d}%)'
+        trigger: "item",
+        formatter: "{b}: {c}单 ({d}%)",
       },
       legend: {
-        orient: 'vertical',
-        left: '0%',
-        top: 'center',
-        textStyle: { color: textColor, fontSize: 11 }
+        orient: "vertical",
+        left: "0%",
+        top: "center",
+        textStyle: { color: textColor, fontSize: 11 },
       },
       series: [
         {
-          name: '选购占比',
-          type: 'pie',
-          radius: ['45%', '75%'],
-          center: ['66%', '50%'],
+          name: "选购占比",
+          type: "pie",
+          radius: ["45%", "75%"],
+          center: ["66%", "50%"],
           avoidLabelOverlap: false,
           itemStyle: {
             borderRadius: 8,
-            borderColor: isDark ? '#1a1d24' : '#ffffff',
-            borderWidth: 2
+            borderColor: isDark ? "#1a1d24" : "#ffffff",
+            borderWidth: 2,
           },
           label: { show: false },
           emphasis: {
             label: {
               show: true,
               fontSize: 14,
-              fontWeight: 'bold',
-              color: textColor
-            }
+              fontWeight: "bold",
+              color: textColor,
+            },
           },
           labelLine: { show: false },
           data: [
-            { value: 45, name: '108热桥级断桥铝窗', itemStyle: { color: '#C5A880' } },
-            { value: 30, name: '极简16重型推拉门', itemStyle: { color: '#60A5FA' } },
-            { value: 15, name: '120超静音三玻窗', itemStyle: { color: '#4ADE80' } },
-            { value: 10, name: '尊享断桥阳光房', itemStyle: { color: '#A855F7' } }
-          ]
-        }
-      ]
+            {
+              value: 45,
+              name: "108热桥级断桥铝窗",
+              itemStyle: { color: "#C5A880" },
+            },
+            {
+              value: 30,
+              name: "极简16重型推拉门",
+              itemStyle: { color: "#60A5FA" },
+            },
+            {
+              value: 15,
+              name: "120超静音三玻窗",
+              itemStyle: { color: "#4ADE80" },
+            },
+            {
+              value: 10,
+              name: "尊享断桥阳光房",
+              itemStyle: { color: "#A855F7" },
+            },
+          ],
+        },
+      ],
     });
   }
 
@@ -228,40 +264,52 @@ const initCharts = () => {
     }
     barChartInstance.setOption({
       tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'shadow' }
+        trigger: "axis",
+        axisPointer: { type: "shadow" },
       },
       grid: {
-        top: '12%',
-        left: '3%',
-        right: '4%',
-        bottom: '4%',
-        containLabel: true
+        top: "12%",
+        left: "3%",
+        right: "4%",
+        bottom: "4%",
+        containLabel: true,
       },
       xAxis: {
-        type: 'category',
-        data: ['待复核/报价', '排产制作中', '准备待提货', '完成交付'],
+        type: "category",
+        data: ["待复核/报价", "排产制作中", "准备待提货", "完成交付"],
         axisLine: { lineStyle: { color: axisLineColor } },
-        axisLabel: { color: textColor, fontSize: 11 }
+        axisLabel: { color: textColor, fontSize: 11 },
       },
       yAxis: {
-        type: 'value',
+        type: "value",
         splitLine: { lineStyle: { color: splitLineColor } },
-        axisLabel: { color: textColor, fontSize: 11 }
+        axisLabel: { color: textColor, fontSize: 11 },
       },
       series: [
         {
-          name: '订单笔数',
-          type: 'bar',
-          barWidth: '36%',
+          name: "订单笔数",
+          type: "bar",
+          barWidth: "36%",
           data: [
-            { value: 12, itemStyle: { color: '#EAB308', borderRadius: [6, 6, 0, 0] } },
-            { value: 34, itemStyle: { color: '#60A5FA', borderRadius: [6, 6, 0, 0] } },
-            { value: 18, itemStyle: { color: '#C5A880', borderRadius: [6, 6, 0, 0] } },
-            { value: 82, itemStyle: { color: '#4ADE80', borderRadius: [6, 6, 0, 0] } }
-          ]
-        }
-      ]
+            {
+              value: 12,
+              itemStyle: { color: "#EAB308", borderRadius: [6, 6, 0, 0] },
+            },
+            {
+              value: 34,
+              itemStyle: { color: "#60A5FA", borderRadius: [6, 6, 0, 0] },
+            },
+            {
+              value: 18,
+              itemStyle: { color: "#C5A880", borderRadius: [6, 6, 0, 0] },
+            },
+            {
+              value: 82,
+              itemStyle: { color: "#4ADE80", borderRadius: [6, 6, 0, 0] },
+            },
+          ],
+        },
+      ],
     });
   }
 };
@@ -276,17 +324,20 @@ onMounted(() => {
   setTimeout(() => {
     initCharts();
   }, 100);
-  window.addEventListener('resize', handleResize);
+  window.addEventListener("resize", handleResize);
 
   // 监听主题属性变化
   const observer = new MutationObserver(() => {
     initCharts();
   });
-  observer.observe(document.body, { attributes: true, attributeFilter: ['arco-theme'] });
+  observer.observe(document.body, {
+    attributes: true,
+    attributeFilter: ["arco-theme"],
+  });
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', handleResize);
+  window.removeEventListener("resize", handleResize);
   lineChartInstance?.dispose();
   pieChartInstance?.dispose();
   barChartInstance?.dispose();
@@ -294,16 +345,45 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.overview-view { display: flex; flex-direction: column; }
-.view-title { font-size: 18px; font-weight: 700; margin: 0; }
-.flex-between { display: flex; justify-content: space-between; align-items: center; }
-.mb-3 { margin-bottom: 12px; }
-.stat-box { border-radius: 12px; }
-.chart-container { height: 210px; width: 100%; }
-.store-details { height: 210px; display: flex; flex-direction: column; justify-content: center; box-sizing: border-box; }
-.store-details p { font-size: 13px; line-height: 1.8; color: #4e5969; margin: 3px 0; }
+.overview-view {
+  display: flex;
+  flex-direction: column;
+}
+.view-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mb-3 {
+  margin-bottom: 12px;
+}
+.stat-box {
+  border-radius: 12px;
+}
+.chart-container {
+  height: 210px;
+  width: 100%;
+}
+.store-details {
+  height: 210px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  box-sizing: border-box;
+}
+.store-details p {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #4e5969;
+  margin: 4px 0;
+}
 
-body[arco-theme='dark'] .store-details p {
+body[arco-theme="dark"] .store-details p {
   color: #a6b1c2;
 }
 </style>

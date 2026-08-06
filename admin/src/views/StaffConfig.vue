@@ -57,7 +57,7 @@
     </a-card>
 
     <!-- 新建/编辑接单员 Modal -->
-    <a-modal v-model:visible="modalVisible" title="配置接单员信息与二维码" @ok="handleSaveReceiver">
+    <a-modal v-model:visible="modalVisible" title="配置接单员信息与二维码" :on-before-ok="handleBeforeSaveReceiver">
       <a-form :model="receiverForm" layout="vertical">
         <a-form-item label="接单员姓名" required>
           <a-input v-model="receiverForm.name" placeholder="如：张经理" />
@@ -184,14 +184,14 @@ const onQrUploadError = () => {
   Message.error('二维码图片上传失败！');
 };
 
-const handleSaveReceiver = async () => {
+const handleBeforeSaveReceiver = async () => {
   if (!receiverForm.value.name || !receiverForm.value.name.trim()) {
     Message.warning('【接单员姓名】为必填项，请输入后再保存！');
-    return;
+    return false;
   }
   if (!receiverForm.value.phone || !receiverForm.value.phone.trim()) {
     Message.warning('【联系手机号】为必填项，请输入后再保存！');
-    return;
+    return false;
   }
 
   try {
@@ -203,13 +203,15 @@ const handleSaveReceiver = async () => {
     const data = await res.json();
     if (res.ok && data.success) {
       Message.success('保存成功！');
-      modalVisible.value = false;
       await fetchReceivers();
+      return true;
     } else {
       Message.error(data.message || `接口响应失败 (HTTP ${res.status})`);
+      return false;
     }
   } catch (e) {
     Message.error('无法连接后端 API 服务，请检查网络设置');
+    return false;
   }
 };
 

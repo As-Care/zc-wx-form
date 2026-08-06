@@ -254,7 +254,7 @@
     </a-drawer>
 
     <!-- 修改状态及调价 Modal 弹窗 -->
-    <a-modal v-model:visible="modalVisible" title="展晨门窗 - 订单状态与特殊费用修改" @ok="handleSaveOrder" @cancel="modalVisible = false">
+    <a-modal v-model:visible="modalVisible" title="展晨门窗 - 订单状态与特殊费用修改" :on-before-ok="handleBeforeSaveOrder">
       <a-form :model="editForm" layout="vertical">
         <a-form-item label="订单编号">
           <a-input v-model="editForm.order_no" readonly />
@@ -442,7 +442,7 @@ const openModal = (record) => {
   modalVisible.value = true;
 };
 
-const handleSaveOrder = async () => {
+const handleBeforeSaveOrder = async () => {
   try {
     const res = await fetch(`${API_BASE}/api/admin/orders/${editForm.value.id}/status`, {
       method: 'PATCH',
@@ -457,13 +457,15 @@ const handleSaveOrder = async () => {
     const data = await res.json();
     if (res.ok && data.success) {
       Message.success('保存成功！');
-      modalVisible.value = false;
       await fetchOrders();
+      return true;
     } else {
       Message.error(data.message || `订单状态修改失败 (HTTP ${res.status})`);
+      return false;
     }
   } catch (e) {
     Message.error('无法连接后端服务，更新失败');
+    return false;
   }
 };
 

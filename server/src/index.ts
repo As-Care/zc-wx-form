@@ -955,7 +955,7 @@ app.get('/api/admin/categories', async (c) => {
 });
 
 /**
- * 管理端 分类管理 CRUD (创建、编辑、禁用/启用)
+ * 管理端 分类管理 CRUD (创建、编辑、物理删除、快捷修改排序)
  * POST /api/admin/categories
  */
 app.post('/api/admin/categories', async (c) => {
@@ -984,20 +984,22 @@ app.post('/api/admin/categories', async (c) => {
   const name = body.name.trim();
   const sub_title = (body.sub_title && body.sub_title.trim()) || name.slice(0, 5);
   const icon_url = body.icon_url || '';
+  const sortOrder = (body.sort_order !== undefined && body.sort_order !== null) ? Number(body.sort_order) : 0;
   const isActive = (body.is_active !== undefined && body.is_active !== null) ? Number(body.is_active) : 1;
 
-  // UPSERT: ID 存在即更新原记录，不存在则精准新建，绝无重复数据
+  // UPSERT: ID 存在即更新原记录，不存在则精准新建
   await db.prepare(`
     INSERT INTO categories (id, name, sub_title, icon_url, sort_order, is_active) 
-    VALUES (?, ?, ?, ?, 0, ?)
+    VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET 
       name = excluded.name, 
       sub_title = excluded.sub_title, 
       icon_url = excluded.icon_url,
+      sort_order = excluded.sort_order,
       is_active = excluded.is_active
-  `).bind(id, name, sub_title, icon_url, isActive).run();
+  `).bind(id, name, sub_title, icon_url, sortOrder, isActive).run();
 
-  return c.json({ success: true, id, message: '保存成功' });
+  return c.json({ success: true, id, message: '保存成功！' });
 });
 
 app.put('/api/admin/categories/:id', async (c) => {
@@ -1007,26 +1009,40 @@ app.put('/api/admin/categories/:id', async (c) => {
   const name = (body.name || '').trim();
   const sub_title = (body.sub_title && body.sub_title.trim()) || name.slice(0, 5);
   const icon_url = body.icon_url || '';
+  const sortOrder = (body.sort_order !== undefined && body.sort_order !== null) ? Number(body.sort_order) : 0;
   const isActive = (body.is_active !== undefined && body.is_active !== null) ? Number(body.is_active) : 1;
 
   await db.prepare(`
     INSERT INTO categories (id, name, sub_title, icon_url, sort_order, is_active) 
-    VALUES (?, ?, ?, ?, 0, ?)
+    VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET 
       name = excluded.name, 
       sub_title = excluded.sub_title, 
       icon_url = excluded.icon_url,
+      sort_order = excluded.sort_order,
       is_active = excluded.is_active
-  `).bind(id, name, sub_title, icon_url, isActive).run();
+  `).bind(id, name, sub_title, icon_url, sortOrder, isActive).run();
 
-  return c.json({ success: true, message: '保存成功' });
+  return c.json({ success: true, message: '保存成功！' });
 });
 
+// 快捷更新排序权重
+app.patch('/api/admin/categories/:id/sort', async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param('id');
+  const body = await c.req.json();
+  const sortOrder = Number(body.sort_order || 0);
+
+  await db.prepare('UPDATE categories SET sort_order = ? WHERE id = ?').bind(sortOrder, id).run();
+  return c.json({ success: true, message: '排序修改成功！' });
+});
+
+// 物理删除分类
 app.delete('/api/admin/categories/:id', async (c) => {
   const db = c.env.DB;
   const id = c.req.param('id');
-  await db.prepare('UPDATE categories SET is_active = 0 WHERE id = ?').bind(id).run();
-  return c.json({ success: true, message: '分类已成功禁用' });
+  await db.prepare('DELETE FROM categories WHERE id = ?').bind(id).run();
+  return c.json({ success: true, message: '删除成功！' });
 });
 
 /**

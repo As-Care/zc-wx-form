@@ -47,7 +47,7 @@
         </a-row>
 
         <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
-          <a-button type="primary" html-type="submit" size="medium">
+          <a-button type="primary" html-type="submit" size="medium" :loading="saving">
             <template #icon><icon-save /></template>
             保存全局配置
           </a-button>
@@ -62,6 +62,7 @@ import { ref, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';
 
 const API_BASE = 'https://zc-api.carelife.top';
+const saving = ref(false);
 
 const storeForm = ref({
   name: '展晨门窗',
@@ -90,6 +91,7 @@ const fetchStoreConfig = async () => {
 };
 
 const saveStoreConfig = async () => {
+  saving.value = true;
   try {
     const res = await fetch(`${API_BASE}/api/admin/config/store`, {
       method: 'POST',
@@ -104,6 +106,8 @@ const saveStoreConfig = async () => {
     }
   } catch (e) {
     Message.error('无法连接后端服务，请检查网络！');
+  } finally {
+    saving.value = false;
   }
 };
 

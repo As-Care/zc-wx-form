@@ -11,19 +11,19 @@
     <!-- 分类数据表格 -->
     <a-table :data="categories" :loading="tableLoading" :pagination="{ pageSize: 10 }" border row-key="id">
       <template #columns>
-        <a-table-column title="分类名称" data-index="name" :width="240">
+        <a-table-column title="分类名称" data-index="name" :width="220">
           <template #cell="{ record }">
             <strong>{{ record.name }}</strong>
           </template>
         </a-table-column>
 
-        <a-table-column title="首页导航区小标签" data-index="sub_title" :width="200">
+        <a-table-column title="首页导航区小标签" data-index="sub_title" :width="180">
           <template #cell="{ record }">
             <a-tag class="champagne-tag">{{ record.sub_title }}</a-tag>
           </template>
         </a-table-column>
 
-        <a-table-column title="首页导航区图标" :width="160">
+        <a-table-column title="首页导航区图标" :width="150">
           <template #cell="{ record }">
             <a-image
               v-if="record.icon_url"
@@ -34,6 +34,18 @@
               style="border-radius: 8px; border: 1px solid #e5e6eb;"
             />
             <span v-else style="color: #c9cdd4; font-size: 12px;">默认图标</span>
+          </template>
+        </a-table-column>
+
+        <a-table-column title="排序权重" :width="130">
+          <template #cell="{ record }">
+            <a-input-number
+              v-model="record.sort_order"
+              size="small"
+              :min="0"
+              style="width: 86px;"
+              @change="handleQuickSortChange(record)"
+            />
           </template>
         </a-table-column>
 
@@ -57,10 +69,10 @@
               <template #icon><icon-edit /></template>
               编辑
             </a-button>
-            <a-popconfirm content="确定禁用此分类吗？" type="warning" @ok="deleteCategory(record.id)">
+            <a-popconfirm content="确定彻底删除此门窗分类吗？" type="warning" @ok="deleteCategory(record.id)">
               <a-button type="outline" status="danger" size="small">
                 <template #icon><icon-delete /></template>
-                禁用
+                删除
               </a-button>
             </a-popconfirm>
           </template>
@@ -69,7 +81,7 @@
     </a-table>
 
     <!-- 新建/修改分类 Modal -->
-    <a-modal v-model:visible="modalVisible" title="配置门窗分类与首页导航区" @ok="handleSaveCategory">
+    <a-modal v-model:visible="modalVisible" title="配置门窗分类与首页导航区" :on-before-ok="handleBeforeSaveCategory">
       <a-form :model="form" layout="vertical">
         <a-form-item label="分类全称 (如: 断桥铝系统窗)" required>
           <a-input v-model="form.name" placeholder="请输入分类全称" />
@@ -77,6 +89,10 @@
 
         <a-form-item label="首页导航区小标签 (限5字以内，如: 极窄推拉门)" required>
           <a-input v-model="form.sub_title" maxlength="5" show-word-limit placeholder="最多5字，适合首页导航显示" />
+        </a-form-item>
+
+        <a-form-item label="排序权重 (数字越小越靠前显示)" required>
+          <a-input-number v-model="form.sort_order" :min="0" placeholder="默认0，数字越小越靠前显示" />
         </a-form-item>
 
         <a-form-item label="分类状态" required>
@@ -142,11 +158,11 @@ import { Message } from '@arco-design/web-vue';
 const API_BASE = 'https://zc-api.carelife.top';
 
 const DEFAULT_CATEGORIES = [
-  { id: 'cat_1', name: '断桥铝系统窗', sub_title: '系统断桥窗', icon_url: '', is_active: 1 },
-  { id: 'cat_2', name: '极窄推拉门/平开门', sub_title: '极窄推拉门', icon_url: '', is_active: 1 },
-  { id: 'cat_3', name: '系统封阳台/阳光房', sub_title: '封阳台阳光房', icon_url: '', is_active: 1 },
-  { id: 'cat_4', name: '金刚网纱窗及配件', sub_title: '金刚网纱窗', icon_url: '', is_active: 1 },
-  { id: 'cat_5', name: '幕墙工程系', sub_title: '幕墙工程系', icon_url: '', is_active: 1 }
+  { id: 'cat_1', name: '断桥铝系统窗', sub_title: '系统断桥窗', icon_url: '', sort_order: 1, is_active: 1 },
+  { id: 'cat_2', name: '极窄推拉门/平开门', sub_title: '极窄推拉门', icon_url: '', sort_order: 2, is_active: 1 },
+  { id: 'cat_3', name: '系统封阳台/阳光房', sub_title: '封阳台阳光房', icon_url: '', sort_order: 3, is_active: 1 },
+  { id: 'cat_4', name: '金刚网纱窗及配件', sub_title: '金刚网纱窗', icon_url: '', sort_order: 4, is_active: 1 },
+  { id: 'cat_5', name: '幕墙工程系', sub_title: '幕墙工程系', icon_url: '', sort_order: 5, is_active: 1 }
 ];
 
 const categories = ref([]);
@@ -160,6 +176,7 @@ const form = ref({
   name: '',
   sub_title: '',
   icon_url: '',
+  sort_order: 0,
   is_active: 1
 });
 
@@ -172,6 +189,7 @@ const fetchCategories = async () => {
     if (data.success && list && list.length > 0) {
       categories.value = list.map(c => ({
         ...c,
+        sort_order: (c.sort_order !== undefined && c.sort_order !== null) ? Number(c.sort_order) : 0,
         is_active: (c.is_active !== undefined && c.is_active !== null) ? Number(c.is_active) : 1
       }));
     } else {
@@ -185,7 +203,7 @@ const fetchCategories = async () => {
 };
 
 const openModal = () => {
-  form.value = { id: '', name: '', sub_title: '', icon_url: '', is_active: 1 };
+  form.value = { id: '', name: '', sub_title: '', icon_url: '', sort_order: 0, is_active: 1 };
   uploading.value = false;
   modalVisible.value = true;
 };
@@ -196,6 +214,7 @@ const editCategory = (record) => {
     name: record.name,
     sub_title: record.sub_title,
     icon_url: record.icon_url || '',
+    sort_order: (record.sort_order !== undefined && record.sort_order !== null) ? Number(record.sort_order) : 0,
     is_active: (record.is_active !== undefined && record.is_active !== null) ? Number(record.is_active) : 1
   };
   uploading.value = false;
@@ -221,10 +240,10 @@ const onIconUploadError = () => {
   Message.error('图片上传失败，请重试');
 };
 
-const handleSaveCategory = async () => {
+const handleBeforeSaveCategory = async () => {
   if (!form.value.name || !form.value.name.trim()) {
     Message.warning('分类全称不能为空！');
-    return;
+    return false;
   }
 
   try {
@@ -237,13 +256,34 @@ const handleSaveCategory = async () => {
 
     if (res.ok && data.success) {
       Message.success('保存成功！');
-      modalVisible.value = false;
       await fetchCategories();
+      return true;
     } else {
       Message.error(data.message || `保存失败 (HTTP ${res.status})`);
+      return false;
     }
   } catch (e) {
     Message.error('网络错误，无法保存分类');
+    return false;
+  }
+};
+
+const handleQuickSortChange = async (record) => {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/categories/${record.id}/sort`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sort_order: record.sort_order })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      Message.success('排序更正成功！');
+      await fetchCategories();
+    } else {
+      Message.error(data.message || '排序更正失败');
+    }
+  } catch (e) {
+    Message.error('网络错误，无法修改排序');
   }
 };
 
@@ -257,6 +297,7 @@ const handleStatusChange = async (record, val) => {
         name: record.name,
         sub_title: record.sub_title,
         icon_url: record.icon_url || '',
+        sort_order: record.sort_order || 0,
         is_active: val
       })
     });
@@ -382,5 +423,13 @@ onMounted(() => {
   font-weight: 600 !important;
   border: none !important;
   border-radius: 4px;
+}
+
+:deep(.arco-image-loader),
+:deep(.arco-image-loading),
+:deep(.arco-image-loader *) {
+  white-space: nowrap !important;
+  font-size: 11px !important;
+  word-break: keep-all !important;
 }
 </style>

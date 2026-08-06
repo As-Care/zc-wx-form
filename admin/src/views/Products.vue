@@ -128,7 +128,7 @@
     </a-table>
 
     <!-- 新建/修改商品 Modal -->
-    <a-modal v-model:visible="modalVisible" title="配置门窗商品与主图" @ok="handleSaveProduct">
+    <a-modal v-model:visible="modalVisible" title="配置门窗商品与主图" :on-before-ok="handleBeforeSaveProduct">
       <a-form :model="form" layout="vertical">
         <a-form-item
           field="name"
@@ -509,40 +509,20 @@ const onCoverUploadError = () => {
   Message.error('图片上传失败，请重试！');
 };
 
-const handleSaveProduct = async () => {
+const handleBeforeSaveProduct = async () => {
   if (!form.value.name || !form.value.name.trim()) {
     Message.warning('【商品名称】为必填项，请输入后再保存！');
-    return;
+    return false;
   }
 
   if (!form.value.cover_image) {
     Message.warning('【商品封面主图】为必填项，请上传图片后再保存！');
-    return;
+    return false;
   }
 
   if (!form.value.category_name) {
     Message.warning('【所属分类】为必选项，请选择分类后再保存！');
-    return;
-  }
-
-  if (form.value.id) {
-    const idx = products.value.findIndex(p => p.id === form.value.id);
-    if (idx !== -1) {
-      products.value[idx] = { ...form.value };
-      products.value = [...products.value];
-    }
-  } else {
-    products.value.push({
-      id: `prod_${Date.now()}`,
-      name: form.value.name,
-      description: form.value.description || '',
-      cover_image: form.value.cover_image,
-      category_name: form.value.category_name,
-      base_price_sqm: form.value.base_price_sqm || 680,
-      min_area: form.value.min_area || 1.5,
-      options: []
-    });
-    products.value = [...products.value];
+    return false;
   }
 
   try {
@@ -554,13 +534,15 @@ const handleSaveProduct = async () => {
     const data = await res.json();
     if (res.ok && data.success) {
       Message.success('保存成功！');
-      modalVisible.value = false;
       await fetchProducts();
+      return true;
     } else {
       Message.error(data.message || `保存失败 (HTTP ${res.status})`);
+      return false;
     }
   } catch (e) {
     Message.error('网络连接异常，保存失败');
+    return false;
   }
 };
 
@@ -577,6 +559,19 @@ onMounted(() => {
 
 :deep(.no-wrap-header-table .arco-table-th-item) {
   white-space: nowrap !important;
+}
+
+/* 统一控制 a-image 加载中文字：单行不换行，精致字号 */
+:deep(.arco-image-loader),
+:deep(.arco-image-loading),
+:deep(.arco-image-loader *) {
+  white-space: nowrap !important;
+  font-size: 11px !important;
+  word-break: keep-all !important;
+}
+
+:deep(.arco-image-loader) {
+  padding: 2px !important;
 }
 
 /* 奢华精致上传控件样式 */
