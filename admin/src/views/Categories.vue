@@ -145,10 +145,14 @@
         </a-form-item>
 
         <a-form-item label="分类状态" required>
-          <a-radio-group v-model="form.is_active" type="button">
-            <a-radio :value="1">启用 (小程序端展示)</a-radio>
-            <a-radio :value="0">禁用 (停用隐藏)</a-radio>
-          </a-radio-group>
+          <a-switch
+            v-model="form.is_active"
+            :checked-value="1"
+            :unchecked-value="0"
+          >
+            <template #checked>已启用</template>
+            <template #unchecked>已禁用</template>
+          </a-switch>
         </a-form-item>
 
         <!-- 首页导航区分类图标 -->

@@ -146,10 +146,14 @@
         </a-form-item>
 
         <a-form-item label="上下架状态" required>
-          <a-radio-group v-model="form.is_active" type="button">
-            <a-radio :value="1">上架售卖 (小程序展示)</a-radio>
-            <a-radio :value="0">下架隐藏 (小程序隐藏)</a-radio>
-          </a-radio-group>
+          <a-switch
+            v-model="form.is_active"
+            :checked-value="1"
+            :unchecked-value="0"
+          >
+            <template #checked>已上架</template>
+            <template #unchecked>已下架</template>
+          </a-switch>
         </a-form-item>
 
         <a-form-item

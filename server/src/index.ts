@@ -301,14 +301,42 @@ app.post('/api/user/sync', async (c) => {
  * 获取全量微信客户列表 (自动清洗归并相同手机号的客户与订单)
  * GET /api/users
  */
+let userAddressesInitialized = false;
+
+async function initUserAddressesTable(db: any) {
+  if (userAddressesInitialized) return;
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS user_addresses (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        province TEXT,
+        city TEXT,
+        district TEXT,
+        detail_address TEXT NOT NULL,
+        is_default INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+    userAddressesInitialized = true;
+  } catch (e) {
+    userAddressesInitialized = true;
+  }
+}
+
+/**
+ * 获取全量微信客户列表 (单次 Batch 高效加载)
+ * GET /api/users
+ */
 app.get('/api/users', async (c) => {
   const db = c.env.DB;
+  await initUserAddressesTable(db);
+
   const nickname = c.req.query('nickname');
   const phone = c.req.query('phone');
   const keyword = c.req.query('keyword') || c.req.query('search');
-
-  // 1. 自动执行全量手机号合并与订单关联重定向清洗
-  await mergeDuplicateUsersByPhone(db);
 
   let whereClause = " WHERE (role != 'admin' OR role IS NULL)";
   const params: any[] = [];
@@ -331,58 +359,58 @@ app.get('/api/users', async (c) => {
 
   const sql = `SELECT * FROM users${whereClause} ORDER BY created_at DESC`;
   const { results: users } = await db.prepare(sql).bind(...params).all<any>();
+  const userList = users || [];
 
-  // 动态建表容错
+  // 单次 Batch 批量拉取 orders 与 addresses，彻底消除 N+1 数据库耗时
+  const orderCountMap: Record<string, number> = {};
+  const phoneOrderCountMap: Record<string, number> = {};
+  const latestInstallAddressMap: Record<string, string> = {};
+
   try {
-    await db.prepare(`
-      CREATE TABLE IF NOT EXISTS user_addresses (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        phone TEXT NOT NULL,
-        province TEXT,
-        city TEXT,
-        district TEXT,
-        detail_address TEXT NOT NULL,
-        is_default INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `).run();
+    const { results: ordersSummary } = await db.prepare(
+      'SELECT id, user_id, customer_phone, install_address FROM orders ORDER BY created_at ASC'
+    ).all<any>();
+
+    (ordersSummary || []).forEach(o => {
+      if (o.user_id) {
+        orderCountMap[o.user_id] = (orderCountMap[o.user_id] || 0) + 1;
+        if (o.install_address) latestInstallAddressMap[o.user_id] = o.install_address;
+      }
+      if (o.customer_phone) {
+        phoneOrderCountMap[o.customer_phone] = (phoneOrderCountMap[o.customer_phone] || 0) + 1;
+        if (o.install_address) latestInstallAddressMap[o.customer_phone] = o.install_address;
+      }
+    });
   } catch (e) {}
 
-  for (const user of users || []) {
-    // 强按 user.id 与 下单手机号 customer_phone 统计关联订单
-    try {
-      const countRes = await db.prepare(
-        'SELECT COUNT(DISTINCT id) as count FROM orders WHERE user_id = ? OR (customer_phone IS NOT NULL AND customer_phone != "" AND customer_phone = ?)'
-      ).bind(user.id, user.phone || '').first<{ count: number }>();
-      user.order_count = countRes ? countRes.count : 0;
-    } catch (e) {
-      user.order_count = 0;
+  const addressMap: Record<string, any> = {};
+  try {
+    const { results: addresses } = await db.prepare(
+      'SELECT * FROM user_addresses ORDER BY is_default DESC, created_at DESC'
+    ).all<any>();
+
+    (addresses || []).forEach(a => {
+      if (a.user_id && !addressMap[a.user_id]) addressMap[a.user_id] = a;
+      if (a.phone && !addressMap[a.phone]) addressMap[a.phone] = a;
+    });
+  } catch (e) {}
+
+  userList.forEach(user => {
+    const uPhone = user.phone || '';
+    const uidCount = orderCountMap[user.id] || 0;
+    const phoneCount = uPhone ? (phoneOrderCountMap[uPhone] || 0) : 0;
+    user.order_count = Math.max(uidCount, phoneCount);
+
+    const addrObj = addressMap[user.id] || (uPhone ? addressMap[uPhone] : null);
+    if (addrObj) {
+      user.address = `${addrObj.province || ''}${addrObj.city || ''}${addrObj.district || ''}${addrObj.detail_address || ''}`;
+      user.address_detail = addrObj;
+    } else {
+      user.address = latestInstallAddressMap[user.id] || (uPhone ? latestInstallAddressMap[uPhone] : '') || '暂无保存地址';
     }
+  });
 
-    // 查询该客户保存的默认地址，未保存时取该客户下单时的最新安装地址
-    try {
-      const addressRes = await db.prepare(
-        'SELECT * FROM user_addresses WHERE user_id = ? OR (phone IS NOT NULL AND phone != "" AND phone = ?) ORDER BY is_default DESC, created_at DESC LIMIT 1'
-      ).bind(user.id, user.phone || '').first<any>();
-
-      if (addressRes) {
-        user.address = `${addressRes.province || ''}${addressRes.city || ''}${addressRes.district || ''}${addressRes.detail_address || ''}`;
-        user.address_detail = addressRes;
-      } else {
-        const latestOrder = await db.prepare(
-          'SELECT install_address FROM orders WHERE (user_id = ? OR customer_phone = ?) AND install_address IS NOT NULL AND install_address != "" ORDER BY created_at DESC LIMIT 1'
-        ).bind(user.id, user.phone || '').first<{ install_address: string }>();
-
-        user.address = (latestOrder && latestOrder.install_address) ? latestOrder.install_address : '暂无保存地址';
-      }
-    } catch (e) {
-      user.address = '暂无保存地址';
-    }
-  }
-
-  return c.json({ success: true, data: users || [] });
+  return c.json({ success: true, data: userList });
 });
 
 /**
@@ -552,16 +580,10 @@ app.patch('/api/user/addresses/:id/default', async (c) => {
 // 2. 门窗分类接口 (Categories)
 // ----------------------------------------------------
 
-/**
- * 获取活动门窗分类列表
- * GET /api/categories
- */
-app.get('/api/categories', async (c) => {
-  const db = c.env.DB;
-  if (!db) {
-    return c.json({ success: false, message: '数据库 DB 未绑定' }, 500);
-  }
+let categoriesInitialized = false;
 
+async function initCategoriesTable(db: any) {
+  if (categoriesInitialized) return;
   try {
     await db.prepare(`
       CREATE TABLE IF NOT EXISTS categories (
@@ -574,7 +596,21 @@ app.get('/api/categories', async (c) => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `).run();
+    categoriesInitialized = true;
   } catch (e) {}
+}
+
+/**
+ * 获取活动门窗分类列表
+ * GET /api/categories
+ */
+app.get('/api/categories', async (c) => {
+  const db = c.env.DB;
+  if (!db) {
+    return c.json({ success: false, message: '数据库 DB 未绑定' }, 500);
+  }
+
+  await initCategoriesTable(db);
 
   const { results } = await db.prepare(`
     SELECT * FROM categories 
@@ -589,16 +625,10 @@ app.get('/api/categories', async (c) => {
 // 3. 门窗商品与选配项 (Products & Options)
 // ----------------------------------------------------
 
-/**
- * 获取商品列表 (支持按 category_id 筛选)
- * GET /api/products?category_id=cat_1
- */
-app.get('/api/products', async (c) => {
-  const db = c.env.DB;
-  if (!db) {
-    return c.json({ success: false, message: '数据库 DB 未绑定' }, 500);
-  }
+let productsInitialized = false;
 
+async function initProductsTable(db: any) {
+  if (productsInitialized) return;
   try {
     await db.prepare(`
       CREATE TABLE IF NOT EXISTS products (
@@ -615,18 +645,30 @@ app.get('/api/products', async (c) => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `).run();
-  } catch (e) {}
-
-  try {
     await db.prepare('ALTER TABLE products ADD COLUMN category_name TEXT').run();
-  } catch (e) {}
+    productsInitialized = true;
+  } catch (e) {
+    productsInitialized = true;
+  }
+}
+
+/**
+ * 获取商品列表 (支持按 category_id 筛选)
+ * GET /api/products?category_id=cat_1
+ */
+app.get('/api/products', async (c) => {
+  const db = c.env.DB;
+  if (!db) {
+    return c.json({ success: false, message: '数据库 DB 未绑定' }, 500);
+  }
+
+  await initProductsTable(db);
 
   const categoryId = c.req.query('category_id');
   const categoryName = c.req.query('category_name') || c.req.query('category');
   const targetCategory = categoryId || categoryName;
 
   try {
-    // 采用 100% 安全无污染的标准 SELECT，绝不在 WHERE 子句中使用未确定的字段
     const { results } = await db.prepare('SELECT * FROM products WHERE is_active = 1 ORDER BY sort_order ASC, created_at DESC').all<any>();
     let list = results || [];
 
@@ -638,14 +680,18 @@ app.get('/api/products', async (c) => {
       );
     }
 
-    // 批量为每个商品绑定其选配规则列表，供管理后台列表显示规则项数
+    // 单次 Batch 批量拉取全量选配规则并在内存映射，完全消除 N+1 数据库网络耗时
+    const optionsGroupMap: Record<string, any[]> = {};
+    try {
+      const { results: allOptions } = await db.prepare('SELECT * FROM product_options ORDER BY sort_order ASC').all<any>();
+      (allOptions || []).forEach((o: any) => {
+        if (!optionsGroupMap[o.product_id]) optionsGroupMap[o.product_id] = [];
+        optionsGroupMap[o.product_id].push(o);
+      });
+    } catch (e) {}
+
     for (const prod of list) {
-      try {
-        const { results: opts } = await db.prepare('SELECT * FROM product_options WHERE product_id = ? ORDER BY sort_order ASC').bind(prod.id).all<any>();
-        prod.options = opts || [];
-      } catch (e) {
-        prod.options = [];
-      }
+      prod.options = optionsGroupMap[prod.id] || [];
     }
 
     return c.json({ success: true, data: list });
@@ -1249,7 +1295,10 @@ app.get('/api/orders/:id', async (c) => {
 // 5. 管理端 RBAC 权限系统与专属 API (Admin Dashboard RBAC & APIs)
 // ----------------------------------------------------
 
+let rbacInitialized = false;
+
 async function initRBACTables(db: any) {
+  if (rbacInitialized) return;
   try {
     await db.prepare(`
       CREATE TABLE IF NOT EXISTS sys_menus (
@@ -1351,6 +1400,8 @@ async function initRBACTables(db: any) {
         UPDATE admin_users SET password = ?, role_id = 'role_root' WHERE username = 'admin'
       `).bind('zhanchen').run();
     }
+
+    rbacInitialized = true;
   } catch (e) {
     console.error('initRBACTables error:', e);
   }
@@ -1834,19 +1885,7 @@ app.patch('/api/admin/orders/:id/status', async (c) => {
  */
 app.get('/api/admin/categories', async (c) => {
   const db = c.env.DB;
-  try {
-    await db.prepare(`
-      CREATE TABLE IF NOT EXISTS categories (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        sub_title TEXT,
-        icon_url TEXT,
-        sort_order INTEGER DEFAULT 0,
-        is_active INTEGER DEFAULT 1,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `).run();
-  } catch (e) {}
+  await initCategoriesTable(db);
 
   const nameQuery = (c.req.query('name') || c.req.query('keyword') || '').trim().toLowerCase();
 
@@ -1872,25 +1911,12 @@ app.get('/api/admin/categories', async (c) => {
  */
 app.post('/api/admin/categories', async (c) => {
   const db = c.env.DB;
+  await initCategoriesTable(db);
   const body = await c.req.json();
 
   if (!body.name || !body.name.trim()) {
     return c.json({ success: false, message: '分类名称为必填项' }, 400);
   }
-
-  try {
-    await db.prepare(`
-      CREATE TABLE IF NOT EXISTS categories (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        sub_title TEXT,
-        icon_url TEXT,
-        sort_order INTEGER DEFAULT 0,
-        is_active INTEGER DEFAULT 1,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `).run();
-  } catch (e) {}
 
   const id = body.id || `cat_${Date.now()}`;
   const name = body.name.trim();
@@ -1963,23 +1989,7 @@ app.delete('/api/admin/categories/:id', async (c) => {
  */
 app.get('/api/admin/products', async (c) => {
   const db = c.env.DB;
-  try {
-    await db.prepare(`
-      CREATE TABLE IF NOT EXISTS products (
-        id TEXT PRIMARY KEY,
-        category_id TEXT,
-        category_name TEXT,
-        name TEXT NOT NULL,
-        description TEXT,
-        cover_image TEXT,
-        base_price_sqm REAL DEFAULT 680,
-        min_area REAL DEFAULT 1,
-        sort_order INTEGER DEFAULT 0,
-        is_active INTEGER DEFAULT 1,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `).run();
-  } catch (e) {}
+  await initProductsTable(db);
 
   const nameQuery = (c.req.query('name') || c.req.query('keyword') || '').trim().toLowerCase();
   const categoryParam = c.req.query('categories') || c.req.query('category_name') || '';
@@ -2002,13 +2012,18 @@ app.get('/api/admin/products', async (c) => {
       );
     }
   }
+
+  const optionsGroupMap: Record<string, any[]> = {};
+  try {
+    const { results: allOptions } = await db.prepare('SELECT * FROM product_options ORDER BY sort_order ASC').all<any>();
+    (allOptions || []).forEach((o: any) => {
+      if (!optionsGroupMap[o.product_id]) optionsGroupMap[o.product_id] = [];
+      optionsGroupMap[o.product_id].push(o);
+    });
+  } catch (e) {}
+
   for (const prod of list) {
-    try {
-      const { results: opts } = await db.prepare('SELECT * FROM product_options WHERE product_id = ? ORDER BY sort_order ASC').bind(prod.id).all<any>();
-      prod.options = opts || [];
-    } catch (e) {
-      prod.options = [];
-    }
+    prod.options = optionsGroupMap[prod.id] || [];
   }
 
   return c.json({ success: true, data: list });
@@ -2177,12 +2192,10 @@ app.delete('/api/admin/products/:id', async (c) => {
   return c.json({ success: true, message: '商品已下架' });
 });
 
-/**
- * 获取接单员列表 (小程序及管理后台使用)
- * GET /api/receivers
- */
-app.get('/api/receivers', async (c) => {
-  const db = c.env.DB;
+let receiversInitialized = false;
+
+async function initReceiversTable(db: any) {
+  if (receiversInitialized) return;
   try {
     await db.prepare(`
       CREATE TABLE IF NOT EXISTS receivers (
@@ -2194,7 +2207,17 @@ app.get('/api/receivers', async (c) => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `).run();
+    receiversInitialized = true;
   } catch (e) {}
+}
+
+/**
+ * 获取接单员列表 (小程序及管理后台使用)
+ * GET /api/receivers
+ */
+app.get('/api/receivers', async (c) => {
+  const db = c.env.DB;
+  await initReceiversTable(db);
 
   const { results } = await db.prepare('SELECT * FROM receivers WHERE is_active = 1 ORDER BY created_at ASC').all<any>();
   let list = results || [];
@@ -2221,25 +2244,13 @@ app.get('/api/receivers', async (c) => {
  */
 app.post('/api/admin/receivers', async (c) => {
   const db = c.env.DB;
+  await initReceiversTable(db);
   const body = await c.req.json();
   const { id, name, phone, qr_code_url } = body;
 
   if (!name || !phone) {
     return c.json({ success: false, message: '【姓名】与【手机号】为必填项' }, 400);
   }
-
-  try {
-    await db.prepare(`
-      CREATE TABLE IF NOT EXISTS receivers (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        phone TEXT NOT NULL,
-        qr_code_url TEXT,
-        is_active INTEGER DEFAULT 1,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `).run();
-  } catch (e) {}
 
   if (id) {
     await db.prepare(`
@@ -2271,12 +2282,10 @@ app.delete('/api/admin/receivers/:id', async (c) => {
   return c.json({ success: true, message: '接单员已移出列表' });
 });
 
-/**
- * 获取门店配置信息 (小程序及管理后台使用)
- * GET /api/config/store
- */
-app.get('/api/config/store', async (c) => {
-  const db = c.env.DB;
+let storeConfigInitialized = false;
+
+async function initStoreConfigTable(db: any) {
+  if (storeConfigInitialized) return;
   try {
     await db.prepare(`
       CREATE TABLE IF NOT EXISTS store_config (
@@ -2290,14 +2299,21 @@ app.get('/api/config/store', async (c) => {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `).run();
-  } catch (e) {}
-
-  try {
     await db.prepare('ALTER TABLE store_config ADD COLUMN latitude REAL').run();
-  } catch (e) {}
-  try {
     await db.prepare('ALTER TABLE store_config ADD COLUMN longitude REAL').run();
-  } catch (e) {}
+    storeConfigInitialized = true;
+  } catch (e) {
+    storeConfigInitialized = true;
+  }
+}
+
+/**
+ * 获取门店配置信息 (小程序及管理后台使用)
+ * GET /api/config/store
+ */
+app.get('/api/config/store', async (c) => {
+  const db = c.env.DB;
+  await initStoreConfigTable(db);
 
   const config = await db.prepare('SELECT * FROM store_config WHERE id = ?').bind('default').first<any>();
   if (config) {
