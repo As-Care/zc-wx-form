@@ -1339,6 +1339,20 @@ app.post("/api/orders", async (c) => {
             priceText: so.priceText || "",
             image_url: so.image_url || "",
           });
+          
+          selectedOptionObjects.push({
+            id: so.id || "",
+            product_id: "",
+            group_name: so.group_name || groupTitle,
+            group_title: groupTitle,
+            option_name: name,
+            price: Number(so.price || 0),
+            price_type: so.price_type || "fixed",
+            is_default: so.is_default ? 1 : 0,
+            image_url: so.image_url || "",
+            created_at: "",
+            updated_at: ""
+          });
         }
       });
     }

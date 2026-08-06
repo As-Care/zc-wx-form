@@ -67,22 +67,22 @@
     <!-- 针对当前套系的算价结果卡片 -->
     <view class="area-summary-box flex-between">
       <view class="area-item flex-column">
-        <text class="a-label">本套实际面积</text>
-        <text class="a-val">{{customSets[activeSetIndex].calcResult.actualArea}} ㎡</text>
+        <view class="a-label">本套实际面积</view>
+        <view class="a-val">{{customSets[activeSetIndex].calcResult.actualArea}} ㎡</view>
       </view>
       <view class="area-line"></view>
       <view class="area-item flex-column">
-        <text class="a-label">本套计费面积</text>
-        <text class="a-val theme-gold-text">
+        <view class="a-label">本套计费面积</view>
+        <view class="a-val theme-gold-text">
           {{customSets[activeSetIndex].calcResult.billedArea}} ㎡
-        </text>
+        </view>
       </view>
       <view class="area-line"></view>
       <view class="area-item flex-column">
-        <text class="a-label">本套预估小计</text>
-        <text class="a-val theme-gold-text">
+        <view class="a-label">本套预估小计</view>
+        <view class="a-val theme-gold-text">
           ¥ {{customSets[activeSetIndex].calcResult.totalPrice}}
-        </text>
+        </view>
       </view>
     </view>
   </view>

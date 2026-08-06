@@ -64,7 +64,7 @@
     <text class="card-title">② 门窗多套定制规格明细拆解 (共{{order.items.length}}套)</text>
     <!-- 逐套展示明细 -->
     <view class="item-preview-box mb-3" wx:for="{{order.items}}" wx:key="label" wx:for-index="idx">
-      <view class="mb-2">
+      <view class="mb-2 spec-row">
         <view class="prod-title mb-2">{{item.product_name || '110断桥铝系统平开窗'}}</view>
         <view class="set-tag-wrapper mb-2">
           <text class="set-tag">{{item.label || ('套系 ' + (idx + 1))}}</text>
@@ -92,10 +92,10 @@
       <view class="opt-tag-list flex-row mt-1">
         <view class="opt-tag flex-row" wx:for="{{item.options_summary}}" wx:for-item="opt" wx:key="groupTitle">
           <image wx:if="{{opt.image_url}}" class="opt-tag-img" src="{{opt.image_url}}" mode="aspectFill" />
-          <text>
-            {{opt.groupTitle || opt.group_name}}：{{opt.option_name || opt.name}}
+          <view>
+            <text>{{opt.groupTitle || opt.group_name}}：{{opt.option_name || opt.name}} </text>
             <text wx:if="{{opt.priceText}}" style="color: #94A3B8;">({{opt.priceText}})</text>
-          </text>
+          </view>
         </view>
       </view>
       <!-- 该套上传的现场照片列表 -->

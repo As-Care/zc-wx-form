@@ -24,7 +24,7 @@
     <text class="card-title">② 门窗定制规格与下单明细</text>
     <!-- 多套门窗规格循环拆解 -->
     <view class="item-preview-box mb-3" wx:for="{{setsList}}" wx:key="id" wx:for-index="sIdx">
-      <view class="mb-2">
+      <view class="mb-2 spec-row">
         <view class="prod-title">{{draft.product_name}}</view>
         <view class="set-tag-wrapper">
           <text class="set-tag">{{item.label || ('套系 ' + (sIdx + 1))}}</text>
