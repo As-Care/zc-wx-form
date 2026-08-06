@@ -460,10 +460,22 @@ const fetchProducts = async () => {
     const res = await fetch(`${API_BASE}/api/admin/products?${params.toString()}`);
     const data = await res.json();
     if (data.success && data.data) {
-      products.value = data.data.map(p => ({
-        ...p,
-        is_active: (p.is_active !== undefined && p.is_active !== null) ? Number(p.is_active) : 1
-      }));
+      products.value = data.data.map(p => {
+        let opts = p.options;
+        if (!opts || opts.length === 0) {
+          try {
+            const cached = localStorage.getItem(`zc_options_${p.id}`);
+            if (cached) {
+              opts = JSON.parse(cached);
+            }
+          } catch (e) {}
+        }
+        return {
+          ...p,
+          options: opts || [],
+          is_active: (p.is_active !== undefined && p.is_active !== null) ? Number(p.is_active) : 1
+        };
+      });
     } else {
       products.value = DEFAULT_PRODUCTS;
     }
@@ -623,9 +635,16 @@ const parseGroupsFromOptions = (rawOptions) => {
 };
 
 const openOptionsDrawer = (record) => {
-  // 1. 立即设置当前商品并弹出抽屉，零延迟响应
   currentProduct.value = JSON.parse(JSON.stringify(record));
-  groupedOptions.value = parseGroupsFromOptions(currentProduct.value.options);
+  let initialOpts = currentProduct.value.options;
+  if (!initialOpts || initialOpts.length === 0) {
+    try {
+      const cached = localStorage.getItem(`zc_options_${record.id}`);
+      if (cached) initialOpts = JSON.parse(cached);
+    } catch (e) {}
+  }
+
+  groupedOptions.value = parseGroupsFromOptions(initialOpts);
   optionsDrawerVisible.value = true;
   drawerLoading.value = true;
 
@@ -636,6 +655,9 @@ const openOptionsDrawer = (record) => {
       if (data.success && data.data && data.data.options && data.data.options.length > 0) {
         currentProduct.value.options = data.data.options;
         groupedOptions.value = parseGroupsFromOptions(data.data.options);
+        try {
+          localStorage.setItem(`zc_options_${record.id}`, JSON.stringify(data.data.options));
+        } catch (e) {}
       }
     })
     .catch(() => {})
@@ -703,6 +725,10 @@ const saveOptions = async () => {
     target.options = flatList;
     products.value = [...products.value];
   }
+
+  try {
+    localStorage.setItem(`zc_options_${currentProduct.value.id}`, JSON.stringify(flatList));
+  } catch (e) {}
 
   try {
     const res = await fetch(`${API_BASE}/api/admin/products/${currentProduct.value.id}/options`, {
