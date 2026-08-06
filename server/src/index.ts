@@ -1637,8 +1637,6 @@ app.delete("/api/orders/:id", async (c) => {
 
     // 删除订单明细
     await db.prepare("DELETE FROM order_items WHERE order_id = ?").bind(id).run();
-    // 删除订单日志
-    await db.prepare("DELETE FROM order_logs WHERE order_id = ?").bind(id).run();
     // 删除主订单
     await db.prepare("DELETE FROM orders WHERE id = ?").bind(id).run();
 
