@@ -84,9 +84,9 @@
       @page-size-change="onPageSizeChange"
     >
       <template #columns>
-        <a-table-column title="订单编号" data-index="order_no" :width="160">
+        <a-table-column title="订单编号" data-index="order_no" :width="190">
           <template #cell="{ record }">
-            <strong>{{ record.order_no }}</strong>
+            <strong class="order-no-text">{{ record.order_no }}</strong>
           </template>
         </a-table-column>
 
@@ -142,7 +142,7 @@
         </a-table-column>
 
         <!-- 左右并排单行按钮样式 -->
-        <a-table-column title="操作" :width="240">
+        <a-table-column title="操作" :width="240" fixed="right">
           <template #cell="{ record }">
             <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
               <a-button type="outline" size="small" @click="viewOrderDetail(record)">
@@ -412,5 +412,9 @@ onMounted(() => {
   line-height: 24px;
   font-weight: 500;
   text-align: center;
+}
+
+.order-no-text {
+  white-space: nowrap;
 }
 </style>

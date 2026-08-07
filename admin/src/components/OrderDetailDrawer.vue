@@ -21,6 +21,10 @@
         <div style="font-size: 12px; color: var(--color-text-3); margin-top: 6px;">
           下单时间：{{ order.created_at || '暂无时间' }}
         </div>
+        <div class="creator-summary">
+          <span>订单创建者：<strong>{{ order.creator_name || order.customer_name }}</strong></span>
+          <span>创建方式：<strong>{{ order.creator_type === 'admin' ? '后台管理员代客创建' : '微信客户本人创建' }}</strong></span>
+        </div>
       </div>
 
       <!-- 👤 客户基本信息 -->
@@ -29,8 +33,6 @@
           <a-descriptions-item label="客户姓名">{{ order.customer_name }}</a-descriptions-item>
           <a-descriptions-item label="联系电话">{{ order.customer_phone }}</a-descriptions-item>
           <a-descriptions-item label="安装详细地址" :span="2">{{ order.install_address }}</a-descriptions-item>
-          <a-descriptions-item label="订单创建者">{{ order.creator_name || order.customer_name }}</a-descriptions-item>
-          <a-descriptions-item label="创建方式">{{ order.creator_type === 'admin' ? '后台管理员代客创建' : '微信客户本人创建' }}</a-descriptions-item>
         </a-descriptions>
       </a-card>
 
@@ -311,5 +313,19 @@ body[arco-theme='dark'] .options-detail-panel {
   border-radius: 4px;
   font-weight: 500;
   text-align: center;
+}
+
+.creator-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 8px;
+  color: var(--color-text-3);
+  font-size: 12px;
+}
+
+.creator-summary strong {
+  color: var(--color-text-1);
+  font-weight: 500;
 }
 </style>

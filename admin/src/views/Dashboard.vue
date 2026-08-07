@@ -139,7 +139,8 @@ const ALL_MENU_CONFIG = [
   { key: 'Admins', name: '管理员管理', icon: 'IconUser' },
   { key: 'Roles', name: '角色与权限', icon: 'IconSafe' },
   { key: 'Menus', name: '菜单管理', icon: 'IconMenu' },
-  { key: 'Settings', name: '全局设置', icon: 'IconSettings' }
+  { key: 'Settings', name: '全局设置', icon: 'IconSettings' },
+  { key: 'AuditLogs', name: '操作日志', icon: 'IconHistory' }
 ];
 
 const visibleMenuList = computed(() => {

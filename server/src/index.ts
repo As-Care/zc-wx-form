@@ -13,6 +13,158 @@ import { calculateDoorWindowPrice } from "./services/pricing";
 
 const app = new Hono<{ Bindings: Env }>();
 
+let auditLogsInitialized = false;
+
+async function initAuditLogsTable(db: any) {
+  if (auditLogsInitialized) return;
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id TEXT PRIMARY KEY,
+        event_type TEXT NOT NULL,
+        action TEXT NOT NULL,
+        actor_id TEXT,
+        actor_username TEXT,
+        actor_name TEXT,
+        target_type TEXT,
+        target_id TEXT,
+        target_name TEXT,
+        user_id TEXT,
+        user_nickname TEXT,
+        user_phone TEXT,
+        details_json TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+    auditLogsInitialized = true;
+  } catch (e) {
+    console.error("initAuditLogsTable failed:", e);
+  }
+}
+
+async function writeAuditLog(db: any, input: {
+  event_type: string;
+  action: string;
+  actor_id?: string;
+  actor_username?: string;
+  actor_name?: string;
+  target_type?: string;
+  target_id?: string;
+  target_name?: string;
+  user_id?: string;
+  user_nickname?: string;
+  user_phone?: string;
+  details?: any;
+}) {
+  await initAuditLogsTable(db);
+  try {
+    await db.prepare(`
+      INSERT INTO audit_logs
+      (id, event_type, action, actor_id, actor_username, actor_name, target_type, target_id, target_name, user_id, user_nickname, user_phone, details_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      `audit_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+      input.event_type,
+      input.action,
+      input.actor_id || "",
+      input.actor_username || "",
+      input.actor_name || input.actor_username || "管理员",
+      input.target_type || "",
+      input.target_id || "",
+      input.target_name || "",
+      input.user_id || "",
+      input.user_nickname || "",
+      input.user_phone || "",
+      JSON.stringify(input.details || {}),
+    ).run();
+  } catch (e) {
+    console.error("writeAuditLog failed:", e);
+  }
+}
+
+const AUDIT_EVENT_MAP: Record<string, string> = {
+  "/api/admin/customers": "客户管理",
+  "/api/user/profile": "客户资料",
+  "/api/user/addresses": "客户地址",
+  "/api/admin/users": "管理员账号",
+  "/api/admin/roles": "角色权限",
+  "/api/admin/sys-menus": "系统菜单",
+  "/api/admin/categories": "门窗分类",
+  "/api/admin/products": "门窗商品",
+  "/api/admin/receivers": "接单员",
+  "/api/admin/config/store": "门店配置",
+  "/api/orders": "订单管理",
+};
+
+function getAuditEventType(path: string) {
+  const key = Object.keys(AUDIT_EVENT_MAP).find((item) => path === item || path.startsWith(`${item}/`));
+  return key ? AUDIT_EVENT_MAP[key] : "系统操作";
+}
+
+// The admin frontend supplies identity headers for every mutating request.
+// This keeps audit recording centralized and prevents individual pages from
+// accidentally forgetting to create an operation record.
+app.use("*", async (c, next) => {
+  const adminId = c.req.header("X-Admin-Id") || "";
+  const adminUsername = c.req.header("X-Admin-Username") || "";
+  const adminName = c.req.header("X-Admin-Name") || "";
+  const method = c.req.method.toUpperCase();
+  const path = new URL(c.req.url).pathname;
+  if (!adminId && !adminUsername && !adminName) return next();
+
+  let body: any = {};
+  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+    try {
+      body = await c.req.raw.clone().json();
+      if (body && typeof body === "object" && body.password) body.password = "[已隐藏]";
+    } catch (e) {}
+  }
+
+  const routeTargetId = c.req.param("id") || "";
+  let targetContext: any = {};
+  try {
+    if (routeTargetId && (path.includes("/api/orders/") || path.includes("/api/admin/orders/"))) {
+      targetContext = await c.env.DB.prepare(
+        "SELECT id, order_no, user_id, customer_name, customer_phone FROM orders WHERE id = ?",
+      ).bind(routeTargetId).first<any>() || {};
+    } else if (routeTargetId && path.includes("/api/admin/users/")) {
+      targetContext = await c.env.DB.prepare(
+        "SELECT id, nickname, phone FROM users WHERE id = ?",
+      ).bind(routeTargetId).first<any>() || {};
+    }
+  } catch (e) {}
+
+  const response = await next();
+  if (!["POST", "PUT", "PATCH", "DELETE"].includes(method)) return response;
+  if (path === "/api/admin/login" || path === "/api/admin/audit-logs") return response;
+  if (response.status < 200 || response.status >= 300) return response;
+
+  const targetId = body.id || body.user_id || body.product_id || body.order_id || routeTargetId || "";
+  const actionMap: Record<string, string> = { POST: "新增", PUT: "修改", PATCH: "更新", DELETE: "删除" };
+  const action = actionMap[method] || method;
+  const detailName = body.order_no || targetContext.order_no || body.nickname || targetContext.nickname || body.name || body.product_name || body.username || "";
+  const isOrderStatus = path.includes("/api/admin/orders/") && path.endsWith("/status");
+  const actionText = isOrderStatus
+    ? `修改订单 ${targetId} 状态为 ${body.new_status || ""}`
+    : `${action}${getAuditEventType(path)}${detailName ? `：${detailName}` : ""}`;
+
+  await writeAuditLog(c.env.DB, {
+    event_type: isOrderStatus ? "订单状态" : getAuditEventType(path),
+    action: actionText,
+    actor_id: adminId,
+    actor_username: adminUsername,
+    actor_name: adminName,
+    target_type: getAuditEventType(path),
+    target_id: targetId,
+    target_name: detailName,
+    user_id: body.user_id || targetContext.user_id || "",
+    user_nickname: body.customer_name || targetContext.customer_name || targetContext.nickname || body.nickname || "",
+    user_phone: body.customer_phone || targetContext.customer_phone || targetContext.phone || body.phone || "",
+    details: body,
+  });
+  return response;
+});
+
 async function mergeCustomerData(db: any, fromUserId: string, toUserId: string) {
   if (!fromUserId || !toUserId || fromUserId === toUserId) return;
   await db.prepare("UPDATE orders SET user_id = ? WHERE user_id = ?").bind(toUserId, fromUserId).run();
@@ -1927,6 +2079,47 @@ app.get("/api/orders/:id", async (c) => {
 // ----------------------------------------------------
 // 5. 管理端 RBAC 权限系统与专属 API (Admin Dashboard RBAC & APIs)
 // ----------------------------------------------------
+
+/**
+ * 操作日志查询
+ * GET /api/admin/audit-logs?event_type=订单状态&actor_username=admin&user_nickname=张&user_phone=138&page=1&pageSize=20&start_time=...&end_time=...
+ */
+app.get("/api/admin/audit-logs", async (c) => {
+  const db = c.env.DB;
+  await initAuditLogsTable(db);
+  const eventType = (c.req.query("event_type") || "").trim();
+  const actorUsername = (c.req.query("actor_username") || "").trim();
+  const userNickname = (c.req.query("user_nickname") || "").trim();
+  const userPhone = (c.req.query("user_phone") || "").trim();
+  const startTime = (c.req.query("start_time") || "").trim();
+  const endTime = (c.req.query("end_time") || "").trim();
+  const page = Math.max(1, parseInt(c.req.query("page") || "1", 10));
+  const pageSize = Math.min(100, Math.max(1, parseInt(c.req.query("pageSize") || "20", 10)));
+  const params: any[] = [];
+  let where = " WHERE 1=1";
+
+  if (eventType) { where += " AND event_type = ?"; params.push(eventType); }
+  if (actorUsername) {
+    where += " AND (actor_username LIKE ? OR actor_name LIKE ?)";
+    params.push(`%${actorUsername}%`, `%${actorUsername}%`);
+  }
+  if (userNickname) { where += " AND user_nickname LIKE ?"; params.push(`%${userNickname}%`); }
+  if (userPhone) { where += " AND user_phone LIKE ?"; params.push(`%${userPhone}%`); }
+  if (startTime) { where += " AND created_at >= ?"; params.push(startTime); }
+  if (endTime) { where += " AND created_at <= ?"; params.push(endTime); }
+
+  const count = await db.prepare(`SELECT COUNT(*) as total FROM audit_logs${where}`).bind(...params).first<{ total: number }>();
+  const total = Number(count?.total || 0);
+  const rows = await db.prepare(
+    `SELECT * FROM audit_logs${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+  ).bind(...params, pageSize, (page - 1) * pageSize).all<any>();
+
+  return c.json({
+    success: true,
+    data: rows.results || [],
+    pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+  });
+});
 
 let rbacInitialized = false;
 

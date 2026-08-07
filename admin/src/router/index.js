@@ -12,6 +12,7 @@ import Settings from '../views/Settings.vue';
 import Admins from '../views/Admins.vue';
 import Roles from '../views/Roles.vue';
 import Menus from '../views/Menus.vue';
+import AuditLogs from '../views/AuditLogs.vue';
 
 const routes = [
   {
@@ -78,6 +79,11 @@ const routes = [
         path: 'settings',
         name: 'Settings',
         component: Settings
+      },
+      {
+        path: 'audit-logs',
+        name: 'AuditLogs',
+        component: AuditLogs
       }
     ]
   },

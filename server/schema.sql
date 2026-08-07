@@ -100,3 +100,21 @@ CREATE TABLE IF NOT EXISTS order_status_logs (
   remark TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 8. 管理后台操作审计日志
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id VARCHAR(80) PRIMARY KEY,
+  event_type VARCHAR(64) NOT NULL,
+  action TEXT NOT NULL,
+  actor_id VARCHAR(64),
+  actor_username VARCHAR(64),
+  actor_name VARCHAR(128),
+  target_type VARCHAR(64),
+  target_id VARCHAR(128),
+  target_name VARCHAR(128),
+  user_id VARCHAR(64),
+  user_nickname VARCHAR(64),
+  user_phone VARCHAR(20),
+  details_json TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
