@@ -432,6 +432,7 @@ const fetchOrders = async () => {
       total.value = 0;
     }
   } catch (e) {
+    console.error("fetchOrders error:", e);
     orders.value = [];
     total.value = 0;
   } finally {

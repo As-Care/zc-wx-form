@@ -174,6 +174,9 @@ app.use("*", cors({
 
 // Admin routes auth middleware
 app.use("/api/admin/*", async (c, next) => {
+  if (c.req.path === "/api/admin/login") {
+    return await next();
+  }
   const authHeader = c.req.header("Authorization");
   if (!authHeader || !authHeader.startsWith("Bearer zc_admin_token_")) {
     return c.json({ success: false, message: "Unauthorized" }, 401);
