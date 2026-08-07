@@ -64,7 +64,7 @@ Page({
   },
 
   fetchProducts() {
-    return request({ url: '/api/products' }).then(res => {
+    return request({ url: '/api/products?hot=1' }).then(res => {
       if (res.success && Array.isArray(res.data)) {
         this.setData({ products: res.data });
       } else {

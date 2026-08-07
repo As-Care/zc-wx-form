@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS products (
   base_price_sqm DECIMAL(10,2) NOT NULL,
   min_area DECIMAL(5,2) DEFAULT 1.50,
   is_active INT DEFAULT 1,
+  is_hot INT DEFAULT 0,
   sort_order INT DEFAULT 0,
   default_width INT,
   default_height INT,
@@ -132,4 +133,5 @@ CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_orders_status_created_at ON orders(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_orders_customer_phone ON orders(customer_phone);
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_products_hot_active_sort ON products(is_hot, is_active, sort_order);
 CREATE INDEX IF NOT EXISTS idx_admin_sessions_admin_expires ON admin_sessions(admin_id, expires_at);

@@ -153,6 +153,19 @@
           </template>
         </a-table-column>
 
+        <a-table-column title="热门推荐" :width="130">
+          <template #cell="{ record }">
+            <a-switch
+              :model-value="record.is_hot === 1"
+              :loading="hotLoadingIds.has(record.id)"
+              @change="(val) => handleHotChange(record, val)"
+            >
+              <template #checked>热门</template>
+              <template #unchecked>普通</template>
+            </a-switch>
+          </template>
+        </a-table-column>
+
         <a-table-column title="操作" :width="180">
           <template #cell="{ record }">
             <div
@@ -616,6 +629,7 @@ const searchForm = ref({
 
 const products = ref([]);
 const tableLoading = ref(true);
+const hotLoadingIds = ref(new Set());
 
 const modalVisible = ref(false);
 const optionsDrawerVisible = ref(false);
@@ -632,6 +646,7 @@ const form = ref({
   base_price_sqm: 680,
   min_area: 1,
   is_active: 1,
+  is_hot: 0,
   default_width: null,
   default_height: null,
 });
@@ -656,6 +671,7 @@ const fetchProducts = async () => {
           p.is_active !== undefined && p.is_active !== null
             ? Number(p.is_active)
             : 1,
+        is_hot: p.is_hot !== undefined && p.is_hot !== null ? Number(p.is_hot) : 0,
       }));
     } else {
       products.value = [];
@@ -689,6 +705,7 @@ const openProductModal = () => {
     base_price_sqm: 680,
     min_area: 1,
     is_active: 1,
+    is_hot: 0,
     default_width: null,
     default_height: null,
   };
@@ -712,6 +729,10 @@ const editProduct = (record) => {
       record.is_active !== undefined && record.is_active !== null
         ? Number(record.is_active)
         : 1,
+    is_hot:
+      record.is_hot !== undefined && record.is_hot !== null
+        ? Number(record.is_hot)
+        : 0,
     default_width: record.default_width ? Number(record.default_width) : null,
     default_height: record.default_height
       ? Number(record.default_height)
@@ -742,6 +763,27 @@ const handleStatusChange = async (record, val) => {
   } catch (e) {
     Message.error("无法连接后端服务");
     record.is_active = val === 1 ? 0 : 1;
+  }
+};
+
+const handleHotChange = async (record, val) => {
+  if (hotLoadingIds.value.has(record.id)) return;
+  hotLoadingIds.value = new Set(hotLoadingIds.value).add(record.id);
+  try {
+    const data = await request(`/api/admin/products`, {
+      method: "POST",
+      body: JSON.stringify({ ...record, is_hot: val ? 1 : 0 }),
+      silent: true,
+    });
+    if (!data.success) throw new Error(data.message || "热门推荐状态保存失败");
+    Message.success(`商品【${record.name}】已${val ? "设为" : "取消"}热门推荐`);
+    await fetchProducts();
+  } catch (e) {
+    Message.error(e?.message || "热门推荐状态保存失败");
+  } finally {
+    const loadingIds = new Set(hotLoadingIds.value);
+    loadingIds.delete(record.id);
+    hotLoadingIds.value = loadingIds;
   }
 };
 

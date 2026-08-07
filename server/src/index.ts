@@ -25,6 +25,32 @@ let adminSessionsInitialized = false;
 let adminSessionsInitializationPromise: Promise<void> | null = null;
 let orderIndexesInitialized = false;
 let orderIndexesInitializationPromise: Promise<void> | null = null;
+let productHotFieldInitialized = false;
+let productHotFieldInitializationPromise: Promise<void> | null = null;
+
+async function initProductHotField(db: D1Database) {
+  if (productHotFieldInitialized) return;
+  if (productHotFieldInitializationPromise) return productHotFieldInitializationPromise;
+
+  productHotFieldInitializationPromise = (async () => {
+    const { results: columns } = await db.prepare("PRAGMA table_info(products)").all<any>();
+    if (!(columns || []).some((column: any) => column.name === "is_hot")) {
+      try {
+        await db.prepare("ALTER TABLE products ADD COLUMN is_hot INTEGER NOT NULL DEFAULT 0").run();
+      } catch (error) {
+        const { results: refreshedColumns } = await db.prepare("PRAGMA table_info(products)").all<any>();
+        if (!(refreshedColumns || []).some((column: any) => column.name === "is_hot")) throw error;
+      }
+    }
+    await db.prepare(
+      "CREATE INDEX IF NOT EXISTS idx_products_hot_active_sort ON products(is_hot, is_active, sort_order)",
+    ).run();
+    productHotFieldInitialized = true;
+  })().finally(() => {
+    productHotFieldInitializationPromise = null;
+  });
+  return productHotFieldInitializationPromise;
+}
 
 async function initOrderQueryIndexes(db: D1Database) {
   if (orderIndexesInitialized) return;
@@ -1115,7 +1141,7 @@ app.get("/api/categories", async (c) => {
 
 /**
  * 获取商品列表 (支持按 category_id 筛选)
- * GET /api/products?category_id=cat_1
+ * GET /api/products?category_id=cat_1&hot=1
  */
 app.get("/api/products", async (c) => {
   const db = c.env.DB;
@@ -1126,11 +1152,15 @@ app.get("/api/products", async (c) => {
   const categoryId = c.req.query("category_id");
   const categoryName = c.req.query("category_name") || c.req.query("category");
   const targetCategory = categoryId || categoryName;
+  const hotOnly = c.req.query("hot") === "1";
 
   try {
+    await initProductHotField(db);
     const { results } = await db
       .prepare(
-        "SELECT * FROM products WHERE is_active = 1 ORDER BY sort_order ASC, created_at DESC",
+        hotOnly
+          ? "SELECT * FROM products WHERE is_active = 1 AND is_hot = 1 ORDER BY sort_order ASC, created_at DESC"
+          : "SELECT * FROM products WHERE is_active = 1 ORDER BY sort_order ASC, created_at DESC",
       )
       .all<any>();
     let list = results || [];
@@ -2856,6 +2886,7 @@ app.delete("/api/admin/categories/:id", async (c) => {
  */
 app.get("/api/admin/products", async (c) => {
   const db = c.env.DB;
+  await initProductHotField(db);
 
   const nameQuery = (c.req.query("name") || c.req.query("keyword") || "")
     .trim()
@@ -2914,6 +2945,7 @@ app.get("/api/admin/products", async (c) => {
  */
 app.post("/api/admin/products", async (c) => {
   const db = c.env.DB;
+  await initProductHotField(db);
   const body = await c.req.json();
 
   if (!body.name || !body.name.trim()) {
@@ -2927,6 +2959,7 @@ app.post("/api/admin/products", async (c) => {
     body.is_active !== undefined && body.is_active !== null
       ? Number(body.is_active)
       : 1;
+  const isHot = Number(body.is_hot) === 1 ? 1 : 0;
 
   let validCategoryId: string | null = null;
   const rawCatId = (body.category_id || "").trim();
@@ -2949,8 +2982,8 @@ app.post("/api/admin/products", async (c) => {
   await db
     .prepare(
       `
-    INSERT INTO products (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active, default_width, default_height)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+    INSERT INTO products (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active, is_hot, default_width, default_height)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       category_id = excluded.category_id,
       category_name = excluded.category_name,
@@ -2960,6 +2993,7 @@ app.post("/api/admin/products", async (c) => {
       base_price_sqm = excluded.base_price_sqm,
       min_area = excluded.min_area,
       is_active = excluded.is_active,
+      is_hot = excluded.is_hot,
       default_width = excluded.default_width,
       default_height = excluded.default_height
   `,
@@ -2976,6 +3010,7 @@ app.post("/api/admin/products", async (c) => {
         ? Number(body.min_area)
         : 1,
       isActive,
+      isHot,
       body.default_width ? Number(body.default_width) : null,
       body.default_height ? Number(body.default_height) : null,
     )
@@ -3091,6 +3126,7 @@ app.post("/api/admin/products", async (c) => {
 
 app.put("/api/admin/products/:id", async (c) => {
   const db = c.env.DB;
+  await initProductHotField(db);
   const id = c.req.param("id");
   const body = await c.req.json();
   const name = (body.name || "").trim();
@@ -3098,6 +3134,7 @@ app.put("/api/admin/products/:id", async (c) => {
     body.is_active !== undefined && body.is_active !== null
       ? Number(body.is_active)
       : 1;
+  const isHot = Number(body.is_hot) === 1 ? 1 : 0;
 
   let validCategoryId: string | null = null;
   const rawCatId = (body.category_id || "").trim();
@@ -3119,8 +3156,8 @@ app.put("/api/admin/products/:id", async (c) => {
   await db
     .prepare(
       `
-    INSERT INTO products (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active, default_width, default_height)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+    INSERT INTO products (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active, is_hot, default_width, default_height)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       category_id = excluded.category_id,
       category_name = excluded.category_name,
@@ -3130,6 +3167,7 @@ app.put("/api/admin/products/:id", async (c) => {
       base_price_sqm = excluded.base_price_sqm,
       min_area = excluded.min_area,
       is_active = excluded.is_active,
+      is_hot = excluded.is_hot,
       default_width = excluded.default_width,
       default_height = excluded.default_height
   `,
@@ -3146,6 +3184,7 @@ app.put("/api/admin/products/:id", async (c) => {
         ? Number(body.min_area)
         : 1,
       isActive,
+      isHot,
       body.default_width ? Number(body.default_width) : null,
       body.default_height ? Number(body.default_height) : null,
     )
@@ -3422,6 +3461,7 @@ app.post("/api/admin/init-db", async (c) => {
         unit TEXT DEFAULT '㎡',
         images TEXT,
         is_active INTEGER DEFAULT 1,
+        is_hot INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         sort_order INTEGER DEFAULT 0

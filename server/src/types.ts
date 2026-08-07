@@ -54,6 +54,7 @@ export interface Product {
   min_area: number;
   sort_order: number;
   is_active: number;
+  is_hot?: number;
   options?: ProductOption[];
   optionGroups?: Array<{
     group_name: string;
