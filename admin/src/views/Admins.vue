@@ -87,7 +87,7 @@
         </a-form-item>
 
         <a-form-item :label="isEdit ? '登录密码 (留空保持原密码)' : '登录密码'" :required="!isEdit">
-          <a-input-password v-model="form.password" placeholder="请输入密码 (如 zhanchen)" />
+          <a-input-password v-model="form.password" placeholder="请输入登录密码" />
         </a-form-item>
 
         <a-form-item label="管理员姓名/备注">

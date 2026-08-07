@@ -62,7 +62,7 @@
 
       <a-form :model="form" class="login-form" @submit="handleLogin">
         <a-form-item field="username" label="管理员账号">
-          <a-input v-model="form.username" placeholder="默认账号: admin">
+          <a-input v-model="form.username" placeholder="请输入管理员账号" autocomplete="off">
             <template #prefix><icon-user /></template>
           </a-input>
         </a-form-item>
@@ -70,7 +70,8 @@
         <a-form-item field="password" label="管理员密码">
           <a-input-password
             v-model="form.password"
-            placeholder="默认密码: zhanchen"
+            placeholder="请输入管理员密码"
+            autocomplete="off"
           >
             <template #prefix><icon-lock /></template>
           </a-input-password>
@@ -99,8 +100,8 @@ const loading = ref(false);
 const isDark = ref(localStorage.getItem("theme") === "dark");
 
 const form = ref({
-  username: "admin",
-  password: "zhanchen",
+  username: "",
+  password: "",
 });
 
 const toggleTheme = () => {
