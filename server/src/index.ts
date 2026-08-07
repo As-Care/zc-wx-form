@@ -185,8 +185,12 @@ function getBearerTokenUserId(c: any): string | null {
   return match && match[1] ? match[1].trim() : null;
 }
 
-// 启用全局 CORS 跨域支持
-app.use("*", cors());
+// 启用全局 CORS 跨域支持。后台审计需要携带管理员身份 Header，必须
+// 显式加入预检允许列表，否则浏览器会拦截所有后台 API 请求。
+app.use("*", cors({
+  allowHeaders: ["Content-Type", "Authorization", "X-Client", "X-Admin-Id", "X-Admin-Username", "X-Admin-Name"],
+  allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+}));
 
 // 全局异常捕获中间件
 app.onError((err, c) => {
