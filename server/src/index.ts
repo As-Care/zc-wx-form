@@ -2126,10 +2126,44 @@ app.get("/api/admin/audit-logs", async (c) => {
 });
 
 let rbacInitialized = false;
+let rbacInitializationPromise: Promise<void> | null = null;
 
 async function initRBACTables(db: any) {
   if (rbacInitialized) return;
+  if (rbacInitializationPromise) return rbacInitializationPromise;
+
+  rbacInitializationPromise = initRBACTablesInternal(db).finally(() => {
+    rbacInitializationPromise = null;
+  });
+  return rbacInitializationPromise;
+}
+
+async function initRBACTablesInternal(db: any) {
+  if (rbacInitialized) return;
   try {
+    // The production D1 is already seeded. Avoid replaying all schema and
+    // default-data statements on every new Worker isolate.
+    try {
+      const ready = await db
+        .prepare(`
+          SELECT
+            (SELECT COUNT(*) FROM sys_menus) AS menu_count,
+            (SELECT COUNT(*) FROM roles WHERE code = 'root') AS root_count,
+            (SELECT COUNT(*) FROM admin_users WHERE username = 'admin') AS admin_count
+        `)
+        .first<{ menu_count: number; root_count: number; admin_count: number }>();
+      if (
+        Number(ready?.menu_count || 0) > 0 &&
+        Number(ready?.root_count || 0) > 0 &&
+        Number(ready?.admin_count || 0) > 0
+      ) {
+        rbacInitialized = true;
+        return;
+      }
+    } catch (e) {
+      // One or more RBAC tables do not exist yet; run the full initializer.
+    }
+
     await db
       .prepare(
         `
@@ -2607,12 +2641,17 @@ app.get("/api/admin/roles", async (c) => {
     .prepare("SELECT * FROM roles ORDER BY created_at ASC")
     .all<any>();
 
+  const { results: menuRows } = await db
+    .prepare("SELECT role_id, menu_key FROM role_menus")
+    .all<{ role_id: string; menu_key: string }>();
+  const menuKeysByRole = new Map<string, string[]>();
+  for (const row of menuRows || []) {
+    const keys = menuKeysByRole.get(row.role_id) || [];
+    keys.push(row.menu_key);
+    menuKeysByRole.set(row.role_id, keys);
+  }
   for (const role of roles || []) {
-    const { results: menuRows } = await db
-      .prepare("SELECT menu_key FROM role_menus WHERE role_id = ?")
-      .bind(role.id)
-      .all<{ menu_key: string }>();
-    role.menu_keys = (menuRows || []).map((m) => m.menu_key);
+    role.menu_keys = menuKeysByRole.get(role.id) || [];
   }
 
   return c.json({ success: true, data: roles || [] });

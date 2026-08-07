@@ -157,16 +157,15 @@ const storeInfo = ref({
 
 const fetchRealStats = async () => {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/stats`);
-    const data = await res.json();
+    const [statsRes, storeRes] = await Promise.all([
+      fetch(`${API_BASE}/api/admin/stats`),
+      fetch(`${API_BASE}/api/admin/config/store`)
+    ]);
+    const data = await statsRes.json();
     if (data.success && data.data) {
       statsData.value = data.data;
     }
-  } catch (e) {}
-
-  try {
-    const resStore = await fetch(`${API_BASE}/api/admin/config/store`);
-    const dataStore = await resStore.json();
+    const dataStore = await storeRes.json();
     if (dataStore.success && dataStore.data) {
       storeInfo.value = dataStore.data;
     }
