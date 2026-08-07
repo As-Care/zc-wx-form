@@ -1,6 +1,5 @@
 // 展晨门窗 新增/编辑地址 Page 逻辑
 const { request } = require("../../utils/request");
-const app = getApp();
 
 Page({
   data: {
@@ -96,17 +95,9 @@ Page({
       return;
     }
 
-    const savedUser = wx.getStorageSync("zc_user_info");
-    const userId =
-      (savedUser && savedUser.id) ||
-      (app.globalData.userInfo && app.globalData.userInfo.id) ||
-      "user_customer_demo";
     wx.showLoading({ title: "保存中..." });
 
-    const payload = {
-      ...this.data.form,
-      user_id: userId,
-    };
+    const payload = { ...this.data.form };
 
     request({
       url: "/api/user/addresses",
@@ -126,10 +117,7 @@ Page({
       })
       .catch(() => {
         wx.hideLoading();
-        wx.showToast({ title: "地址已保存！", icon: "success" });
-        setTimeout(() => {
-          wx.navigateBack();
-        }, 1000);
+        wx.showToast({ title: "网络异常，地址未保存，请重试", icon: "none" });
       });
   },
 });

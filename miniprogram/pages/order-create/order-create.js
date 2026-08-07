@@ -1,6 +1,5 @@
 // 展晨门窗 确认定制订单 Page 逻辑
 const { request } = require('../../utils/request');
-const app = getApp();
 
 Page({
   data: {
@@ -52,7 +51,7 @@ Page({
         customer_name: this.data.customer_name || '',
         customer_phone: this.data.customer_phone || ''
       });
-      this.fetchDefaultAddress(savedUser);
+      this.fetchDefaultAddress();
     } else {
       wx.navigateBack();
     }
@@ -70,11 +69,10 @@ Page({
     }
   },
 
-  fetchDefaultAddress(savedUser) {
+  fetchDefaultAddress() {
     if (this.data.customer_name || this.data.customer_phone || this.data.install_address) return;
-    const userId = (savedUser && savedUser.id) || (app.globalData.userInfo && app.globalData.userInfo.id) || 'user_customer_demo';
     request({
-      url: `/api/user/addresses?user_id=${userId}`
+      url: '/api/user/addresses'
     }).then(res => {
       if (res.success && res.data && res.data.length > 0) {
         const defaultAddr = res.data.find(addr => addr.is_default === 1 || addr.is_default === true);
@@ -168,7 +166,6 @@ Page({
     }));
 
     const payload = {
-      user_id: (app.globalData.userInfo && app.globalData.userInfo.id) || 'user_customer_demo',
       customer_name: this.data.customer_name,
       customer_phone: this.data.customer_phone,
       install_address: this.data.install_address,

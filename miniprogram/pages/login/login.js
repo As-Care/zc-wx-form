@@ -94,10 +94,9 @@ Page({
     }
 
     const saved = wx.getStorageSync('zc_user_info') || {};
-    const userId = saved.id || `user_${Date.now()}`;
     const info = {
       ...saved,
-      id: userId,
+      id: saved.id || '',
       avatarUrl: this.data.avatarUrl,
       nickname: name,
       phone: phone
@@ -109,7 +108,6 @@ Page({
         url: '/api/user/profile',
         method: 'POST',
         data: {
-          user_id: userId,
           nickname: name,
           avatar_url: this.data.avatarUrl,
           phone: phone
@@ -131,10 +129,9 @@ Page({
     }
 
     wx.setStorageSync('zc_user_info', canonicalInfo);
-    wx.setStorageSync('zc_token', `zc_token_${canonicalInfo.id}`);
     const app = getApp();
     app.globalData.userInfo = canonicalInfo;
-    app.globalData.token = `zc_token_${canonicalInfo.id}`;
+    app.globalData.token = wx.getStorageSync('zc_token') || null;
 
     wx.showToast({
       title: '资料更新成功',

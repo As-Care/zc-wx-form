@@ -36,6 +36,10 @@ App({
   },
 
   silentLogin() {
+    const cachedUser = wx.getStorageSync('zc_user_info') || {};
+    const cachedPhone = cachedUser.phone === '13344443333' ? '' : String(cachedUser.phone || '').trim();
+    const phone = /^1[3-9]\d{9}$/.test(cachedPhone) ? cachedPhone : '';
+
     return new Promise((resolve) => {
       wx.login({
         success: ({ code }) => {
@@ -48,7 +52,7 @@ App({
           wx.request({
             url: `${this.globalData.baseUrl}/api/auth/wx-login`,
             method: 'POST',
-            data: { code },
+            data: { code, phone },
             header: { 'Content-Type': 'application/json', 'X-Client': 'miniprogram' },
             success: (res) => {
               const data = res.data || {};
@@ -58,7 +62,6 @@ App({
                 return;
               }
 
-              const cachedUser = wx.getStorageSync('zc_user_info') || {};
               const isSameUser = cachedUser.id === data.user.id;
               const serverPhone = data.user.phone === '13344443333' ? '' : data.user.phone;
               const userInfo = {
@@ -66,7 +69,7 @@ App({
                 id: data.user.id,
                 nickname: data.user.nickname || (isSameUser ? cachedUser.nickname : '') || '',
                 avatarUrl: data.user.avatar_url || (isSameUser ? cachedUser.avatarUrl : '') || '',
-                phone: serverPhone || (isSameUser ? cachedUser.phone : '') || ''
+                phone: serverPhone || (isSameUser ? cachedPhone : '') || ''
               };
               wx.setStorageSync('zc_user_info', userInfo);
               wx.setStorageSync('zc_token', data.token);

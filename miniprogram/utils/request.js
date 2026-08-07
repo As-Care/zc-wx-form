@@ -20,13 +20,9 @@ function request(options) {
     : Promise.resolve();
 
   return waitForLogin.then(() => new Promise((resolve, reject) => {
-    // Older sessions only persisted zc_user_info. Derive the compatible token
-    // once so order APIs can still enforce ownership after an app upgrade.
-    const savedUser = wx.getStorageSync('zc_user_info') || {};
-    const token = wx.getStorageSync('zc_token') || (savedUser.id ? `zc_token_${savedUser.id}` : '');
-    if (token && !wx.getStorageSync('zc_token')) {
-      wx.setStorageSync('zc_token', token);
-    }
+    // Token must come from the server-side WeChat session. A user ID is not
+    // a credential and must never be used to construct a fallback token.
+    const token = wx.getStorageSync('zc_token') || '';
     wx.request({
       url: options.url.startsWith('http') ? options.url : `${BASE_URL}${options.url}`,
       method: options.method || 'GET',

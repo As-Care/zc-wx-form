@@ -19,10 +19,19 @@ type AdminIdentity = {
   role_code: string;
 };
 
-const app = new Hono<{ Bindings: Env; Variables: { admin: AdminIdentity } }>();
+type UserIdentity = {
+  id: string;
+  openid: string;
+  nickname: string;
+  phone: string;
+};
+
+const app = new Hono<{ Bindings: Env; Variables: { admin?: AdminIdentity; user?: UserIdentity } }>();
 
 let adminSessionsInitialized = false;
 let adminSessionsInitializationPromise: Promise<void> | null = null;
+let userSessionsInitialized = false;
+let userSessionsInitializationPromise: Promise<void> | null = null;
 let orderIndexesInitialized = false;
 let orderIndexesInitializationPromise: Promise<void> | null = null;
 let productHotFieldInitialized = false;
@@ -113,6 +122,52 @@ async function getAdminFromSession(db: D1Database, authorization: string): Promi
     WHERE s.token = ? AND s.expires_at > CURRENT_TIMESTAMP AND a.status = 1
   `).bind(match[1]).first<AdminIdentity>();
   return admin || null;
+}
+
+async function initUserSessions(db: D1Database) {
+  if (userSessionsInitialized) return;
+  if (userSessionsInitializationPromise) return userSessionsInitializationPromise;
+
+  userSessionsInitializationPromise = (async () => {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        token TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        expires_at DATETIME NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+    await db.prepare(
+      "CREATE INDEX IF NOT EXISTS idx_user_sessions_user_expires ON user_sessions(user_id, expires_at)",
+    ).run();
+    userSessionsInitialized = true;
+  })().finally(() => {
+    userSessionsInitializationPromise = null;
+  });
+  return userSessionsInitializationPromise;
+}
+
+async function createUserSession(db: D1Database, userId: string) {
+  await initUserSessions(db);
+  const token = `zc_user_token_${crypto.randomUUID()}`;
+  await db.prepare("DELETE FROM user_sessions WHERE expires_at <= CURRENT_TIMESTAMP").run();
+  await db.prepare(
+    "INSERT INTO user_sessions (token, user_id, expires_at) VALUES (?, ?, datetime('now', '+7 days'))",
+  ).bind(token, userId).run();
+  return token;
+}
+
+async function getUserFromSession(db: D1Database, authorization: string): Promise<UserIdentity | null> {
+  const match = authorization.match(/^Bearer\s+(zc_user_token_[A-Za-z0-9-]+)$/i);
+  if (!match) return null;
+  await initUserSessions(db);
+  const user = await db.prepare(`
+    SELECT u.id, u.openid, u.nickname, u.phone
+    FROM user_sessions s
+    JOIN users u ON u.id = s.user_id
+    WHERE s.token = ? AND s.expires_at > CURRENT_TIMESTAMP
+  `).bind(match[1]).first<UserIdentity>();
+  return user || null;
 }
 
 const ADMIN_ROUTE_MENU: Array<[string, string]> = [
@@ -279,17 +334,54 @@ async function mergeCustomerData(db: any, fromUserId: string, toUserId: string) 
   await db.prepare("DELETE FROM users WHERE id = ?").bind(fromUserId).run();
 }
 
+function isLegacyCustomerIdentity(user: { openid?: string | null; role?: string | null }) {
+  const openid = String(user.openid || "");
+  return (
+    user.role === "admin_created" ||
+    !openid ||
+    openid.startsWith("wx_openid_") ||
+    openid.startsWith("admin_created_")
+  );
+}
+
+/**
+ * A phone number can claim legacy placeholder or admin-created records, but
+ * never another real WeChat identity. This preserves historical orders while
+ * preventing one signed-in customer from taking over a different account.
+ */
+async function claimLegacyCustomerDataByPhone(db: any, currentUserId: string, phone: string) {
+  const result = await db
+    .prepare(
+      "SELECT id, openid, role FROM users WHERE phone = ? AND id != ? ORDER BY created_at ASC",
+    )
+    .bind(phone, currentUserId)
+    .all();
+
+  const matches = (result.results || []) as Array<{
+    id: string;
+    openid: string | null;
+    role: string | null;
+  }>;
+  const realIdentity = matches.find((user) => !isLegacyCustomerIdentity(user));
+  if (realIdentity) return { conflict: true };
+
+  for (const user of matches) {
+    await mergeCustomerData(db, user.id, currentUserId);
+  }
+  await db
+    .prepare("UPDATE orders SET user_id = ? WHERE user_id IS NULL AND customer_phone = ?")
+    .bind(currentUserId, phone)
+    .run();
+  return { conflict: false };
+}
+
 /**
  * Resolve the customer identity carried by the mini-program token.
  * Admin pages currently use the legacy unauthenticated order query path,
  * while mini-program requests always send a Bearer token.
  */
 function getBearerTokenUserId(c: any): string | null {
-  const authorization = c.req.header("Authorization") || "";
-  if (!authorization) return null;
-
-  const match = authorization.match(/^Bearer\s+zc_token_(.+)$/i);
-  return match && match[1] ? match[1].trim() : null;
+  return c.get("user")?.id || null;
 }
 
 function normalizeImageUrls(value: unknown): string {
@@ -326,6 +418,9 @@ app.use("*", async (c, next) => {
       return c.json({ success: false, message: "登录已失效，请重新登录" }, 401);
     }
     c.set("admin", admin);
+  } else if (authorization.startsWith("Bearer zc_user_token_")) {
+    const user = await getUserFromSession(c.env.DB, authorization);
+    if (user) c.set("user", user);
   }
 
   if (!path.startsWith("/api/admin/")) {
@@ -431,7 +526,8 @@ app.post("/api/auth/wx-login", async (c) => {
     body.avatar_url ||
     body.avatar ||
     "https://zc-oss.carelife.top/common/zc-logo.jpg";
-  const phone = String(body.phone || "").trim();
+  const requestedPhone = String(body.phone || "").trim();
+  const phone = /^1[3-9]\d{9}$/.test(requestedPhone) ? requestedPhone : "";
 
   let openid = "";
   const appId = c.env.WX_APP_ID;
@@ -519,10 +615,21 @@ app.post("/api/auth/wx-login", async (c) => {
     };
   }
 
+  // Use a previously saved valid phone only to claim legacy placeholder data.
+  // A real WeChat account with the same phone is never merged automatically.
+  if (phone && (!user.phone || user.phone === phone)) {
+    const claimResult = await claimLegacyCustomerDataByPhone(db, user.id, phone);
+    if (!claimResult.conflict && !user.phone) {
+      await db.prepare("UPDATE users SET phone = ? WHERE id = ?").bind(phone, user.id).run();
+      user = await db.prepare("SELECT * FROM users WHERE id = ?").bind(user.id).first<User>();
+    }
+  }
+
+  const token = await createUserSession(db, user.id);
   return c.json({
     success: true,
     user,
-    token: `zc_token_${user.id}`,
+    token,
   });
 });
 
@@ -570,18 +677,18 @@ app.post("/api/admin/customers", async (c) => {
 
 /**
  * 获取当前用户信息
- * GET /api/user/profile?user_id=xxx
+ * GET /api/user/profile
  */
 app.get("/api/user/profile", async (c) => {
   const db = c.env.DB;
-  const userId = c.req.query("user_id");
-  if (!userId) {
-    return c.json({ success: false, message: "用户ID不能为空" }, 400);
+  const currentUser = c.get("user");
+  if (!currentUser) {
+    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
   }
 
   const user = await db
     .prepare("SELECT * FROM users WHERE id = ?")
-    .bind(userId)
+    .bind(currentUser.id)
     .first<User>();
   if (!user) {
     return c.json({ success: false, message: "未找到该用户" }, 404);
@@ -596,61 +703,22 @@ app.get("/api/user/profile", async (c) => {
  */
 app.post("/api/user/profile", async (c) => {
   const db = c.env.DB;
-  const body = await c.req.json();
-  const { user_id, nickname, avatar_url, phone } = body;
-
-  const id = user_id || `user_${Date.now()}`;
-
-  // The mini-program profile page can be the first authenticated action for
-  // a user. Keep that flow from producing a token for a non-existent user.
-  const existingUser = await db
-    .prepare("SELECT id FROM users WHERE id = ?")
-    .bind(id)
-    .first<{ id: string }>();
-  if (!existingUser) {
-    await db
-      .prepare(
-        `INSERT OR IGNORE INTO users (id, openid, nickname, avatar_url, phone, role)
-         VALUES (?, ?, ?, ?, ?, 'customer')`,
-      )
-      .bind(
-        id,
-        `wx_openid_${id}`,
-        nickname || "展晨尊享客户",
-        avatar_url || "",
-        phone || "",
-      )
-      .run();
+  const currentUser = c.get("user");
+  if (!currentUser) {
+    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
   }
+  const body = await c.req.json();
+  const { nickname, avatar_url, phone } = body;
+  const id = currentUser.id;
+  const cleanPhone = String(phone || "").trim();
 
-  if (phone && phone.trim()) {
-    const cleanPhone = phone.trim();
-    const existing = await db
-      .prepare(
-        "SELECT id, nickname, role, openid FROM users WHERE phone = ? AND id != ? AND openid != ? AND openid != ?",
-      )
-      .bind(cleanPhone, id, id, `wx_openid_${id}`)
-      .first<{ id: string; nickname: string; role: string; openid: string }>();
-
-    if (existing) {
-      if (existing.role === "admin_created") {
-        await mergeCustomerData(db, id, existing.id);
-        await db
-          .prepare(
-            "UPDATE users SET nickname = COALESCE(?, nickname), avatar_url = COALESCE(?, avatar_url), role = 'customer' WHERE id = ?",
-          )
-          .bind(nickname || null, avatar_url || null, existing.id)
-          .run();
-        const mergedUser = await db.prepare("SELECT * FROM users WHERE id = ?").bind(existing.id).first<User>();
-        return c.json({ success: true, user: mergedUser, merged: true });
-      }
-      return c.json(
-        {
-          success: false,
-          message: `联系电话【${cleanPhone}】已被客户【${existing.nickname || existing.id}】绑定，手机号必须唯一！`,
-        },
-        400,
-      );
+  if (cleanPhone && !/^1[3-9]\d{9}$/.test(cleanPhone)) {
+    return c.json({ success: false, message: "请输入有效的手机号码" }, 400);
+  }
+  if (cleanPhone) {
+    const claimResult = await claimLegacyCustomerDataByPhone(db, id, cleanPhone);
+    if (claimResult.conflict) {
+      return c.json({ success: false, message: "该手机号已绑定其他微信账号，请联系门店处理" }, 409);
     }
   }
 
@@ -660,11 +728,12 @@ app.post("/api/user/profile", async (c) => {
     UPDATE users SET
       nickname = COALESCE(?, nickname),
       avatar_url = COALESCE(?, avatar_url),
-      phone = COALESCE(?, phone)
+      phone = COALESCE(?, phone),
+      role = 'customer'
     WHERE id = ?
   `,
     )
-    .bind(nickname || null, avatar_url || null, phone || null, id)
+    .bind(nickname || null, avatar_url || null, cleanPhone || null, id)
     .run();
 
   const user = await db
@@ -738,63 +807,47 @@ async function mergeDuplicateUsersByPhone(db: any) {
 }
 
 /**
- * 客户端更新/同步用户信息 (支持自动合并相同手机号的散客账号)
+ * 客户端更新/同步用户信息
  * POST /api/user/sync
  */
 app.post("/api/user/sync", async (c) => {
   const db = c.env.DB;
   if (!db) return c.json({ success: false, message: "DB 未绑定" }, 500);
+  const currentUser = c.get("user");
+  if (!currentUser) {
+    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
+  }
 
   const body = await c.req.json();
-  const { id, nickname, avatar_url, phone } = body;
+  const { nickname, avatar_url, phone } = body;
+  const id = currentUser.id;
+  const cleanPhone = String(phone || "").trim();
 
-  if (!id) return c.json({ success: false, message: "缺少用户 ID" }, 400);
-
-
-  // 若传入的手机号已被其他客户绑定，自动执行主辅合并
-  if (phone && phone.trim()) {
-    const cleanPhone = phone.trim();
-    const existing = await db
-      .prepare("SELECT * FROM users WHERE phone = ? AND id != ?")
-      .bind(cleanPhone, id)
-      .first<any>();
-
-    if (existing) {
-      await db
-        .prepare("UPDATE orders SET user_id = ? WHERE user_id = ?")
-        .bind(existing.id, id)
-        .run();
-      await db
-        .prepare("UPDATE user_addresses SET user_id = ? WHERE user_id = ?")
-        .bind(existing.id, id)
-        .run();
-      await db.prepare("DELETE FROM users WHERE id = ?").bind(id).run();
-
-      const mergedUser = await db
-        .prepare("SELECT * FROM users WHERE id = ?")
-        .bind(existing.id)
-        .first<any>();
-      return c.json({ success: true, user: mergedUser });
+  if (cleanPhone && !/^1[3-9]\d{9}$/.test(cleanPhone)) {
+    return c.json({ success: false, message: "请输入有效的手机号码" }, 400);
+  }
+  if (cleanPhone) {
+    const claimResult = await claimLegacyCustomerDataByPhone(db, id, cleanPhone);
+    if (claimResult.conflict) {
+      return c.json({ success: false, message: "该手机号已绑定其他微信账号，请联系门店处理" }, 409);
     }
   }
 
   await db
     .prepare(
       `
-    INSERT INTO users (id, openid, nickname, avatar_url, phone, role)
-    VALUES (?, ?, ?, ?, ?, 'customer')
-    ON CONFLICT(id) DO UPDATE SET
-      nickname = COALESCE(NULLIF(excluded.nickname, ''), users.nickname),
-      avatar_url = COALESCE(NULLIF(excluded.avatar_url, ''), users.avatar_url),
-      phone = COALESCE(NULLIF(excluded.phone, ''), users.phone)
+    UPDATE users SET
+      nickname = COALESCE(NULLIF(?, ''), nickname),
+      avatar_url = COALESCE(NULLIF(?, ''), avatar_url),
+      phone = COALESCE(NULLIF(?, ''), phone)
+    WHERE id = ?
   `,
     )
     .bind(
-      id,
-      `wx_openid_${id}`,
-      nickname || "care",
+      nickname || "",
       avatar_url || "",
-      phone || "",
+      cleanPhone,
+      id,
     )
     .run();
 
@@ -983,9 +1036,9 @@ app.delete("/api/admin/users/:id", async (c) => {
  */
 app.get("/api/user/addresses", async (c) => {
   const db = c.env.DB;
-  const userId = c.req.query("user_id");
-  if (!userId) {
-    return c.json({ success: false, message: "用户ID不能为空" }, 400);
+  const currentUser = c.get("user");
+  if (!currentUser) {
+    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
   }
 
 
@@ -993,7 +1046,7 @@ app.get("/api/user/addresses", async (c) => {
     .prepare(
       "SELECT * FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC, created_at DESC",
     )
-    .bind(userId)
+    .bind(currentUser.id)
     .all();
 
   return c.json({ success: true, data: results || [] });
@@ -1005,10 +1058,13 @@ app.get("/api/user/addresses", async (c) => {
  */
 app.post("/api/user/addresses", async (c) => {
   const db = c.env.DB;
+  const currentUser = c.get("user");
+  if (!currentUser) {
+    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
+  }
   const body = await c.req.json();
   const {
     id,
-    user_id,
     name,
     phone,
     province,
@@ -1018,7 +1074,7 @@ app.post("/api/user/addresses", async (c) => {
     is_default,
   } = body;
 
-  if (!user_id || !name || !phone || !detail_address) {
+  if (!name || !phone || !detail_address) {
     return c.json(
       { success: false, message: "请填写完整的联系人、电话及详细地址" },
       400,
@@ -1029,7 +1085,7 @@ app.post("/api/user/addresses", async (c) => {
   if (is_default) {
     await db
       .prepare("UPDATE user_addresses SET is_default = 0 WHERE user_id = ?")
-      .bind(user_id)
+      .bind(currentUser.id)
       .run();
   }
 
@@ -1053,7 +1109,7 @@ app.post("/api/user/addresses", async (c) => {
         detail_address,
         defaultVal,
         id,
-        user_id,
+        currentUser.id,
       )
       .run();
 
@@ -1069,7 +1125,7 @@ app.post("/api/user/addresses", async (c) => {
       )
       .bind(
         newId,
-        user_id,
+        currentUser.id,
         name,
         phone,
         province || "",
@@ -1090,8 +1146,12 @@ app.post("/api/user/addresses", async (c) => {
  */
 app.delete("/api/user/addresses/:id", async (c) => {
   const db = c.env.DB;
+  const currentUser = c.get("user");
+  if (!currentUser) {
+    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
+  }
   const id = c.req.param("id");
-  await db.prepare("DELETE FROM user_addresses WHERE id = ?").bind(id).run();
+  await db.prepare("DELETE FROM user_addresses WHERE id = ? AND user_id = ?").bind(id, currentUser.id).run();
   return c.json({ success: true, message: "地址已删除" });
 });
 
@@ -1101,23 +1161,21 @@ app.delete("/api/user/addresses/:id", async (c) => {
  */
 app.patch("/api/user/addresses/:id/default", async (c) => {
   const db = c.env.DB;
-  const id = c.req.param("id");
-  const body = await c.req.json();
-  const userId = body.user_id || c.req.query("user_id");
-
-  if (!userId) {
-    return c.json({ success: false, message: "用户ID不能为空" }, 400);
+  const currentUser = c.get("user");
+  if (!currentUser) {
+    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
   }
+  const id = c.req.param("id");
 
   await db
     .prepare("UPDATE user_addresses SET is_default = 0 WHERE user_id = ?")
-    .bind(userId)
+    .bind(currentUser.id)
     .run();
   await db
     .prepare(
       "UPDATE user_addresses SET is_default = 1 WHERE id = ? AND user_id = ?",
     )
-    .bind(id, userId)
+    .bind(id, currentUser.id)
     .run();
 
   return c.json({ success: true, message: "默认地址设置成功" });
@@ -1398,11 +1456,11 @@ app.post("/api/orders", async (c) => {
   } = body;
 
   const admin = c.get("admin");
+  const currentUser = c.get("user");
   if (creator_type === "admin" && !admin) {
     return c.json({ success: false, message: "请先登录后台管理系统" }, 401);
   }
-  const customerTokenUserId = getBearerTokenUserId(c);
-  if (!admin && !customerTokenUserId) {
+  if (!admin && !currentUser) {
     return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
   }
 
@@ -1434,15 +1492,12 @@ app.post("/api/orders", async (c) => {
     ? requestedStatus
     : "pending_review";
 
-  // 外键安全校验与容错: 防止 invalid user_id / product_id 触发 SQLite 外键约束异常
-  // 以下单联系电话 (customer_phone) 作为订单与客户账号的唯一关键强绑定
+  // 小程序订单始终归属当前已验证的微信用户；后台代客下单才按手机号匹配客户。
   let validUserId: string | null = null;
   const rawUserId = (user_id || "").trim();
-  if (!admin && rawUserId && rawUserId !== customerTokenUserId) {
-    return c.json({ success: false, message: "无权为其他客户创建订单" }, 403);
-  }
-
-  if (cleanPhone) {
+  if (!admin) {
+    validUserId = currentUser!.id;
+  } else if (cleanPhone) {
     try {
       let targetUser = await db
         .prepare("SELECT * FROM users WHERE phone = ? LIMIT 1")
@@ -1497,7 +1552,7 @@ app.post("/api/orders", async (c) => {
         validUserId = targetUser.id;
       }
     } catch (e) {}
-  } else if (rawUserId) {
+  } else if (admin && rawUserId) {
     try {
       const u = await db
         .prepare("SELECT id FROM users WHERE id = ?")
@@ -1566,7 +1621,7 @@ app.post("/api/orders", async (c) => {
       totalSets,
       initialStatus,
       isAdminCreated ? "admin" : "customer",
-      isAdminCreated ? admin!.id : validUserId || rawUserId,
+      isAdminCreated ? admin!.id : currentUser!.id,
       isAdminCreated ? admin!.nickname || admin!.username : customer_name || "客户本人",
       admin_remark || "",
     )

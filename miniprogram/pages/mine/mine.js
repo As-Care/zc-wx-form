@@ -59,24 +59,18 @@ Page({
   },
 
   fetchOrderCounts() {
-    request({ url: '/api/orders' }).then(res => {
-      if (res.success && res.data) {
-        const list = res.data;
-        const counts = {
-          total: list.length,
-          pending_review: 0,
-          producing: 0,
-          installing: 0,
-          completed: 0
-        };
-
-        list.forEach(o => {
-          if (counts[o.status] !== undefined) {
-            counts[o.status]++;
+    request({ url: '/api/orders?page=1&pageSize=1' }).then(res => {
+      if (res.success) {
+        const counts = res.status_counts || {};
+        this.setData({
+          orderCounts: {
+            total: Number((res.pagination && res.pagination.total) || 0),
+            pending_review: Number(counts.pending_review || 0),
+            producing: Number(counts.producing || 0),
+            installing: Number(counts.installing || 0),
+            completed: Number(counts.completed || 0)
           }
         });
-
-        this.setData({ orderCounts: counts });
       }
     });
   },

@@ -1,6 +1,5 @@
 // 展晨门窗 地址管理列表 Page 逻辑
 const { request } = require('../../utils/request');
-const app = getApp();
 
 Page({
   data: {
@@ -19,12 +18,10 @@ Page({
   },
 
   fetchAddresses() {
-    const savedUser = wx.getStorageSync('zc_user_info');
-    const userId = (savedUser && savedUser.id) || (app.globalData.userInfo && app.globalData.userInfo.id) || 'user_customer_demo';
     wx.showLoading({ title: '加载地址中...' });
 
     request({
-      url: `/api/user/addresses?user_id=${userId}`
+      url: '/api/user/addresses'
     }).then(res => {
       wx.hideLoading();
       if (res.success && res.data) {
@@ -49,14 +46,11 @@ Page({
 
   setDefaultAddress(e) {
     const id = e.currentTarget.dataset.id;
-    const savedUser = wx.getStorageSync('zc_user_info');
-    const userId = (savedUser && savedUser.id) || (app.globalData.userInfo && app.globalData.userInfo.id) || 'user_customer_demo';
 
     wx.showLoading({ title: '设置中...' });
     request({
       url: `/api/user/addresses/${id}/default`,
-      method: 'PATCH',
-      data: { user_id: userId }
+      method: 'PATCH'
     }).then(res => {
       wx.hideLoading();
       if (res.success) {
