@@ -93,8 +93,7 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { Message } from "@arco-design/web-vue";
-
-const API_BASE = 'https://zc-api.carelife.top';
+import request from "../utils/request";
 const router = useRouter();
 const loading = ref(false);
 const isDark = ref(localStorage.getItem("theme") === "dark");
@@ -130,12 +129,10 @@ const handleLogin = async () => {
 
   loading.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/admin/login`, {
+    const data = await request(`/api/admin/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form.value)
     });
-    const data = await res.json();
 
     if (data.success) {
       localStorage.setItem("admin_token", data.token || "zc_admin_token_2026");
@@ -147,16 +144,7 @@ const handleLogin = async () => {
       Message.error(data.message || "登录失败，请检查账号和密码");
     }
   } catch (e) {
-    // 网络兜底
-    if (form.value.username === 'admin' && form.value.password === 'zhanchen') {
-      localStorage.setItem("admin_token", "zc_admin_token_2026");
-      localStorage.setItem("admin_user", JSON.stringify({ id: 'admin_root', username: 'admin', nickname: '展晨总管理', role_name: '超级管理员', role_code: 'root' }));
-      localStorage.setItem("admin_menus", JSON.stringify(["Overview","Categories","Products","Orders","StaffConfig","Users","Admins","Roles","Menus","Settings"]));
-      Message.success("本地演示验证通过！");
-      router.push("/dashboard/overview");
-    } else {
-      Message.error("登录服务连接异常");
-    }
+    Message.error("登录服务连接异常");
   } finally {
     loading.value = false;
   }

@@ -8,57 +8,80 @@
       </a-button>
     </div>
 
-    <!-- 搜索与多条件筛选面板 (学习商品方案管理样式) -->
-    <a-card class="search-panel mb-4">
-      <a-form :model="searchForm" layout="inline">
-        <a-form-item label="客户昵称/姓名">
-          <a-input
-            v-model="searchForm.nickname"
-            placeholder="输入姓名或昵称模糊搜索"
-            allow-clear
-            style="width: 240px;"
-            @keyup.enter="handleSearch"
-          />
-        </a-form-item>
+    <!-- 搜索与多条件筛选面板 -->
+    <a-card class="search-panel mb-4" size="small">
+      <a-form :model="searchForm" auto-label-width>
+        <a-row :gutter="[12, 16]">
+          <a-col :xs="24" :sm="12" :md="7">
+            <a-form-item label="客户昵称/姓名">
+              <a-input
+                v-model="searchForm.nickname"
+                placeholder="输入姓名或昵称模糊搜索"
+                allow-clear
+                style="width: 100%"
+                @keyup.enter="handleSearch"
+              />
+            </a-form-item>
+          </a-col>
 
-        <a-form-item label="联系电话">
-          <a-input
-            v-model="searchForm.phone"
-            placeholder="输入手机号模糊搜索"
-            allow-clear
-            style="width: 240px;"
-            @keyup.enter="handleSearch"
-          />
-        </a-form-item>
+          <a-col :xs="24" :sm="12" :md="7">
+            <a-form-item label="联系电话">
+              <a-input
+                v-model="searchForm.phone"
+                placeholder="输入手机号模糊搜索"
+                allow-clear
+                style="width: 100%"
+                @keyup.enter="handleSearch"
+              />
+            </a-form-item>
+          </a-col>
 
-        <a-form-item>
-          <a-space>
-            <a-button type="primary" @click="handleSearch">
-              <template #icon><icon-search /></template>
-              查询
-            </a-button>
-            <a-button @click="resetSearch">
-              <template #icon><icon-refresh /></template>
-              重置
-            </a-button>
-          </a-space>
-        </a-form-item>
+          <a-col :xs="24" :sm="12" :md="6">
+            <a-form-item hide-label>
+              <a-space>
+                <a-button type="primary" @click="handleSearch">
+                  <template #icon><icon-search /></template>
+                  查询
+                </a-button>
+                <a-button @click="resetSearch">
+                  <template #icon><icon-refresh /></template>
+                  重置
+                </a-button>
+              </a-space>
+            </a-form-item>
+          </a-col>
+        </a-row>
       </a-form>
     </a-card>
 
     <!-- 客户数据表格 (仅展示客户，过滤管理员) -->
-    <a-table :data="customerList" :loading="tableLoading" :pagination="{ pageSize: 10 }" border row-key="id">
+    <a-table
+      :data="customerList"
+      :loading="tableLoading"
+      :pagination="{ pageSize: 10 }"
+      border
+      row-key="id"
+    >
       <template #columns>
         <a-table-column title="客户头像" :width="100">
           <template #cell="{ record }">
-            <a-avatar :size="42" style="border: 1px solid #C5A880; background: #C5A880;">
+            <a-avatar
+              :size="42"
+              style="border: 1px solid #c5a880; background: #c5a880"
+            >
               <img v-if="record.avatar_url" :src="record.avatar_url" />
-              <span v-else>{{ record.nickname ? record.nickname.charAt(0) : '客' }}</span>
+              <span v-else>{{
+                record.nickname ? record.nickname.charAt(0) : "客"
+              }}</span>
             </a-avatar>
           </template>
         </a-table-column>
 
-        <a-table-column title="客户姓名/昵称" data-index="nickname" :width="180">
+        <a-table-column
+          title="客户姓名/昵称"
+          data-index="nickname"
+          :width="180"
+        >
           <template #cell="{ record }">
             <strong>{{ record.nickname }}</strong>
           </template>
@@ -66,14 +89,20 @@
 
         <a-table-column title="联系电话" data-index="phone" :width="160">
           <template #cell="{ record }">
-            <span style="color: #C5A880; font-weight: bold;">{{ record.phone }}</span>
+            <span style="color: #c5a880; font-weight: bold">{{
+              record.phone
+            }}</span>
           </template>
         </a-table-column>
 
         <a-table-column title="下单数量" :width="130">
           <template #cell="{ record }">
-            <span class="champagne-tag count-badge" style="cursor: pointer;" @click="goToOrders(record.phone)">
-              <icon-history style="margin-right: 4px;" />
+            <span
+              class="champagne-tag count-badge"
+              style="cursor: pointer"
+              @click="goToOrders(record.phone)"
+            >
+              <icon-history style="margin-right: 4px" />
               {{ record.order_count || 0 }} 单
             </span>
           </template>
@@ -81,13 +110,19 @@
 
         <a-table-column title="微信 OpenID" data-index="openid" :width="220">
           <template #cell="{ record }">
-            <small style="color: #86909c;">{{ record.role === 'admin_created' ? '暂未注册微信' : (record.openid || '暂未注册微信') }}</small>
+            <small style="color: #86909c">{{
+              record.role === "admin_created"
+                ? "暂未注册微信"
+                : record.openid || "暂未注册微信"
+            }}</small>
           </template>
         </a-table-column>
 
         <a-table-column title="角色身份" :width="120">
           <template #cell="{ record }">
-            <span class="champagne-tag role-badge">{{ getCustomerRoleText(record) }}</span>
+            <span class="champagne-tag role-badge">{{
+              getCustomerRoleText(record)
+            }}</span>
           </template>
         </a-table-column>
 
@@ -95,14 +130,35 @@
 
         <a-table-column title="操作" :width="230">
           <template #cell="{ record }">
-            <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
-              <a-button class="btn-champagne-outline" size="small" @click="viewCustomerDetails(record)">
+            <div
+              style="
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                white-space: nowrap;
+                gap: 6px;
+              "
+            >
+              <a-button
+                class="btn-champagne-outline"
+                size="small"
+                @click="viewCustomerDetails(record)"
+              >
                 查看详情
               </a-button>
-              <a-button type="outline" size="small" status="warning" @click="editUser(record)">
+              <a-button
+                type="outline"
+                size="small"
+                status="warning"
+                @click="editUser(record)"
+              >
                 修改资料
               </a-button>
-              <a-popconfirm content="确定彻底删除此客户档案吗？" type="warning" @ok="deleteUser(record.id)">
+              <a-popconfirm
+                content="确定彻底删除此客户档案吗？"
+                type="warning"
+                @ok="deleteUser(record.id)"
+              >
                 <a-button type="outline" status="danger" size="small">
                   删除
                 </a-button>
@@ -114,26 +170,59 @@
     </a-table>
 
     <!-- 客户详细档案与地址列表 Drawer 抽屉 -->
-    <a-drawer v-model:visible="detailDrawerVisible" width="40vw" title="👤 客户详细档案与全部地址" unmount-on-close>
+    <a-drawer
+      v-model:visible="detailDrawerVisible"
+      width="40vw"
+      title="👤 客户详细档案与全部地址"
+      unmount-on-close
+    >
       <div v-if="selectedUser" class="user-detail-container">
         <!-- 头部个人名片 -->
         <div class="user-card-header flex-row mb-4">
-          <a-avatar :size="60" style="border: 2px solid #C5A880; background: #C5A880; flex-shrink: 0;">
-            <img v-if="selectedUser.avatar_url" :src="selectedUser.avatar_url" />
-            <span v-else style="font-size: 22px;">{{ selectedUser.nickname ? selectedUser.nickname.charAt(0) : '客' }}</span>
+          <a-avatar
+            :size="60"
+            style="
+              border: 2px solid #c5a880;
+              background: #c5a880;
+              flex-shrink: 0;
+            "
+          >
+            <img
+              v-if="selectedUser.avatar_url"
+              :src="selectedUser.avatar_url"
+            />
+            <span v-else style="font-size: 22px">{{
+              selectedUser.nickname ? selectedUser.nickname.charAt(0) : "客"
+            }}</span>
           </a-avatar>
           <div class="header-info flex-column ml-3">
-            <h3 class="user-detail-name">{{ selectedUser.nickname || '微信用户' }}</h3>
-            <span class="user-detail-phone">📞 手机号: {{ selectedUser.phone || '暂未绑定' }}</span>
-            <span class="user-detail-time">🕒 注册时间: {{ selectedUser.created_at || '最近注册' }}</span>
+            <h3 class="user-detail-name">
+              {{ selectedUser.nickname || "微信用户" }}
+            </h3>
+            <span class="user-detail-phone"
+              >📞 手机号: {{ selectedUser.phone || "暂未绑定" }}</span
+            >
+            <span class="user-detail-time"
+              >🕒 注册时间: {{ selectedUser.created_at || "最近注册" }}</span
+            >
           </div>
         </div>
 
         <a-descriptions :column="1" border title="📋 基础账号档案" class="mb-4">
-          <a-descriptions-item label="客户 ID">{{ selectedUser.id }}</a-descriptions-item>
-          <a-descriptions-item label="微信 OpenID">{{ selectedUser.role === 'admin_created' ? '暂未注册微信' : (selectedUser.openid || '暂无记录') }}</a-descriptions-item>
-          <a-descriptions-item label="角色身份">{{ getCustomerRoleText(selectedUser) }}</a-descriptions-item>
-          <a-descriptions-item label="累计下单数量">{{ selectedUser.order_count || 0 }} 笔定制订单</a-descriptions-item>
+          <a-descriptions-item label="客户 ID">{{
+            selectedUser.id
+          }}</a-descriptions-item>
+          <a-descriptions-item label="微信 OpenID">{{
+            selectedUser.role === "admin_created"
+              ? "暂未注册微信"
+              : selectedUser.openid || "暂无记录"
+          }}</a-descriptions-item>
+          <a-descriptions-item label="角色身份">{{
+            getCustomerRoleText(selectedUser)
+          }}</a-descriptions-item>
+          <a-descriptions-item label="累计下单数量"
+            >{{ selectedUser.order_count || 0 }} 笔定制订单</a-descriptions-item
+          >
         </a-descriptions>
 
         <!-- 关联的收货 / 安装地址列表 -->
@@ -151,27 +240,43 @@
               class="address-item-box mb-3"
             >
               <div class="addr-header flex-between mb-1">
-                <span class="addr-name"><strong>{{ addr.name }}</strong> ({{ addr.phone }})</span>
+                <span class="addr-name"
+                  ><strong>{{ addr.name }}</strong> ({{ addr.phone }})</span
+                >
                 <a-space>
-                  <a-tag v-if="addr.is_default" color="gold" size="small">默认地址</a-tag>
-                  <a-button type="text" size="mini" @click="openAddressModal(addr)">修改</a-button>
+                  <a-tag v-if="addr.is_default" color="gold" size="small"
+                    >默认地址</a-tag
+                  >
+                  <a-button
+                    type="text"
+                    size="mini"
+                    @click="openAddressModal(addr)"
+                    >修改</a-button
+                  >
                 </a-space>
               </div>
               <div class="addr-detail">
-                📍 {{ addr.province || '' }}{{ addr.city || '' }}{{ addr.district || '' }} {{ addr.detail_address }}
+                📍 {{ addr.province || "" }}{{ addr.city || ""
+                }}{{ addr.district || "" }} {{ addr.detail_address }}
               </div>
             </div>
           </div>
           <div v-else class="empty-address-tip flex-column flex-center">
-            <icon-location style="font-size: 24px; color: #86909c;" />
-            <span style="margin-top: 8px; color: #86909c; font-size: 13px;">客户暂未在小程序中提交过详细收货地址</span>
+            <icon-location style="font-size: 24px; color: #86909c" />
+            <span style="margin-top: 8px; color: #86909c; font-size: 13px"
+              >客户暂未在小程序中提交过详细收货地址</span
+            >
           </div>
         </a-card>
       </div>
     </a-drawer>
 
     <!-- 修改客户资料 Modal 弹窗 -->
-    <a-modal v-model:visible="modalVisible" title="修改小程序客户个人资料" :on-before-ok="handleBeforeSaveUser">
+    <a-modal
+      v-model:visible="modalVisible"
+      title="修改小程序客户个人资料"
+      :on-before-ok="handleBeforeSaveUser"
+    >
       <a-form :model="editForm" layout="vertical">
         <!-- 客户微信头像上传 (挪至最上方) -->
         <a-form-item label="客户微信头像">
@@ -186,7 +291,7 @@
                     @before-upload="onBeforeUpload"
                     @success="onAvatarUploadSuccess"
                     @error="onAvatarUploadError"
-                    style="display: inline-block;"
+                    style="display: inline-block"
                   >
                     <template #upload-button>
                       <span class="mask-icon" title="更换头像">
@@ -194,7 +299,11 @@
                       </span>
                     </template>
                   </a-upload>
-                  <span class="mask-icon mask-icon-delete ml-2" title="删除头像" @click.stop="editForm.avatar_url = ''">
+                  <span
+                    class="mask-icon mask-icon-delete ml-2"
+                    title="删除头像"
+                    @click.stop="editForm.avatar_url = ''"
+                  >
                     <icon-delete />
                   </span>
                 </div>
@@ -209,7 +318,7 @@
               >
                 <template #upload-button>
                   <div class="upload-dropzone">
-                    <icon-plus style="font-size: 16px; color: #C5A880;" />
+                    <icon-plus style="font-size: 16px; color: #c5a880" />
                     <span class="upload-title">上传头像</span>
                   </div>
                 </template>
@@ -219,7 +328,10 @@
         </a-form-item>
 
         <a-form-item label="客户姓名/昵称" required>
-          <a-input v-model="editForm.nickname" placeholder="请输入客户姓名或备注" />
+          <a-input
+            v-model="editForm.nickname"
+            placeholder="请输入客户姓名或备注"
+          />
         </a-form-item>
 
         <a-form-item label="联系电话">
@@ -228,10 +340,17 @@
       </a-form>
     </a-modal>
 
-    <a-modal v-model:visible="createModalVisible" title="创建客户档案" :on-before-ok="handleCreateCustomer">
+    <a-modal
+      v-model:visible="createModalVisible"
+      title="创建客户档案"
+      :on-before-ok="handleCreateCustomer"
+    >
       <a-form :model="createForm" layout="vertical">
         <a-form-item label="客户姓名/昵称" required>
-          <a-input v-model="createForm.nickname" placeholder="请输入客户姓名或昵称" />
+          <a-input
+            v-model="createForm.nickname"
+            placeholder="请输入客户姓名或昵称"
+          />
         </a-form-item>
         <a-form-item label="联系电话" required>
           <a-input v-model="createForm.phone" placeholder="请输入11位手机号" />
@@ -239,19 +358,36 @@
         <a-divider orientation="left">收货/安装地址</a-divider>
         <a-form-item label="省 / 市 / 区">
           <a-grid :cols="3" :col-gap="12">
-            <a-grid-item><a-input v-model="createForm.province" placeholder="省份" /></a-grid-item>
-            <a-grid-item><a-input v-model="createForm.city" placeholder="城市" /></a-grid-item>
-            <a-grid-item><a-input v-model="createForm.district" placeholder="区县" /></a-grid-item>
+            <a-grid-item
+              ><a-input v-model="createForm.province" placeholder="省份"
+            /></a-grid-item>
+            <a-grid-item
+              ><a-input v-model="createForm.city" placeholder="城市"
+            /></a-grid-item>
+            <a-grid-item
+              ><a-input v-model="createForm.district" placeholder="区县"
+            /></a-grid-item>
           </a-grid>
         </a-form-item>
         <a-form-item label="详细收货/安装地址" required>
-          <a-textarea v-model="createForm.detail_address" placeholder="请输入小区、街道、门牌号" :auto-size="{ minRows: 2, maxRows: 4 }" />
+          <a-textarea
+            v-model="createForm.detail_address"
+            placeholder="请输入小区、街道、门牌号"
+            :auto-size="{ minRows: 2, maxRows: 4 }"
+          />
         </a-form-item>
-        <div class="create-customer-tip">该客户暂时没有微信 OpenID，后续使用相同手机号在小程序注册后会自动合并。</div>
+        <div class="create-customer-tip">
+          该客户暂时没有微信
+          OpenID，后续使用相同手机号在小程序注册后会自动合并。
+        </div>
       </a-form>
     </a-modal>
 
-    <a-modal v-model:visible="addressModalVisible" :title="addressForm.id ? '修改收货/安装地址' : '新增收货/安装地址'" :on-before-ok="handleSaveAddress">
+    <a-modal
+      v-model:visible="addressModalVisible"
+      :title="addressForm.id ? '修改收货/安装地址' : '新增收货/安装地址'"
+      :on-before-ok="handleSaveAddress"
+    >
       <a-form :model="addressForm" layout="vertical">
         <a-form-item label="联系人姓名" required>
           <a-input v-model="addressForm.name" placeholder="请输入联系人姓名" />
@@ -261,13 +397,23 @@
         </a-form-item>
         <a-form-item label="省 / 市 / 区">
           <a-grid :cols="3" :col-gap="12">
-            <a-grid-item><a-input v-model="addressForm.province" placeholder="省份" /></a-grid-item>
-            <a-grid-item><a-input v-model="addressForm.city" placeholder="城市" /></a-grid-item>
-            <a-grid-item><a-input v-model="addressForm.district" placeholder="区县" /></a-grid-item>
+            <a-grid-item
+              ><a-input v-model="addressForm.province" placeholder="省份"
+            /></a-grid-item>
+            <a-grid-item
+              ><a-input v-model="addressForm.city" placeholder="城市"
+            /></a-grid-item>
+            <a-grid-item
+              ><a-input v-model="addressForm.district" placeholder="区县"
+            /></a-grid-item>
           </a-grid>
         </a-form-item>
         <a-form-item label="详细收货/安装地址" required>
-          <a-textarea v-model="addressForm.detail_address" placeholder="请输入小区、街道、门牌号" :auto-size="{ minRows: 2, maxRows: 4 }" />
+          <a-textarea
+            v-model="addressForm.detail_address"
+            placeholder="请输入小区、街道、门牌号"
+            :auto-size="{ minRows: 2, maxRows: 4 }"
+          />
         </a-form-item>
         <a-form-item label="默认地址">
           <a-switch v-model="addressForm.is_default" />
@@ -278,20 +424,20 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { Message } from '@arco-design/web-vue';
+import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { Message } from "@arco-design/web-vue";
 
 const router = useRouter();
 const goToOrders = (phone) => {
   if (!phone) {
-    Message.warning('该客户尚未绑定手机号');
+    Message.warning("该客户尚未绑定手机号");
     return;
   }
-  router.push({ path: '/dashboard/orders', query: { customer: phone } });
+  router.push({ path: "/dashboard/orders", query: { customer: phone } });
 };
 
-const API_BASE = 'https://zc-api.carelife.top';
+import request from "../utils/request";
 
 const users = ref([]);
 const tableLoading = ref(true);
@@ -306,64 +452,60 @@ const addressLoading = ref(false);
 const uploading = ref(false);
 
 const searchForm = ref({
-  nickname: '',
-  phone: ''
+  nickname: "",
+  phone: "",
 });
 
 const editForm = ref({
-  id: '',
-  nickname: '',
-  avatar_url: '',
-  phone: ''
+  id: "",
+  nickname: "",
+  avatar_url: "",
+  phone: "",
 });
 
 const DEFAULT_REGION = {
-  province: '湖北省',
-  city: '省直辖县级行政区划',
-  district: '仙桃市'
+  province: "湖北省",
+  city: "省直辖县级行政区划",
+  district: "仙桃市",
 };
 
 const createForm = ref({
-  nickname: '',
-  phone: '',
+  nickname: "",
+  phone: "",
   ...DEFAULT_REGION,
-  detail_address: ''
+  detail_address: "",
 });
 
 const addressForm = ref({
-  id: '',
-  name: '',
-  phone: '',
+  id: "",
+  name: "",
+  phone: "",
   ...DEFAULT_REGION,
-  detail_address: '',
-  is_default: true
+  detail_address: "",
+  is_default: true,
 });
 
 const getCustomerRoleText = (record) => {
-  return record && record.role === 'admin_created' ? '管理员创建' : '微信客户';
+  return record && record.role === "admin_created" ? "管理员创建" : "微信客户";
 };
 
 // 严格过滤掉管理员 (role !== 'admin')
 const customerList = computed(() => {
-  return users.value.filter(u => u.role !== 'admin');
+  return users.value.filter((u) => u.role !== "admin");
 });
 
 const fetchUsers = async () => {
   tableLoading.value = true;
   try {
-    const params = new URLSearchParams();
-    if (searchForm.value.nickname && searchForm.value.nickname.trim()) {
-      params.append('nickname', searchForm.value.nickname.trim());
+    let url = `/api/users`;
+    if (searchForm.value.nickname || searchForm.value.phone) {
+      const params = new URLSearchParams();
+      if (searchForm.value.nickname)
+        params.append("nickname", searchForm.value.nickname);
+      if (searchForm.value.phone) params.append("phone", searchForm.value.phone);
+      url += `?${params.toString()}`;
     }
-    if (searchForm.value.phone && searchForm.value.phone.trim()) {
-      params.append('phone', searchForm.value.phone.trim());
-    }
-
-    const queryStr = params.toString();
-    const url = `${API_BASE}/api/users${queryStr ? '?' + queryStr : ''}`;
-
-    const res = await fetch(url);
-    const data = await res.json();
+    const data = await request(url);
     if (data.success && Array.isArray(data.data)) {
       users.value = data.data;
     } else {
@@ -382,8 +524,8 @@ const handleSearch = () => {
 
 const resetSearch = () => {
   searchForm.value = {
-    nickname: '',
-    phone: ''
+    nickname: "",
+    phone: "",
   };
   fetchUsers();
 };
@@ -395,13 +537,12 @@ const viewCustomerDetails = async (record) => {
   userAddresses.value = [];
 
   try {
-    const res = await fetch(`${API_BASE}/api/user/addresses?user_id=${record.id}`);
-    const data = await res.json();
+    const data = await request(`/api/user/addresses?user_id=${record.id}`);
     if (data.success && data.data && data.data.length > 0) {
       userAddresses.value = data.data;
     }
   } catch (error) {
-    Message.error('获取地址失败');
+    Message.error("获取地址失败");
   } finally {
     addressLoading.value = false;
   }
@@ -411,8 +552,8 @@ const editUser = (record) => {
   editForm.value = {
     id: record.id,
     nickname: record.nickname,
-    avatar_url: record.avatar_url || '',
-    phone: record.phone || ''
+    avatar_url: record.avatar_url || "",
+    phone: record.phone || "",
   };
   uploading.value = false;
   modalVisible.value = true;
@@ -420,18 +561,17 @@ const editUser = (record) => {
 
 const openCreateCustomer = () => {
   createForm.value = {
-    nickname: '',
-    phone: '',
+    nickname: "",
+    phone: "",
     ...DEFAULT_REGION,
-    detail_address: ''
+    detail_address: "",
   };
   createModalVisible.value = true;
 };
 
 const saveAddress = async (userId, form) => {
-  const res = await fetch(`${API_BASE}/api/user/addresses`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const data = await request(`/api/user/addresses`, {
+    method: "POST",
     body: JSON.stringify({
       user_id: userId,
       id: form.id || undefined,
@@ -441,11 +581,11 @@ const saveAddress = async (userId, form) => {
       city: form.city,
       district: form.district,
       detail_address: form.detail_address,
-      is_default: form.is_default !== false
-    })
+      is_default: form.is_default !== false,
+    }),
   });
-  const data = await res.json();
-  if (!res.ok || !data.success) throw new Error(data.message || `保存地址失败 (HTTP ${res.status})`);
+  if (!data.success)
+    throw new Error(data.message || `保存地址失败`);
   return data;
 };
 
@@ -454,30 +594,32 @@ const openAddressModal = (address = null) => {
   addressForm.value = address
     ? {
         id: address.id,
-        name: address.name || selectedUser.value.nickname || '',
-        phone: address.phone || selectedUser.value.phone || '',
+        name: address.name || selectedUser.value.nickname || "",
+        phone: address.phone || selectedUser.value.phone || "",
         province: address.province || DEFAULT_REGION.province,
         city: address.city || DEFAULT_REGION.city,
         district: address.district || DEFAULT_REGION.district,
-        detail_address: address.detail_address || '',
-        is_default: Boolean(address.is_default)
+        detail_address: address.detail_address || "",
+        is_default: Boolean(address.is_default),
       }
     : {
-        id: '',
-        name: selectedUser.value.nickname || '',
-        phone: selectedUser.value.phone || '',
+        id: "",
+        name: selectedUser.value.nickname || "",
+        phone: selectedUser.value.phone || "",
         ...DEFAULT_REGION,
-        detail_address: '',
-        is_default: userAddresses.value.length === 0
+        detail_address: "",
+        is_default: userAddresses.value.length === 0,
       };
   addressModalVisible.value = true;
 };
 
 const validateAddress = (form) => {
-  if (!form.name || !form.name.trim()) return '请填写联系人姓名';
-  if (!/^1[3-9]\d{9}$/.test((form.phone || '').trim())) return '请输入有效的手机号码';
-  if (!form.detail_address || !form.detail_address.trim()) return '请填写详细收货/安装地址';
-  return '';
+  if (!form.name || !form.name.trim()) return "请填写联系人姓名";
+  if (!/^1[3-9]\d{9}$/.test((form.phone || "").trim()))
+    return "请输入有效的手机号码";
+  if (!form.detail_address || !form.detail_address.trim())
+    return "请填写详细收货/安装地址";
+  return "";
 };
 
 const handleSaveAddress = async () => {
@@ -488,30 +630,30 @@ const handleSaveAddress = async () => {
   }
   try {
     await saveAddress(selectedUser.value.id, addressForm.value);
-    Message.success(addressForm.value.id ? '地址修改成功！' : '地址保存成功！');
+    Message.success(addressForm.value.id ? "地址修改成功！" : "地址保存成功！");
     await viewCustomerDetails(selectedUser.value);
     return true;
   } catch (e) {
-    Message.error(e.message || '地址保存失败');
+    Message.error(e.message || "地址保存失败");
     return false;
   }
 };
 
 const handleCreateCustomer = async () => {
-  const nickname = (createForm.value.nickname || '').trim();
-  const phone = (createForm.value.phone || '').trim();
+  const nickname = (createForm.value.nickname || "").trim();
+  const phone = (createForm.value.phone || "").trim();
   if (!nickname) {
-    Message.warning('【客户姓名/昵称】不能为空！');
+    Message.warning("【客户姓名/昵称】不能为空！");
     return false;
   }
   if (!/^1[3-9]\d{9}$/.test(phone)) {
-    Message.warning('请输入有效的手机号码！');
+    Message.warning("请输入有效的手机号码！");
     return false;
   }
   const addressValidationMessage = validateAddress({
     name: nickname,
     phone,
-    detail_address: createForm.value.detail_address
+    detail_address: createForm.value.detail_address,
   });
   if (addressValidationMessage) {
     Message.warning(addressValidationMessage);
@@ -519,14 +661,12 @@ const handleCreateCustomer = async () => {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/api/admin/customers`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nickname, phone })
+    const data = await request(`/api/admin/customers`, {
+      method: "POST",
+      body: JSON.stringify({ nickname, phone }),
     });
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      Message.error(data.message || `创建失败 (HTTP ${res.status})`);
+    if (!data.success) {
+      Message.error(data.message || `创建失败`);
       return false;
     }
     await saveAddress(data.user.id, {
@@ -536,13 +676,13 @@ const handleCreateCustomer = async () => {
       city: createForm.value.city,
       district: createForm.value.district,
       detail_address: createForm.value.detail_address,
-      is_default: true
+      is_default: true,
     });
-    Message.success('客户及默认地址创建成功！');
+    Message.success("客户及默认地址创建成功！");
     await fetchUsers();
     return true;
   } catch (e) {
-    Message.error('无法连接后端服务');
+    Message.error("无法连接后端服务");
     return false;
   }
 };
@@ -563,62 +703,65 @@ const onAvatarUploadSuccess = (fileItem) => {
 
 const onAvatarUploadError = () => {
   uploading.value = false;
-  Message.error('客户头像上传失败！');
+  Message.error("客户头像上传失败！");
 };
 
 const handleBeforeSaveUser = async () => {
   if (!editForm.value.nickname || !editForm.value.nickname.trim()) {
-    Message.warning('【客户姓名/昵称】不能为空！');
+    Message.warning("【客户姓名/昵称】不能为空！");
     return false;
   }
 
   if (editForm.value.phone && editForm.value.phone.trim()) {
     const cleanPhone = editForm.value.phone.trim();
-    const dup = users.value.find(u => u.id !== editForm.value.id && u.phone === cleanPhone);
+    const dup = users.value.find(
+      (u) => u.id !== editForm.value.id && u.phone === cleanPhone,
+    );
     if (dup) {
-      Message.warning(`【联系电话】${cleanPhone} 已被客户【${dup.nickname || '其他客户'}】绑定，不可重复！`);
+      Message.warning(
+        `【联系电话】${cleanPhone} 已被客户【${dup.nickname || "其他客户"}】绑定，不可重复！`,
+      );
       return false;
     }
   }
 
   try {
-    const res = await fetch(`${API_BASE}/api/user/profile`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const data = await request(`/api/user/profile`, {
+      method: "POST",
       body: JSON.stringify({
         user_id: editForm.value.id,
         nickname: editForm.value.nickname,
         avatar_url: editForm.value.avatar_url,
-        phone: editForm.value.phone
-      })
+        phone: editForm.value.phone,
+      }),
     });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      Message.success('保存成功！');
+    if (data.success) {
+      Message.success("保存成功！");
       await fetchUsers();
       return true;
     } else {
-      Message.error(data.message || `保存失败 (HTTP ${res.status})`);
+      Message.error(data.message || `保存失败`);
       return false;
     }
   } catch (e) {
-    Message.error('无法连接后端服务');
+    Message.error("无法连接后端服务");
     return false;
   }
 };
 
 const deleteUser = async (id) => {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/users/${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      Message.success('客户档案已成功删除！');
+    const data = await request(`/api/admin/users/${id}`, {
+      method: "DELETE",
+    });
+    if (data.success) {
+      Message.success("客户档案已成功删除！");
       await fetchUsers();
     } else {
-      Message.error(data.message || `删除失败 (HTTP ${res.status})`);
+      Message.error(data.message || `删除失败`);
     }
   } catch (e) {
-    Message.error('无法连接后端服务');
+    Message.error("无法连接后端服务");
   }
 };
 
@@ -628,18 +771,53 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.users-view { display: flex; flex-direction: column; }
-.create-customer-tip { color: #86909c; font-size: 13px; line-height: 1.6; }
-.view-title { font-size: 20px; font-weight: 700; margin: 0; }
-.flex-between { display: flex; justify-content: space-between; align-items: center; }
-.flex-row { display: flex; flex-direction: row; align-items: center; }
-.flex-column { display: flex; flex-direction: column; }
-.flex-center { align-items: center; justify-content: center; }
-.mb-1 { margin-bottom: 4px; }
-.mb-3 { margin-bottom: 12px; }
-.mb-4 { margin-bottom: 16px; }
-.ml-3 { margin-left: 12px; }
-.mr-2 { margin-right: 8px; }
+.users-view {
+  display: flex;
+  flex-direction: column;
+}
+.create-customer-tip {
+  color: #86909c;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.view-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.flex-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+.flex-center {
+  align-items: center;
+  justify-content: center;
+}
+.mb-1 {
+  margin-bottom: 4px;
+}
+.mb-3 {
+  margin-bottom: 12px;
+}
+.mb-4 {
+  margin-bottom: 16px;
+}
+.ml-3 {
+  margin-left: 12px;
+}
+.mr-2 {
+  margin-right: 8px;
+}
 
 .user-card-header {
   padding: 16px;
@@ -656,7 +834,7 @@ onMounted(() => {
 
 .user-detail-phone {
   font-size: 13px;
-  color: #C5A880;
+  color: #c5a880;
   font-weight: 600;
 }
 
@@ -673,7 +851,7 @@ onMounted(() => {
   border: 1px solid #e5e6eb;
 }
 
-body[arco-theme='dark'] .address-item-box {
+body[arco-theme="dark"] .address-item-box {
   background: rgba(255, 255, 255, 0.04);
   border-color: rgba(255, 255, 255, 0.12);
 }
@@ -683,8 +861,8 @@ body[arco-theme='dark'] .address-item-box {
   color: #1d2129;
 }
 
-body[arco-theme='dark'] .addr-name {
-  color: #F8FAFC;
+body[arco-theme="dark"] .addr-name {
+  color: #f8fafc;
 }
 
 .addr-detail {
@@ -693,8 +871,8 @@ body[arco-theme='dark'] .addr-name {
   line-height: 1.5;
 }
 
-body[arco-theme='dark'] .addr-detail {
-  color: #CBD5E1;
+body[arco-theme="dark"] .addr-detail {
+  color: #cbd5e1;
 }
 
 .empty-address-tip {
@@ -727,7 +905,7 @@ body[arco-theme='dark'] .addr-detail {
   border-radius: 50%;
   overflow: hidden;
   position: relative;
-  border: 1.5px solid #C5A880;
+  border: 1.5px solid #c5a880;
 }
 
 .avatar-img {
@@ -782,7 +960,7 @@ body[arco-theme='dark'] .addr-detail {
   align-items: center;
   font-size: 12px;
   font-weight: 600;
-  color: #C5A880;
+  color: #c5a880;
   background: rgba(197, 168, 128, 0.12);
   border: 1px solid rgba(197, 168, 128, 0.35);
   padding: 2px 10px;
@@ -795,14 +973,14 @@ body[arco-theme='dark'] .addr-detail {
 }
 
 .champagne-tag.role-badge {
-  color: #A38458;
+  color: #a38458;
   background: rgba(197, 168, 128, 0.08);
   border-color: rgba(197, 168, 128, 0.25);
 }
 
 .btn-champagne-primary {
-  background-color: #C5A880 !important;
-  border-color: #C5A880 !important;
+  background-color: #c5a880 !important;
+  border-color: #c5a880 !important;
   color: #ffffff !important;
 }
 
@@ -812,12 +990,19 @@ body[arco-theme='dark'] .addr-detail {
 }
 
 .btn-champagne-outline {
-  color: #C5A880 !important;
-  border-color: #C5A880 !important;
+  color: #c5a880 !important;
+  border-color: #c5a880 !important;
   background: transparent !important;
 }
 
 .btn-champagne-outline:hover {
   background: rgba(197, 168, 128, 0.1) !important;
+}
+
+.users-view :deep(.search-panel .arco-card-body) {
+  padding: 12px 16px;
+}
+.users-view :deep(.search-panel .arco-form-item) {
+  margin-bottom: 0 !important;
 }
 </style>

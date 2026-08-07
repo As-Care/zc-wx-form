@@ -5,30 +5,44 @@
     </div>
 
     <a-card class="search-panel mb-4" size="small">
-      <a-form :model="searchForm" layout="inline" style="flex-wrap: wrap; gap: 12px 16px;">
-        <a-form-item label="事件类型">
-          <a-select v-model="searchForm.event_type" allow-clear placeholder="全部事件" style="width: 160px;">
-            <a-option v-for="event in eventTypes" :key="event" :value="event">{{ event }}</a-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="管理员账号">
-          <a-input v-model="searchForm.actor_username" allow-clear placeholder="账号或管理员姓名" style="width: 190px;" @press-enter="handleSearch" />
-        </a-form-item>
-        <a-form-item label="用户昵称">
-          <a-input v-model="searchForm.user_nickname" allow-clear placeholder="客户昵称/姓名" style="width: 170px;" @press-enter="handleSearch" />
-        </a-form-item>
-        <a-form-item label="用户手机号">
-          <a-input v-model="searchForm.user_phone" allow-clear placeholder="客户手机号" style="width: 170px;" @press-enter="handleSearch" />
-        </a-form-item>
-        <a-form-item label="日志时间">
-          <a-range-picker v-model="searchForm.timeRange" show-time format="YYYY-MM-DD HH:mm:ss" style="width: 360px;" />
-        </a-form-item>
-        <a-form-item>
-          <a-space>
-            <a-button type="primary" @click="handleSearch"><template #icon><icon-search /></template>查询</a-button>
-            <a-button @click="resetSearch"><template #icon><icon-refresh /></template>重置</a-button>
-          </a-space>
-        </a-form-item>
+      <a-form :model="searchForm" auto-label-width>
+        <a-row :gutter="[12, 16]">
+          <a-col :xs="24" :sm="12" :md="6">
+            <a-form-item label="事件类型">
+              <a-select v-model="searchForm.event_type" allow-clear placeholder="全部事件" style="width: 100%;">
+                <a-option v-for="event in eventTypes" :key="event" :value="event">{{ event }}</a-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="12" :md="6">
+            <a-form-item label="管理员账号">
+              <a-input v-model="searchForm.actor_username" allow-clear placeholder="账号或管理员姓名" style="width: 100%;" @press-enter="handleSearch" />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="12" :md="6">
+            <a-form-item label="用户昵称">
+              <a-input v-model="searchForm.user_nickname" allow-clear placeholder="客户昵称/姓名" style="width: 100%;" @press-enter="handleSearch" />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="12" :md="6">
+            <a-form-item label="用户手机号">
+              <a-input v-model="searchForm.user_phone" allow-clear placeholder="客户手机号" style="width: 100%;" @press-enter="handleSearch" />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="16" :md="11">
+            <a-form-item label="日志时间">
+              <a-range-picker v-model="searchForm.timeRange" show-time format="YYYY-MM-DD HH:mm:ss" style="width: 100%;" />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="8" :md="6">
+            <a-form-item>
+              <a-space>
+                <a-button type="primary" @click="handleSearch"><template #icon><icon-search /></template>查询</a-button>
+                <a-button @click="resetSearch"><template #icon><icon-refresh /></template>重置</a-button>
+              </a-space>
+            </a-form-item>
+          </a-col>
+        </a-row>
       </a-form>
     </a-card>
 
@@ -71,7 +85,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 
-const API_BASE = 'https://zc-api.carelife.top';
+import request from '../utils/request';
 const eventTypes = ['订单管理', '订单状态', '客户管理', '客户资料', '客户地址', '门窗商品', '门窗分类', '接单员', '门店配置', '管理员账号', '角色权限', '系统菜单', '系统操作'];
 const searchForm = ref({ event_type: '', actor_username: '', user_nickname: '', user_phone: '', timeRange: [] });
 const logs = ref([]);
@@ -98,8 +112,7 @@ const fetchLogs = async () => {
       params.set('start_time', formatTime(searchForm.value.timeRange[0]));
       params.set('end_time', formatTime(searchForm.value.timeRange[1]));
     }
-    const response = await fetch(`${API_BASE}/api/admin/audit-logs?${params.toString()}`);
-    const data = await response.json();
+    const data = await request(`/api/admin/audit-logs?${params.toString()}`);
     logs.value = data.success ? data.data || [] : [];
     total.value = data.pagination?.total || 0;
   } catch (error) {
@@ -129,4 +142,10 @@ onMounted(fetchLogs);
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .mb-4 { margin-bottom: 16px; }
 .sub-text { color: #86909c; font-size: 12px; margin-top: 3px; }
+.audit-logs-view :deep(.arco-card-body) {
+  padding: 12px 16px;
+}
+.audit-logs-view :deep(.arco-form-item) {
+  margin-bottom: 0 !important;
+}
 </style>

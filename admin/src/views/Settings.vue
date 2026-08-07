@@ -61,7 +61,7 @@
 import { ref, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';
 
-const API_BASE = 'https://zc-api.carelife.top';
+import request from '../utils/request';
 const saving = ref(false);
 
 const storeForm = ref({
@@ -75,8 +75,7 @@ const storeForm = ref({
 
 const fetchStoreConfig = async () => {
   try {
-    const res = await fetch(`${API_BASE}/api/config/store`);
-    const data = await res.json();
+    const data = await request(`/api/config/store`);
     if (data.success && data.data) {
       storeForm.value = {
         name: data.data.name || '展晨门窗',
@@ -93,19 +92,16 @@ const fetchStoreConfig = async () => {
 const saveStoreConfig = async () => {
   saving.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/admin/config/store`, {
+    const data = await request(`/api/admin/config/store`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(storeForm.value)
     });
-    const data = await res.json();
-    if (res.ok && data.success) {
+    if (data.success) {
       Message.success('保存成功！');
     } else {
-      Message.error(data.message || `全局设置保存失败 (HTTP ${res.status})`);
+      Message.error(data.message || `全局设置保存失败`);
     }
   } catch (e) {
-    Message.error('无法连接后端服务，请检查网络！');
   } finally {
     saving.value = false;
   }

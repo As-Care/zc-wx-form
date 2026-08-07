@@ -170,7 +170,7 @@
 import { ref, onMounted } from "vue";
 import { Message } from "@arco-design/web-vue";
 
-const API_BASE = "https://zc-api.carelife.top";
+import request from "../utils/request";
 
 const receivers = ref([]);
 const tableLoading = ref(true);
@@ -237,18 +237,16 @@ const handleBeforeSaveReceiver = async () => {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/api/admin/receivers`, {
+    const data = await request(`/api/admin/receivers`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(receiverForm.value),
     });
-    const data = await res.json();
-    if (res.ok && data.success) {
+    if (data.success) {
       Message.success("保存成功！");
       await fetchReceivers();
       return true;
     } else {
-      Message.error(data.message || `接口响应失败 (HTTP ${res.status})`);
+      Message.error(data.message || `接口响应失败`);
       return false;
     }
   } catch (e) {
@@ -259,15 +257,14 @@ const handleBeforeSaveReceiver = async () => {
 
 const deleteReceiver = async (id) => {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/receivers/${id}`, {
+    const data = await request(`/api/admin/receivers/${id}`, {
       method: "DELETE",
     });
-    const data = await res.json();
-    if (res.ok && data.success) {
+    if (data.success) {
       Message.success("删除成功！");
       await fetchReceivers();
     } else {
-      Message.error(data.message || `操作失败 (HTTP ${res.status})`);
+      Message.error(data.message || `操作失败`);
     }
   } catch (e) {
     Message.error("删除操作失败，网络连接错误");
@@ -277,8 +274,7 @@ const deleteReceiver = async (id) => {
 const fetchReceivers = async () => {
   tableLoading.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/receivers`);
-    const data = await res.json();
+    const data = await request(`/api/receivers`);
     if (data.success && Array.isArray(data.data)) {
       receivers.value = data.data;
     } else {

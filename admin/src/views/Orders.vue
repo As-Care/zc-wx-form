@@ -10,66 +10,84 @@
 
     <!-- 高级搜索筛选卡片 -->
     <a-card class="mb-4" size="small">
-      <a-form :model="searchForm" layout="inline" style="flex-wrap: wrap; gap: 12px 16px;">
-        <a-form-item label="订单编号" style="margin-right: 0; margin-bottom: 0;">
-          <a-input
-            v-model="searchForm.order_no"
-            placeholder="请输入订单编号"
-            allow-clear
-            @press-enter="handleSearch"
-            style="width: 200px"
-          />
-        </a-form-item>
+      <a-form :model="searchForm" auto-label-width>
+        <a-row :gutter="[12, 16]">
+          <a-col :xs="24" :sm="12" :md="6">
+            <a-form-item label="订单编号">
+              <a-input
+                v-model="searchForm.order_no"
+                placeholder="请输入订单编号"
+                allow-clear
+                @press-enter="handleSearch"
+              />
+            </a-form-item>
+          </a-col>
 
-        <a-form-item label="客户信息" style="margin-right: 0; margin-bottom: 0;">
-          <a-input
-            v-model="searchForm.customer"
-            placeholder="姓名或手机号"
-            allow-clear
-            @press-enter="handleSearch"
-            style="width: 200px"
-          />
-        </a-form-item>
+          <a-col :xs="24" :sm="12" :md="6">
+            <a-form-item label="客户信息">
+              <a-input
+                v-model="searchForm.customer"
+                placeholder="姓名或手机号"
+                allow-clear
+                @press-enter="handleSearch"
+              />
+            </a-form-item>
+          </a-col>
 
-        <a-form-item label="商品名称" style="margin-right: 0; margin-bottom: 0;">
-          <a-input
-            v-model="searchForm.product_name"
-            placeholder="请输入商品名称"
-            allow-clear
-            @press-enter="handleSearch"
-            style="width: 200px"
-          />
-        </a-form-item>
+          <a-col :xs="24" :sm="12" :md="6">
+            <a-form-item label="商品名称">
+              <a-input
+                v-model="searchForm.product_name"
+                placeholder="请输入商品名称"
+                allow-clear
+                @press-enter="handleSearch"
+              />
+            </a-form-item>
+          </a-col>
 
-        <a-form-item label="订单状态" style="margin-right: 0; margin-bottom: 0;">
-          <a-select
-            v-model="searchForm.status"
-            placeholder="请选择状态"
-            allow-clear
-            style="width: 170px"
-            @change="handleSearch"
-          >
-            <a-option value="all">全部订单</a-option>
-            <a-option value="pending_review">待复核</a-option>
-            <a-option value="producing">生产中</a-option>
-            <a-option value="installing">待提货</a-option>
-            <a-option value="completed">已完成</a-option>
-            <a-option value="cancelled">已取消</a-option>
-          </a-select>
-        </a-form-item>
+          <a-col :xs="24" :sm="12" :md="6">
+            <a-form-item label="订单状态">
+              <a-select
+                v-model="searchForm.status"
+                placeholder="请选择状态"
+                allow-clear
+                @change="handleSearch"
+              >
+                <a-option value="all">全部订单</a-option>
+                <a-option value="pending_review">待复核</a-option>
+                <a-option value="producing">生产中</a-option>
+                <a-option value="installing">待提货</a-option>
+                <a-option value="completed">已完成</a-option>
+                <a-option value="cancelled">已取消</a-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
 
-        <a-form-item style="margin-right: 0; margin-bottom: 0;">
-          <div style="display: flex; gap: 8px;">
-            <a-button type="primary" @click="handleSearch">
-              <template #icon><icon-search /></template>
-              查询
-            </a-button>
-            <a-button @click="handleReset">
-              <template #icon><icon-refresh /></template>
-              重置
-            </a-button>
-          </div>
-        </a-form-item>
+          <a-col :xs="24" :sm="14" :md="9">
+            <a-form-item label="订单时间">
+              <a-range-picker
+                v-model="searchForm.order_time"
+                format="YYYY-MM-DD"
+                style="width: 100%"
+              />
+            </a-form-item>
+          </a-col>
+
+          <a-col :xs="24" :sm="10" :md="6">
+            <a-form-item hide-label>
+              <a-space>
+                <a-button type="primary" @click="handleSearch">
+                  <template #icon><icon-search /></template>
+                  查询
+                </a-button>
+                <a-button @click="handleReset">
+                  <template #icon><icon-refresh /></template>
+                  重置
+                </a-button>
+              </a-space>
+            </a-form-item>
+          </a-col>
+        </a-row>
       </a-form>
     </a-card>
 
@@ -92,66 +110,112 @@
 
         <a-table-column title="客户信息" :width="220">
           <template #cell="{ record }">
-            <div><strong>{{ record.customer_name }}</strong> ({{ record.customer_phone }})</div>
-            <div style="font-size: 12px; color: #86909c;">{{ record.install_address }}</div>
+            <div>
+              <strong>{{ record.customer_name }}</strong> ({{
+                record.customer_phone
+              }})
+            </div>
+            <div style="font-size: 12px; color: #86909c">
+              {{ record.install_address }}
+            </div>
           </template>
         </a-table-column>
 
         <a-table-column title="定制规格" :width="200">
           <template #cell="{ record }">
             <span v-if="record.items && record.items.length > 0">
-              {{ record.items[0].product_name }}<br>
-              <small style="color: #C5A880;">{{ record.items[0].width_mm }} × {{ record.items[0].height_mm }} mm ({{ record.items[0].billed_area }} ㎡)</small>
+              {{ record.items[0].product_name }}<br />
+              <small style="color: #c5a880"
+                >{{ record.items[0].width_mm }} ×
+                {{ record.items[0].height_mm }} mm ({{
+                  record.items[0].billed_area
+                }}
+                ㎡)</small
+              >
             </span>
-            <span v-else>{{ record.spec || '系统配置门窗' }}</span>
+            <span v-else>{{ record.spec || "系统配置门窗" }}</span>
           </template>
         </a-table-column>
 
-        <a-table-column title="预估平米费" data-index="base_amount" :width="120">
-          <template #cell="{ record }">
-            ¥ {{ record.base_amount }}
-          </template>
+        <a-table-column
+          title="预估平米费"
+          data-index="base_amount"
+          :width="120"
+        >
+          <template #cell="{ record }"> ¥ {{ record.base_amount }} </template>
         </a-table-column>
 
         <a-table-column title="特殊调价/费用" :width="140">
           <template #cell="{ record }">
-            <a-tag v-if="record.special_charges_amount > 0" color="orange">+ ¥ {{ record.special_charges_amount }}</a-tag>
-            <span v-else style="color: #86909c;">无追加</span>
+            <a-tag v-if="record.special_charges_amount > 0" color="orange"
+              >+ ¥ {{ record.special_charges_amount }}</a-tag
+            >
+            <span v-else style="color: #86909c">无追加</span>
           </template>
         </a-table-column>
 
         <a-table-column title="最终总金额" :width="140">
           <template #cell="{ record }">
-            <strong style="color: #C5A880; font-size: 16px;">¥ {{ record.final_amount }}</strong>
+            <strong style="color: #c5a880; font-size: 16px"
+              >¥ {{ record.final_amount }}</strong
+            >
           </template>
         </a-table-column>
 
         <a-table-column title="当前状态" :width="120">
           <template #cell="{ record }">
             <div class="status-col">
-              <span class="custom-status-tag" :style="getStatusStyle(record.status)">{{ getStatusText(record.status) }}</span>
+              <span
+                class="custom-status-tag"
+                :style="getStatusStyle(record.status)"
+                >{{ getStatusText(record.status) }}</span
+              >
             </div>
           </template>
         </a-table-column>
 
         <a-table-column title="创建者" :width="150">
           <template #cell="{ record }">
-            <div><strong>{{ record.creator_name || record.customer_name }}</strong></div>
-            <small style="color: #86909c;">{{ record.creator_type === 'admin' ? '后台管理员' : '客户本人' }}</small>
+            <div>
+              <strong>{{ record.creator_name || record.customer_name }}</strong>
+            </div>
+            <small style="color: #86909c">{{
+              record.creator_type === "admin" ? "后台管理员" : "客户本人"
+            }}</small>
           </template>
         </a-table-column>
 
         <!-- 左右并排单行按钮样式 -->
         <a-table-column title="操作" :width="240" fixed="right">
           <template #cell="{ record }">
-            <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
-              <a-button type="outline" size="small" @click="viewOrderDetail(record)">
+            <div
+              style="
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                white-space: nowrap;
+                gap: 6px;
+              "
+            >
+              <a-button
+                type="outline"
+                size="small"
+                @click="viewOrderDetail(record)"
+              >
                 查看详情
               </a-button>
-              <a-button type="outline" status="warning" size="small" @click="openModal(record)">
+              <a-button
+                type="outline"
+                status="warning"
+                size="small"
+                @click="openModal(record)"
+              >
                 修改状态
               </a-button>
-              <a-popconfirm content="确定要删除该订单吗？删除后无法恢复！" @ok="deleteOrder(record)">
+              <a-popconfirm
+                content="确定要删除该订单吗？删除后无法恢复！"
+                @ok="deleteOrder(record)"
+              >
                 <a-button type="outline" status="danger" size="small">
                   删除
                 </a-button>
@@ -177,27 +241,27 @@
       v-model:visible="createDrawerVisible"
       @created="handleOrderCreated"
     />
-
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
-import { Message } from '@arco-design/web-vue';
-import OrderDetailDrawer from '../components/OrderDetailDrawer.vue';
-import StatusUpdateModal from '../components/StatusUpdateModal.vue';
-import AdminOrderCreateDrawer from '../components/AdminOrderCreateDrawer.vue';
+import { ref, computed, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import { Message } from "@arco-design/web-vue";
+import OrderDetailDrawer from "../components/OrderDetailDrawer.vue";
+import StatusUpdateModal from "../components/StatusUpdateModal.vue";
+import AdminOrderCreateDrawer from "../components/AdminOrderCreateDrawer.vue";
 
 const route = useRoute();
 
-const API_BASE = 'https://zc-api.carelife.top';
+import request from "../utils/request";
 
 const searchForm = ref({
-  order_no: '',
-  customer: '',
-  product_name: '',
-  status: 'all'
+  order_no: "",
+  customer: "",
+  product_name: "",
+  status: "all",
+  order_time: [],
 });
 
 const loading = ref(false);
@@ -216,7 +280,7 @@ const paginationConfig = computed(() => ({
   total: total.value,
   showTotal: true,
   showJumper: true,
-  showPageSize: true
+  showPageSize: true,
 }));
 
 // 清空所有静态 Mock 数据，全部从 API 动态获取
@@ -226,24 +290,44 @@ const currentRecord = ref(null);
 
 const getStatusText = (status) => {
   const map = {
-    'pending_review': '待复核',
-    'producing': '生产中',
-    'installing': '待提货',
-    'completed': '已完成',
-    'cancelled': '已取消'
+    pending_review: "待复核",
+    producing: "生产中",
+    installing: "待提货",
+    completed: "已完成",
+    cancelled: "已取消",
   };
   return map[status] || status;
 };
 
 const getStatusStyle = (status) => {
   const map = {
-    'pending_review': { backgroundColor: '#e2e8f0', color: '#64748b', borderColor: '#94a3b8' },
-    'producing': { backgroundColor: '#f97316', color: '#ffffff', borderColor: '#f97316' },
-    'installing': { backgroundColor: '#eab308', color: '#ffffff', borderColor: '#eab308' },
-    'completed': { backgroundColor: '#10b981', color: '#ffffff', borderColor: '#10b981' },
-    'cancelled': { backgroundColor: '#f1f5f9', color: '#94a3b8', borderColor: '#cbd5e1' }
+    pending_review: {
+      backgroundColor: "#e2e8f0",
+      color: "#64748b",
+      borderColor: "#94a3b8",
+    },
+    producing: {
+      backgroundColor: "#f97316",
+      color: "#ffffff",
+      borderColor: "#f97316",
+    },
+    installing: {
+      backgroundColor: "#eab308",
+      color: "#ffffff",
+      borderColor: "#eab308",
+    },
+    completed: {
+      backgroundColor: "#10b981",
+      color: "#ffffff",
+      borderColor: "#10b981",
+    },
+    cancelled: {
+      backgroundColor: "#f1f5f9",
+      color: "#94a3b8",
+      borderColor: "#cbd5e1",
+    },
   };
-  return map[status] || map['pending_review'];
+  return map[status] || map["pending_review"];
 };
 
 const handleSearch = () => {
@@ -253,10 +337,11 @@ const handleSearch = () => {
 
 const handleReset = () => {
   searchForm.value = {
-    order_no: '',
-    customer: '',
-    product_name: '',
-    status: 'all'
+    order_no: "",
+    customer: "",
+    product_name: "",
+    status: "all",
+    order_time: [],
   };
   page.value = 1;
   fetchOrders();
@@ -277,47 +362,71 @@ const fetchOrders = async () => {
   loading.value = true;
   try {
     const params = new URLSearchParams();
-    params.append('page', page.value);
-    params.append('pageSize', pageSize.value);
-    if (searchForm.value.status && searchForm.value.status !== 'all') {
-      params.append('status', searchForm.value.status);
+    params.append("page", page.value);
+    params.append("pageSize", pageSize.value);
+    if (searchForm.value.status && searchForm.value.status !== "all") {
+      params.append("status", searchForm.value.status);
     }
     if (searchForm.value.order_no.trim()) {
-      params.append('order_no', searchForm.value.order_no.trim());
+      params.append("order_no", searchForm.value.order_no.trim());
     }
     if (searchForm.value.customer.trim()) {
-      params.append('customer', searchForm.value.customer.trim());
+      params.append("customer", searchForm.value.customer.trim());
     }
     if (searchForm.value.product_name.trim()) {
-      params.append('product_name', searchForm.value.product_name.trim());
+      params.append("product_name", searchForm.value.product_name.trim());
     }
-    const url = `${API_BASE}/api/orders?${params.toString()}`;
+    if (
+      searchForm.value.order_time &&
+      searchForm.value.order_time.length === 2
+    ) {
+      const [start, end] = searchForm.value.order_time;
+      const formatDate = (value, endOfDay = false) => {
+        if (value && typeof value.format === "function") {
+          return value.format(
+            endOfDay ? "YYYY-MM-DD 23:59:59" : "YYYY-MM-DD 00:00:00",
+          );
+        }
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "";
+        return `${date.toISOString().slice(0, 10)}${endOfDay ? " 23:59:59" : " 00:00:00"}`;
+      };
+      const startTime = formatDate(start);
+      const endTime = formatDate(end, true);
+      if (startTime) params.append("start_time", startTime);
+      if (endTime) params.append("end_time", endTime);
+    }
+    const url = `/api/orders?${params.toString()}`;
 
-    const res = await fetch(url);
-    const data = await res.json();
+    const data = await request(url);
     if (data.success && data.data) {
-      orders.value = data.data.map(o => ({
+      orders.value = data.data.map((o) => ({
         id: o.id,
         order_no: o.order_no,
-        customer_name: o.customer_name || '客户',
-        customer_phone: o.customer_phone || '',
-        install_address: o.install_address || '',
-        customer_remark: o.customer_remark || '',
-        scene_images: o.scene_images || '',
-        created_at: o.created_at || '',
-        spec: o.items && o.items[0] ? `${o.items[0].width_mm} × ${o.items[0].height_mm} mm (${o.items[0].billed_area} ㎡)` : '',
+        customer_name: o.customer_name || "客户",
+        customer_phone: o.customer_phone || "",
+        install_address: o.install_address || "",
+        customer_remark: o.customer_remark || "",
+        scene_images: o.scene_images || "",
+        created_at: o.created_at || "",
+        spec:
+          o.items && o.items[0]
+            ? `${o.items[0].width_mm} × ${o.items[0].height_mm} mm (${o.items[0].billed_area} ㎡)`
+            : "",
         base_amount: o.base_amount || 0,
         extra_amount: o.extra_amount || 0,
         special_charges_amount: o.special_charges_amount || 0,
         final_amount: o.final_amount || 0,
-        status: o.status || 'pending_review',
-        admin_remark: o.admin_remark || '',
-        creator_type: o.creator_type || 'customer',
-        creator_id: o.creator_id || o.user_id || '',
-        creator_name: o.creator_name || o.customer_name || '客户本人',
-        items: o.items || []
+        status: o.status || "pending_review",
+        admin_remark: o.admin_remark || "",
+        creator_type: o.creator_type || "customer",
+        creator_id: o.creator_id || o.user_id || "",
+        creator_name: o.creator_name || o.customer_name || "客户本人",
+        items: o.items || [],
       }));
-      total.value = data.pagination ? data.pagination.total : orders.value.length;
+      total.value = data.pagination
+        ? data.pagination.total
+        : orders.value.length;
     } else {
       orders.value = [];
       total.value = 0;
@@ -334,14 +443,14 @@ const viewOrderDetail = async (record) => {
   currentOrderDetail.value = { ...record };
   detailDrawerVisible.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/orders/${record.id}`);
-    const data = await res.json();
+    const data = await request(`/api/orders/${record.id}`);
     if (data.success && data.data && data.data.order) {
       currentOrderDetail.value = {
         ...data.data.order,
-        customer_remark: data.data.order.customer_remark || record.customer_remark || '',
-        scene_images: data.data.order.scene_images || record.scene_images || '',
-        items: data.data.order.items || record.items || []
+        customer_remark:
+          data.data.order.customer_remark || record.customer_remark || "",
+        scene_images: data.data.order.scene_images || record.scene_images || "",
+        items: data.data.order.items || record.items || [],
       };
     }
   } catch (e) {}
@@ -359,18 +468,17 @@ const handleOrderCreated = () => {
 
 const deleteOrder = async (record) => {
   try {
-    const res = await fetch(`${API_BASE}/api/orders/${record.id}`, {
-      method: 'DELETE'
+    const data = await request(`/api/orders/${record.id}`, {
+      method: "DELETE",
     });
-    const data = await res.json();
     if (data.success) {
-      Message.success('订单已成功删除');
+      Message.success("订单已成功删除");
       fetchOrders();
     } else {
-      Message.error(data.message || '删除失败');
+      Message.error(data.message || "删除失败");
     }
   } catch (error) {
-    Message.error('网络请求异常，删除失败');
+    Message.error("网络请求异常，删除失败");
   }
 };
 
@@ -416,5 +524,13 @@ onMounted(() => {
 
 .order-no-text {
   white-space: nowrap;
+}
+
+.orders-view :deep(.arco-card-body) {
+  padding: 12px 16px;
+}
+
+.orders-view :deep(.arco-form-item) {
+  margin-bottom: 0 !important;
 }
 </style>

@@ -9,44 +9,52 @@
     </div>
 
     <!-- 搜索与多维度筛选面板 -->
-    <a-card class="search-panel mb-4">
-      <a-form :model="searchForm" layout="inline">
-        <a-form-item label="所属分类 (可多选)">
-          <a-select
-            v-model="searchForm.categories"
-            placeholder="请选择一个或多个分类"
-            multiple
-            allow-clear
-            style="width: 320px"
-          >
-            <a-option v-for="cat in categories" :key="cat" :value="cat">
-              {{ cat }}
-            </a-option>
-          </a-select>
-        </a-form-item>
+    <a-card class="search-panel mb-4" size="small">
+      <a-form :model="searchForm" auto-label-width>
+        <a-row :gutter="[12, 16]">
+          <a-col :xs="24" :sm="12" :md="7">
+            <a-form-item label="所属分类 (可多选)">
+              <a-select
+                v-model="searchForm.categories"
+                placeholder="请选择一个或多个分类"
+                multiple
+                allow-clear
+                style="width: 100%"
+              >
+                <a-option v-for="cat in categories" :key="cat" :value="cat">
+                  {{ cat }}
+                </a-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
 
-        <a-form-item label="商品名称/描述">
-          <a-input
-            v-model="searchForm.name"
-            placeholder="输入名称或关键字模糊搜索"
-            allow-clear
-            style="width: 240px"
-            @keyup.enter="handleSearch"
-          />
-        </a-form-item>
+          <a-col :xs="24" :sm="12" :md="7">
+            <a-form-item label="商品名称/描述">
+              <a-input
+                v-model="searchForm.name"
+                placeholder="输入名称或关键字模糊搜索"
+                allow-clear
+                style="width: 100%"
+                @keyup.enter="handleSearch"
+              />
+            </a-form-item>
+          </a-col>
 
-        <a-form-item>
-          <a-space>
-            <a-button type="primary" @click="handleSearch">
-              <template #icon><icon-search /></template>
-              查询
-            </a-button>
-            <a-button @click="handleReset">
-              <template #icon><icon-refresh /></template>
-              重置
-            </a-button>
-          </a-space>
-        </a-form-item>
+          <a-col :xs="24" :sm="12" :md="6">
+            <a-form-item hide-label>
+              <a-space>
+                <a-button type="primary" @click="handleSearch">
+                  <template #icon><icon-search /></template>
+                  查询
+                </a-button>
+                <a-button @click="handleReset">
+                  <template #icon><icon-refresh /></template>
+                  重置
+                </a-button>
+              </a-space>
+            </a-form-item>
+          </a-col>
+        </a-row>
       </a-form>
     </a-card>
 
@@ -194,7 +202,10 @@
               required
               :rules="[{ required: true, message: '商品名称为必填项' }]"
             >
-              <a-input v-model="form.name" placeholder="请输入商品全称（必填）" />
+              <a-input
+                v-model="form.name"
+                placeholder="请输入商品全称（必填）"
+              />
             </a-form-item>
 
             <a-form-item label="上下架状态" required>
@@ -233,7 +244,10 @@
             </a-form-item>
 
             <a-form-item label="基础平米单价 (元/㎡)">
-              <a-input-number v-model="form.base_price_sqm" placeholder="如 680" />
+              <a-input-number
+                v-model="form.base_price_sqm"
+                placeholder="如 680"
+              />
             </a-form-item>
           </a-col>
 
@@ -287,7 +301,9 @@
                           <icon-plus style="font-size: 22px; color: #c5a880" />
                         </div>
                         <span class="upload-title">点击上传图片</span>
-                        <span class="upload-sub">支持 PNG / JPG / WEBP 格式</span>
+                        <span class="upload-sub"
+                          >支持 PNG / JPG / WEBP 格式</span
+                        >
                       </div>
                     </template>
                   </a-upload>
@@ -298,12 +314,18 @@
             <a-row :gutter="16">
               <a-col :span="12">
                 <a-form-item label="默认宽度 (mm)">
-                  <a-input-number v-model="form.default_width" placeholder="选填，如 2400" />
+                  <a-input-number
+                    v-model="form.default_width"
+                    placeholder="选填，如 2400"
+                  />
                 </a-form-item>
               </a-col>
               <a-col :span="12">
                 <a-form-item label="默认高度 (mm)">
-                  <a-input-number v-model="form.default_height" placeholder="选填，如 2100" />
+                  <a-input-number
+                    v-model="form.default_height"
+                    placeholder="选填，如 2100"
+                  />
                 </a-form-item>
               </a-col>
             </a-row>
@@ -435,7 +457,9 @@
 
                     <a-table-column title="选项示图/色卡 (可选)" :width="160">
                       <template #cell="{ record }">
-                        <div style="display: flex; align-items: center; gap: 6px">
+                        <div
+                          style="display: flex; align-items: center; gap: 6px"
+                        >
                           <a-popover v-if="record.image_url" trigger="hover">
                             <img
                               :src="record.image_url"
@@ -491,7 +515,9 @@
                         <a-select v-model="record.price_type" size="medium">
                           <a-option value="fixed">固定金额(元)</a-option>
                           <a-option value="per_sqm">按面积加价(元/㎡)</a-option>
-                          <a-option value="per_item">按套数加价(元/套)</a-option>
+                          <a-option value="per_item"
+                            >按套数加价(元/套)</a-option
+                          >
                         </a-select>
                       </template>
                     </a-table-column>
@@ -573,7 +599,7 @@
 import { ref, onMounted } from "vue";
 import { Message } from "@arco-design/web-vue";
 
-const API_BASE = "https://zc-api.carelife.top";
+import request from "../utils/request";
 
 const categories = ref([
   "断桥铝系统窗",
@@ -621,10 +647,7 @@ const fetchProducts = async () => {
       params.append("categories", searchForm.value.categories.join(","));
     }
 
-    const res = await fetch(
-      `${API_BASE}/api/admin/products?${params.toString()}`,
-    );
-    const data = await res.json();
+    const data = await request(`/api/admin/products?${params.toString()}`);
     if (data.success && Array.isArray(data.data)) {
       products.value = data.data.map((p) => ({
         ...p,
@@ -690,7 +713,9 @@ const editProduct = (record) => {
         ? Number(record.is_active)
         : 1,
     default_width: record.default_width ? Number(record.default_width) : null,
-    default_height: record.default_height ? Number(record.default_height) : null,
+    default_height: record.default_height
+      ? Number(record.default_height)
+      : null,
   };
   uploading.value = false;
   modalVisible.value = true;
@@ -698,16 +723,14 @@ const editProduct = (record) => {
 
 const handleStatusChange = async (record, val) => {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/products`, {
+    const data = await request(`/api/admin/products`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...record,
         is_active: val,
       }),
     });
-    const data = await res.json();
-    if (res.ok && data.success) {
+    if (data.success) {
       Message.success(
         `已成功${val === 1 ? "上架" : "下架"}商品【${record.name}】`,
       );
@@ -887,15 +910,9 @@ const openOptionsDrawer = (record) => {
   drawerLoading.value = true;
 
   // 2. 抽屉内异步请求后台最新规则，加载完成后关闭 loading 遮罩
-  fetch(`${API_BASE}/api/products/${record.id}`)
-    .then((res) => res.json())
+  request(`/api/products/${record.id}`)
     .then((data) => {
-      if (
-        data.success &&
-        data.data &&
-        data.data.options &&
-        data.data.options.length > 0
-      ) {
+      if (data.success && data.data && data.data.options && data.data.options.length > 0) {
         currentProduct.value.options = data.data.options;
         groupedOptions.value = parseGroupsFromOptions(data.data.options);
       }
@@ -948,7 +965,7 @@ const removeItemFromGroup = (group, itemIndex) => {
 const handleDefaultSwitch = (group, record) => {
   if (record.is_default === 1) {
     if (group && group.items) {
-      group.items.forEach(item => {
+      group.items.forEach((item) => {
         if (item.id !== record.id) {
           item.is_default = 0;
         }
@@ -988,21 +1005,19 @@ const saveOptions = async () => {
       products.value = [...products.value];
     }
 
-    const res = await fetch(
-      `${API_BASE}/api/admin/products/${currentProduct.value.id}/options`,
+    const data = await request(
+      `/api/admin/products/${currentProduct.value.id}/options`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ options: flatList }),
       },
     );
-    const data = await res.json();
-    if (res.ok && data.success) {
+    if (data.success) {
       Message.success("选配规则分组配置保存成功！");
       optionsDrawerVisible.value = false;
       await fetchProducts();
     } else {
-      Message.error(data.message || `保存失败 (HTTP ${res.status})`);
+      Message.error(data.message || "保存失败");
     }
   } catch (e) {
     Message.error("无法连接后端 API 接口，请检查网络");
@@ -1047,18 +1062,16 @@ const handleBeforeSaveProduct = async () => {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/api/admin/products`, {
+    const data = await request(`/api/admin/products`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form.value),
     });
-    const data = await res.json();
-    if (res.ok && data.success) {
+    if (data.success) {
       Message.success("保存成功！");
       await fetchProducts();
       return true;
     } else {
-      Message.error(data.message || `保存失败 (HTTP ${res.status})`);
+      Message.error(data.message || "保存失败");
       return false;
     }
   } catch (e) {
@@ -1239,5 +1252,12 @@ body[arco-theme="dark"] .upload-title {
 }
 .ml-2 {
   margin-left: 8px;
+}
+
+.products-view :deep(.search-panel .arco-card-body) {
+  padding: 12px 16px;
+}
+.products-view :deep(.search-panel .arco-form-item) {
+  margin-bottom: 0 !important;
 }
 </style>

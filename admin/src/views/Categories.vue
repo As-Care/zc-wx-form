@@ -9,35 +9,47 @@
     </div>
 
     <!-- 搜索与多维度筛选面板 -->
-    <a-card class="search-panel mb-4">
-      <a-form :model="searchForm" layout="inline">
-        <a-form-item label="分类名称/标签">
-          <a-input
-            v-model="searchForm.name"
-            placeholder="输入名称或关键字模糊搜索"
-            allow-clear
-            style="width: 260px;"
-            @keyup.enter="handleSearch"
-          />
-        </a-form-item>
+    <a-card class="search-panel mb-4" size="small">
+      <a-form :model="searchForm" auto-label-width>
+        <a-row :gutter="[12, 16]">
+          <a-col :xs="24" :sm="14" :md="8">
+            <a-form-item label="分类名称/标签">
+              <a-input
+                v-model="searchForm.name"
+                placeholder="输入名称或关键字模糊搜索"
+                allow-clear
+                style="width: 100%"
+                @keyup.enter="handleSearch"
+              />
+            </a-form-item>
+          </a-col>
 
-        <a-form-item>
-          <a-space>
-            <a-button type="primary" @click="handleSearch">
-              <template #icon><icon-search /></template>
-              查询
-            </a-button>
-            <a-button @click="resetSearch">
-              <template #icon><icon-refresh /></template>
-              重置
-            </a-button>
-          </a-space>
-        </a-form-item>
+          <a-col :xs="24" :sm="10" :md="6">
+            <a-form-item hide-label>
+              <a-space>
+                <a-button type="primary" @click="handleSearch">
+                  <template #icon><icon-search /></template>
+                  查询
+                </a-button>
+                <a-button @click="resetSearch">
+                  <template #icon><icon-refresh /></template>
+                  重置
+                </a-button>
+              </a-space>
+            </a-form-item>
+          </a-col>
+        </a-row>
       </a-form>
     </a-card>
 
     <!-- 分类数据表格 -->
-    <a-table :data="categories" :loading="tableLoading" :pagination="{ pageSize: 10 }" border row-key="id">
+    <a-table
+      :data="categories"
+      :loading="tableLoading"
+      :pagination="{ pageSize: 10 }"
+      border
+      row-key="id"
+    >
       <template #columns>
         <a-table-column title="分类名称" data-index="name" :width="220">
           <template #cell="{ record }">
@@ -45,7 +57,11 @@
           </template>
         </a-table-column>
 
-        <a-table-column title="首页导航区小标签" data-index="sub_title" :width="180">
+        <a-table-column
+          title="首页导航区小标签"
+          data-index="sub_title"
+          :width="180"
+        >
           <template #cell="{ record }">
             <a-tag class="champagne-tag">{{ record.sub_title }}</a-tag>
           </template>
@@ -59,37 +75,56 @@
               width="44"
               height="44"
               fit="cover"
-              style="border-radius: 8px; border: 1px solid #e5e6eb;"
+              style="border-radius: 8px; border: 1px solid #e5e6eb"
             />
-            <span v-else style="color: #c9cdd4; font-size: 12px;">默认图标</span>
+            <span v-else style="color: #c9cdd4; font-size: 12px">默认图标</span>
           </template>
         </a-table-column>
 
         <a-table-column title="排序权重" :width="190">
           <template #cell="{ record }">
-            <div style="display: flex; align-items: center;">
+            <div style="display: flex; align-items: center">
               <!-- 编辑态：出现输入框 + 保存/取消按键 -->
               <template v-if="record.is_editing_sort">
                 <a-input-number
                   v-model="record.editing_sort_order"
                   size="small"
                   :min="0"
-                  style="width: 76px; margin-right: 6px;"
+                  style="width: 76px; margin-right: 6px"
                 />
-                <a-button type="primary" size="small" status="success" style="margin-right: 4px;" @click="saveSortChange(record)">
+                <a-button
+                  type="primary"
+                  size="small"
+                  status="success"
+                  style="margin-right: 4px"
+                  @click="saveSortChange(record)"
+                >
                   保存
                 </a-button>
-                <a-button type="text" size="small" style="color: #86909c; padding: 0 2px;" @click="cancelEditSort(record)">
+                <a-button
+                  type="text"
+                  size="small"
+                  style="color: #86909c; padding: 0 2px"
+                  @click="cancelEditSort(record)"
+                >
                   取消
                 </a-button>
               </template>
 
               <!-- 常规展示态：呈现数字与右侧【修改】按钮 -->
               <template v-else>
-                <a-tag color="arcoblue" style="font-weight: bold; margin-right: 8px;">
+                <a-tag
+                  color="arcoblue"
+                  style="font-weight: bold; margin-right: 8px"
+                >
                   {{ record.sort_order }}
                 </a-tag>
-                <a-button type="text" size="small" style="color: #C5A880; font-weight: 600;" @click="startEditSort(record)">
+                <a-button
+                  type="text"
+                  size="small"
+                  style="color: #c5a880; font-weight: 600"
+                  @click="startEditSort(record)"
+                >
                   <template #icon><icon-edit /></template>
                   修改
                 </a-button>
@@ -114,11 +149,27 @@
 
         <a-table-column title="操作" :width="140">
           <template #cell="{ record }">
-            <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
-              <a-button type="outline" size="small" @click="editCategory(record)">
+            <div
+              style="
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                white-space: nowrap;
+                gap: 6px;
+              "
+            >
+              <a-button
+                type="outline"
+                size="small"
+                @click="editCategory(record)"
+              >
                 编辑
               </a-button>
-              <a-popconfirm content="确定彻底删除此门窗分类吗？" type="warning" @ok="deleteCategory(record.id)">
+              <a-popconfirm
+                content="确定彻底删除此门窗分类吗？"
+                type="warning"
+                @ok="deleteCategory(record.id)"
+              >
                 <a-button type="outline" status="danger" size="small">
                   删除
                 </a-button>
@@ -130,18 +181,34 @@
     </a-table>
 
     <!-- 新建/修改分类 Modal -->
-    <a-modal v-model:visible="modalVisible" title="配置门窗分类与首页导航区" :on-before-ok="handleBeforeSaveCategory">
+    <a-modal
+      v-model:visible="modalVisible"
+      title="配置门窗分类与首页导航区"
+      :on-before-ok="handleBeforeSaveCategory"
+    >
       <a-form :model="form" layout="vertical">
         <a-form-item label="分类全称 (如: 断桥铝系统窗)" required>
           <a-input v-model="form.name" placeholder="请输入分类全称" />
         </a-form-item>
 
-        <a-form-item label="首页导航区小标签 (限5字以内，如: 极窄推拉门)" required>
-          <a-input v-model="form.sub_title" maxlength="5" show-word-limit placeholder="最多5字，适合首页导航显示" />
+        <a-form-item
+          label="首页导航区小标签 (限5字以内，如: 极窄推拉门)"
+          required
+        >
+          <a-input
+            v-model="form.sub_title"
+            maxlength="5"
+            show-word-limit
+            placeholder="最多5字，适合首页导航显示"
+          />
         </a-form-item>
 
         <a-form-item label="排序权重 (数字越小越靠前显示)" required>
-          <a-input-number v-model="form.sort_order" :min="0" placeholder="默认0，数字越小越靠前显示" />
+          <a-input-number
+            v-model="form.sort_order"
+            :min="0"
+            placeholder="默认0，数字越小越靠前显示"
+          />
         </a-form-item>
 
         <a-form-item label="分类状态" required>
@@ -168,7 +235,7 @@
                     @before-upload="onBeforeUpload"
                     @success="onIconUploadSuccess"
                     @error="onIconUploadError"
-                    style="display: inline-block;"
+                    style="display: inline-block"
                   >
                     <template #upload-button>
                       <span class="mask-icon" title="更换图片">
@@ -176,7 +243,11 @@
                       </span>
                     </template>
                   </a-upload>
-                  <span class="mask-icon mask-icon-delete ml-2" title="删除图片" @click.stop="form.icon_url = ''">
+                  <span
+                    class="mask-icon mask-icon-delete ml-2"
+                    title="删除图片"
+                    @click.stop="form.icon_url = ''"
+                  >
                     <icon-delete />
                   </span>
                 </div>
@@ -191,7 +262,7 @@
               >
                 <template #upload-button>
                   <div class="upload-dropzone">
-                    <icon-plus style="font-size: 20px; color: #C5A880;" />
+                    <icon-plus style="font-size: 20px; color: #c5a880" />
                     <span class="upload-title">上传图片</span>
                   </div>
                 </template>
@@ -205,13 +276,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { Message } from '@arco-design/web-vue';
+import { ref, onMounted } from "vue";
+import { Message } from "@arco-design/web-vue";
 
-const API_BASE = 'https://zc-api.carelife.top';
+import request from "../utils/request";
 
 const searchForm = ref({
-  name: ''
+  name: "",
 });
 
 const categories = ref([]);
@@ -221,12 +292,12 @@ const modalVisible = ref(false);
 const uploading = ref(false);
 
 const form = ref({
-  id: '',
-  name: '',
-  sub_title: '',
-  icon_url: '',
+  id: "",
+  name: "",
+  sub_title: "",
+  icon_url: "",
   sort_order: 0,
-  is_active: 1
+  is_active: 1,
 });
 
 const handleSearch = () => {
@@ -234,7 +305,7 @@ const handleSearch = () => {
 };
 
 const resetSearch = () => {
-  searchForm.value.name = '';
+  searchForm.value.name = "";
   fetchCategories();
 };
 
@@ -243,23 +314,29 @@ const fetchCategories = async () => {
   try {
     const params = new URLSearchParams();
     if (searchForm.value.name && searchForm.value.name.trim()) {
-      params.append('name', searchForm.value.name.trim());
+      params.append("name", searchForm.value.name.trim());
     }
-    const res = await fetch(`${API_BASE}/api/admin/categories?${params.toString()}`);
-    const data = await res.json();
+    const data = await request(`/api/admin/categories?${params.toString()}`);
     let list = data.data || data.categories;
     if (data.success && Array.isArray(list)) {
       if (searchForm.value.name && searchForm.value.name.trim()) {
         const kw = searchForm.value.name.trim().toLowerCase();
-        list = list.filter(c => 
-          (c.name && c.name.toLowerCase().includes(kw)) ||
-          (c.sub_title && c.sub_title.toLowerCase().includes(kw))
+        list = list.filter(
+          (c) =>
+            (c.name && c.name.toLowerCase().includes(kw)) ||
+            (c.sub_title && c.sub_title.toLowerCase().includes(kw)),
         );
       }
-      categories.value = list.map(c => ({
+      categories.value = list.map((c) => ({
         ...c,
-        sort_order: (c.sort_order !== undefined && c.sort_order !== null) ? Number(c.sort_order) : 0,
-        is_active: (c.is_active !== undefined && c.is_active !== null) ? Number(c.is_active) : 1
+        sort_order:
+          c.sort_order !== undefined && c.sort_order !== null
+            ? Number(c.sort_order)
+            : 0,
+        is_active:
+          c.is_active !== undefined && c.is_active !== null
+            ? Number(c.is_active)
+            : 1,
       }));
     } else {
       categories.value = [];
@@ -272,7 +349,14 @@ const fetchCategories = async () => {
 };
 
 const openModal = () => {
-  form.value = { id: '', name: '', sub_title: '', icon_url: '', sort_order: 0, is_active: 1 };
+  form.value = {
+    id: "",
+    name: "",
+    sub_title: "",
+    icon_url: "",
+    sort_order: 0,
+    is_active: 1,
+  };
   uploading.value = false;
   modalVisible.value = true;
 };
@@ -282,9 +366,15 @@ const editCategory = (record) => {
     id: record.id,
     name: record.name,
     sub_title: record.sub_title,
-    icon_url: record.icon_url || '',
-    sort_order: (record.sort_order !== undefined && record.sort_order !== null) ? Number(record.sort_order) : 0,
-    is_active: (record.is_active !== undefined && record.is_active !== null) ? Number(record.is_active) : 1
+    icon_url: record.icon_url || "",
+    sort_order:
+      record.sort_order !== undefined && record.sort_order !== null
+        ? Number(record.sort_order)
+        : 0,
+    is_active:
+      record.is_active !== undefined && record.is_active !== null
+        ? Number(record.is_active)
+        : 1,
   };
   uploading.value = false;
   modalVisible.value = true;
@@ -306,39 +396,37 @@ const onIconUploadSuccess = (fileItem) => {
 
 const onIconUploadError = () => {
   uploading.value = false;
-  Message.error('图片上传失败，请重试');
+  Message.error("图片上传失败，请重试");
 };
 
 const handleBeforeSaveCategory = async () => {
   if (!form.value.name || !form.value.name.trim()) {
-    Message.warning('分类全称不能为空！');
+    Message.warning("分类全称不能为空！");
     return false;
   }
 
   try {
-    const res = await fetch(`${API_BASE}/api/admin/categories`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form.value)
+    const data = await request(`/api/admin/categories`, {
+      method: "POST",
+      body: JSON.stringify(form.value),
     });
-    const data = await res.json();
-
-    if (res.ok && data.success) {
-      Message.success('保存成功！');
+    if (data.success) {
+      Message.success("保存成功！");
       await fetchCategories();
       return true;
     } else {
-      Message.error(data.message || `保存失败 (HTTP ${res.status})`);
+      Message.error(data.message || "保存失败");
       return false;
     }
   } catch (e) {
-    Message.error('网络错误，无法保存分类');
+    Message.error("网络错误，无法保存分类");
     return false;
   }
 };
 
 const startEditSort = (record) => {
-  record.editing_sort_order = record.sort_order !== undefined ? Number(record.sort_order) : 0;
+  record.editing_sort_order =
+    record.sort_order !== undefined ? Number(record.sort_order) : 0;
   record.is_editing_sort = true;
 };
 
@@ -349,65 +437,67 @@ const cancelEditSort = (record) => {
 const saveSortChange = async (record) => {
   const newSort = Number(record.editing_sort_order || 0);
   try {
-    const res = await fetch(`${API_BASE}/api/admin/categories/${record.id}/sort`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sort_order: newSort })
-    });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      Message.success('排序更正成功！');
+    const data = await request(
+      `/api/admin/categories/${record.id}/sort`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ sort_order: newSort }),
+      },
+    );
+    if (data.success) {
+      Message.success("排序更正成功！");
       record.sort_order = newSort;
       record.is_editing_sort = false;
       await fetchCategories();
     } else {
-      Message.error(data.message || '排序更正失败');
+      Message.error(data.message || "排序更正失败");
     }
   } catch (e) {
-    Message.error('网络错误，无法修改排序');
+    Message.error("网络错误，无法修改排序");
   }
 };
 
 const handleStatusChange = async (record, val) => {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/categories`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const data = await request(`/api/admin/categories`, {
+      method: "POST",
       body: JSON.stringify({
         id: record.id,
         name: record.name,
         sub_title: record.sub_title,
-        icon_url: record.icon_url || '',
+        icon_url: record.icon_url || "",
         sort_order: record.sort_order || 0,
-        is_active: val
-      })
+        is_active: val,
+      }),
     });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      Message.success(`已成功${val === 1 ? '启用' : '禁用'}分类【${record.name}】`);
+    if (data.success) {
+      Message.success(
+        `已成功${val === 1 ? "启用" : "禁用"}分类【${record.name}】`,
+      );
       await fetchCategories();
     } else {
-      Message.error('状态修改失败');
+      Message.error("状态修改失败");
       record.is_active = val === 1 ? 0 : 1;
     }
   } catch (e) {
-    Message.error('网络联通失败');
+    Message.error("网络联通失败");
     record.is_active = val === 1 ? 0 : 1;
   }
 };
 
 const deleteCategory = async (id) => {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/categories/${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      Message.success('删除成功！');
+    const data = await request(`/api/admin/categories/${id}`, {
+      method: "DELETE",
+    });
+    if (data.success) {
+      Message.success("删除成功！");
       await fetchCategories();
     } else {
-      Message.error(data.message || `删除失败 (HTTP ${res.status})`);
+      Message.error(data.message || "删除失败");
     }
   } catch (e) {
-    Message.error('无法连接后端服务');
+    Message.error("无法连接后端服务");
   }
 };
 
@@ -417,11 +507,26 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.categories-view { display: flex; flex-direction: column; }
-.view-title { font-size: 20px; font-weight: 700; margin: 0; }
-.flex-between { display: flex; justify-content: space-between; align-items: center; }
-.mb-4 { margin-bottom: 16px; }
-.mr-2 { margin-right: 8px; }
+.categories-view {
+  display: flex;
+  flex-direction: column;
+}
+.view-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mb-4 {
+  margin-bottom: 16px;
+}
+.mr-2 {
+  margin-right: 8px;
+}
 
 .upload-dropzone {
   width: 90px;
@@ -448,7 +553,7 @@ onMounted(() => {
   border-radius: 10px;
   overflow: hidden;
   position: relative;
-  border: 1.5px solid #C5A880;
+  border: 1.5px solid #c5a880;
 }
 
 .icon-img {
@@ -496,7 +601,9 @@ onMounted(() => {
   background: #f53f3f;
   color: #ffffff;
 }
-.ml-2 { margin-left: 8px; }
+.ml-2 {
+  margin-left: 8px;
+}
 
 :deep(.champagne-tag) {
   background-color: #c5a880 !important;
@@ -512,5 +619,12 @@ onMounted(() => {
   white-space: nowrap !important;
   font-size: 11px !important;
   word-break: keep-all !important;
+}
+
+.categories-view :deep(.search-panel .arco-card-body) {
+  padding: 12px 16px;
+}
+.categories-view :deep(.search-panel .arco-form-item) {
+  margin-bottom: 0 !important;
 }
 </style>

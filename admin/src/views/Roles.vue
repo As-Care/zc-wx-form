@@ -9,18 +9,26 @@
     </div>
 
     <!-- 角色列表表格 -->
-    <a-table :data="roleList" :loading="tableLoading" border row-key="id" class="mb-4">
+    <a-table
+      :data="roleList"
+      :loading="tableLoading"
+      border
+      row-key="id"
+      class="mb-4"
+    >
       <template #columns>
         <a-table-column title="角色名称" data-index="name" :width="180">
           <template #cell="{ record }">
             <strong>{{ record.name }}</strong>
-            <a-tag v-if="record.code === 'root'" color="gold" size="small" class="ml-2">SUPER ROOT</a-tag>
+            <a-tag v-if="record.code === 'root'" color="gold" size="small"
+              >SUPER ROOT</a-tag
+            >
           </template>
         </a-table-column>
 
         <a-table-column title="角色标识 (Code)" data-index="code" :width="160">
           <template #cell="{ record }">
-            <code style="color: #C5A880;">{{ record.code }}</code>
+            <code style="color: #c5a880">{{ record.code }}</code>
           </template>
         </a-table-column>
 
@@ -39,8 +47,20 @@
 
         <a-table-column title="操作" :width="220">
           <template #cell="{ record }">
-            <div style="display: flex; flex-direction: row; align-items: center; white-space: nowrap; gap: 6px;">
-              <a-button type="outline" size="small" @click="editRolePermission(record)">
+            <div
+              style="
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                white-space: nowrap;
+                gap: 6px;
+              "
+            >
+              <a-button
+                type="outline"
+                size="small"
+                @click="editRolePermission(record)"
+              >
                 <template #icon><icon-safe /></template>
                 分配菜单权限
               </a-button>
@@ -63,40 +83,106 @@
     </a-table>
 
     <!-- 角色与权限分配 Drawer 抽屉 (加宽至 640px，强效单行防换行) -->
-    <a-drawer v-model:visible="drawerVisible" width="640px" :title="isEdit ? '编辑角色与菜单授权' : '新建角色并分配权限'" unmount-on-close @ok="handleSaveRole">
+    <a-drawer
+      v-model:visible="drawerVisible"
+      width="640px"
+      :title="isEdit ? '编辑角色与菜单授权' : '新建角色并分配权限'"
+      unmount-on-close
+      @ok="handleSaveRole"
+    >
       <a-form :model="form" layout="vertical">
         <a-form-item label="角色名称" required>
-          <a-input v-model="form.name" placeholder="如：店长经理 / 客服接单员" />
+          <a-input
+            v-model="form.name"
+            placeholder="如：店长经理 / 客服接单员"
+          />
         </a-form-item>
 
         <a-form-item label="角色唯一标识 (Code)" required>
-          <a-input v-model="form.code" placeholder="如：manager / clerk" :disabled="isEdit && form.code === 'root'" />
+          <a-input
+            v-model="form.code"
+            placeholder="如：manager / clerk"
+            :disabled="isEdit && form.code === 'root'"
+          />
         </a-form-item>
 
         <a-form-item label="角色说明描述">
-          <a-textarea v-model="form.description" placeholder="请输入该角色的管理范围与职责说明" row="2" />
+          <a-textarea
+            v-model="form.description"
+            placeholder="请输入该角色的管理范围与职责说明"
+            row="2"
+          />
         </a-form-item>
 
         <a-divider>勾选授权可见菜单 (后台侧边栏)</a-divider>
 
-        <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; white-space: nowrap;">
-          <span style="font-size: 13px; color: #86909c;">按需勾选给该角色开放的后台导航菜单：</span>
+        <div
+          style="
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            white-space: nowrap;
+          "
+        >
+          <span style="font-size: 13px; color: #86909c"
+            >按需勾选给该角色开放的后台导航菜单：</span
+          >
           <a-space size="small">
-            <a-button size="mini" type="text" @click="selectAllMenus">全选</a-button>
-            <a-button size="mini" type="text" status="danger" @click="clearAllMenus" :disabled="form.code === 'root'">清空</a-button>
+            <a-button size="mini" type="text" @click="selectAllMenus"
+              >全选</a-button
+            >
+            <a-button
+              size="mini"
+              type="text"
+              status="danger"
+              @click="clearAllMenus"
+              :disabled="form.code === 'root'"
+              >清空</a-button
+            >
           </a-space>
         </div>
 
         <div class="menu-checkbox-container">
-          <a-checkbox-group v-model="form.menu_keys" direction="vertical" style="width: 100%;">
-            <div v-for="menu in allSysMenus" :key="menu.key" class="menu-item-row">
-              <a-checkbox :value="menu.key" :disabled="form.code === 'root'" style="white-space: nowrap;">
-                <div style="display: flex; align-items: center; gap: 8px; white-space: nowrap;">
-                  <strong style="white-space: nowrap;">{{ menu.name }}</strong>
-                  <code style="color: #86909c; font-size: 12px; white-space: nowrap;">({{ menu.key }})</code>
+          <a-checkbox-group
+            v-model="form.menu_keys"
+            direction="vertical"
+            style="width: 100%"
+          >
+            <div
+              v-for="menu in allSysMenus"
+              :key="menu.key"
+              class="menu-item-row"
+            >
+              <a-checkbox
+                :value="menu.key"
+                :disabled="form.code === 'root'"
+                style="white-space: nowrap"
+              >
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    white-space: nowrap;
+                  "
+                >
+                  <strong style="white-space: nowrap">{{ menu.name }}</strong>
+                  <code
+                    style="color: #86909c; font-size: 12px; white-space: nowrap"
+                    >({{ menu.key }})</code
+                  >
                 </div>
               </a-checkbox>
-              <span style="color: #c5a880; font-size: 12px; font-family: monospace; white-space: nowrap;">{{ menu.path }}</span>
+              <span
+                style="
+                  color: #c5a880;
+                  font-size: 12px;
+                  font-family: monospace;
+                  white-space: nowrap;
+                "
+                >{{ menu.path }}</span
+              >
             </div>
           </a-checkbox-group>
         </div>
@@ -106,10 +192,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { Message } from '@arco-design/web-vue';
+import { ref, onMounted } from "vue";
+import { Message } from "@arco-design/web-vue";
 
-const API_BASE = 'https://zc-api.carelife.top';
+import request from "../utils/request";
 
 const roleList = ref([]);
 const allSysMenus = ref([]);
@@ -117,25 +203,24 @@ const tableLoading = ref(false);
 
 const drawerVisible = ref(false);
 const isEdit = ref(false);
-const editId = ref('');
+const editId = ref("");
 
 const form = ref({
-  name: '',
-  code: '',
-  description: '',
-  menu_keys: []
+  name: "",
+  code: "",
+  description: "",
+  menu_keys: [],
 });
 
 const fetchRoles = async () => {
   tableLoading.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/admin/roles`);
-    const data = await res.json();
+    const data = await request(`/api/admin/roles`);
     if (data.success) {
       roleList.value = data.data || [];
     }
   } catch (e) {
-    Message.error('获取角色列表失败');
+    Message.error("获取角色列表失败");
   } finally {
     tableLoading.value = false;
   }
@@ -143,8 +228,7 @@ const fetchRoles = async () => {
 
 const fetchSysMenus = async () => {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/sys-menus`);
-    const data = await res.json();
+    const data = await request(`/api/admin/sys-menus`);
     if (data.success) {
       allSysMenus.value = data.data || [];
     }
@@ -153,12 +237,12 @@ const fetchSysMenus = async () => {
 
 const openCreateModal = () => {
   isEdit.value = false;
-  editId.value = '';
+  editId.value = "";
   form.value = {
-    name: '',
-    code: '',
-    description: '',
-    menu_keys: allSysMenus.value.map(m => m.key)
+    name: "",
+    code: "",
+    description: "",
+    menu_keys: allSysMenus.value.map((m) => m.key),
   };
   drawerVisible.value = true;
 };
@@ -169,62 +253,59 @@ const editRolePermission = (record) => {
   form.value = {
     name: record.name,
     code: record.code,
-    description: record.description || '',
-    menu_keys: Array.isArray(record.menu_keys) ? [...record.menu_keys] : []
+    description: record.description || "",
+    menu_keys: Array.isArray(record.menu_keys) ? [...record.menu_keys] : [],
   };
   drawerVisible.value = true;
 };
 
 const selectAllMenus = () => {
-  form.value.menu_keys = allSysMenus.value.map(m => m.key);
+  form.value.menu_keys = allSysMenus.value.map((m) => m.key);
 };
 
 const clearAllMenus = () => {
-  if (form.value.code === 'root') return;
+  if (form.value.code === "root") return;
   form.value.menu_keys = [];
 };
 
 const handleSaveRole = async () => {
   if (!form.value.name || !form.value.code) {
-    Message.warning('角色名称与标识为必填项');
+    Message.warning("角色名称与标识为必填项");
     return false;
   }
 
-  const url = isEdit.value 
-    ? `${API_BASE}/api/admin/roles/${editId.value}`
-    : `${API_BASE}/api/admin/roles`;
-  const method = isEdit.value ? 'PUT' : 'POST';
+  const url = isEdit.value
+    ? `/api/admin/roles/${editId.value}`
+    : `/api/admin/roles`;
+  const method = isEdit.value ? "PUT" : "POST";
 
   try {
-    const res = await fetch(url, {
+    const data = await request(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form.value)
+      body: JSON.stringify(form.value),
     });
-    const data = await res.json();
     if (data.success) {
-      Message.success(data.message || '角色权限保存成功');
+      Message.success(data.message || "角色权限保存成功");
       fetchRoles();
     } else {
-      Message.error(data.message || '保存失败');
+      Message.error(data.message || "保存失败");
     }
   } catch (e) {
-    Message.error('网络请求失败');
+    Message.error("网络请求失败");
   }
 };
 
 const deleteRole = async (id) => {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/roles/${id}`, { method: 'DELETE' });
-    const data = await res.json();
+    const data = await request(`/api/admin/roles/${id}`, { method: "DELETE" });
     if (data.success) {
-      Message.success('角色记录已彻底删除');
+      Message.success("角色记录已彻底删除");
       fetchRoles();
     } else {
-      Message.error(data.message || '删除失败');
+      Message.error(data.message || "删除失败");
     }
   } catch (e) {
-    Message.error('删除操作异常');
+    Message.error("删除操作异常");
   }
 };
 

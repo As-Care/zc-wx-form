@@ -125,7 +125,7 @@
 import { ref, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';
 
-const API_BASE = 'https://zc-api.carelife.top';
+import request from '../utils/request';
 
 const adminList = ref([]);
 const roleOptions = ref([]);
@@ -147,8 +147,7 @@ const form = ref({
 const fetchAdmins = async () => {
   tableLoading.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/admin/users`);
-    const data = await res.json();
+    const data = await request(`/api/admin/users`);
     if (data.success) {
       adminList.value = data.data || [];
     }
@@ -161,8 +160,7 @@ const fetchAdmins = async () => {
 
 const fetchRoles = async () => {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/roles`);
-    const data = await res.json();
+    const data = await request(`/api/admin/roles`);
     if (data.success) {
       roleOptions.value = data.data || [];
     }
@@ -208,17 +206,15 @@ const handleModalSave = async () => {
   }
 
   const url = isEdit.value 
-    ? `${API_BASE}/api/admin/users/${editId.value}`
-    : `${API_BASE}/api/admin/users`;
+    ? `/api/admin/users/${editId.value}`
+    : `/api/admin/users`;
   const method = isEdit.value ? 'PUT' : 'POST';
 
   try {
-    const res = await fetch(url, {
+    const data = await request(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
     });
-    const data = await res.json();
     if (data.success) {
       Message.success(data.message || '保存成功');
       fetchAdmins();
@@ -232,12 +228,13 @@ const handleModalSave = async () => {
 
 const handleStatusChange = async (record, val) => {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/users/${record.id}`, {
+    const data = await request(`/api/admin/users/${record.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...record, status: val })
+      body: JSON.stringify({
+        ...record,
+        status: val
+      })
     });
-    const data = await res.json();
     if (data.success) {
       Message.success(`管理员账号状态已更新为：${val === 1 ? '已启用' : '已禁用'}`);
       fetchAdmins();
@@ -253,10 +250,9 @@ const handleStatusChange = async (record, val) => {
 
 const deleteAdmin = async (id) => {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/users/${id}`, { method: 'DELETE' });
-    const data = await res.json();
+    const data = await request(`/api/admin/users/${id}`, { method: 'DELETE' });
     if (data.success) {
-      Message.success('管理员账号已彻底删除');
+      Message.success('管理员已被删除');
       fetchAdmins();
     } else {
       Message.error(data.message || '删除失败');

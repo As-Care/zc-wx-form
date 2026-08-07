@@ -123,7 +123,7 @@
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import * as echarts from "echarts";
 
-const API_BASE = 'https://zc-api.carelife.top';
+import request from '../utils/request';
 
 const lineChartRef = ref(null);
 const pieChartRef = ref(null);
@@ -157,17 +157,15 @@ const storeInfo = ref({
 
 const fetchRealStats = async () => {
   try {
-    const [statsRes, storeRes] = await Promise.all([
-      fetch(`${API_BASE}/api/admin/stats`),
-      fetch(`${API_BASE}/api/admin/config/store`)
+    const [statsDataRes, storeDataRes] = await Promise.all([
+      request(`/api/admin/stats`),
+      request(`/api/config/store`)
     ]);
-    const data = await statsRes.json();
-    if (data.success && data.data) {
-      statsData.value = data.data;
+    if (statsDataRes.success && statsDataRes.data) {
+      statsData.value = statsDataRes.data;
     }
-    const dataStore = await storeRes.json();
-    if (dataStore.success && dataStore.data) {
-      storeInfo.value = dataStore.data;
+    if (storeDataRes.success && storeDataRes.data) {
+      storeInfo.value = storeDataRes.data;
     }
   } catch (e) {}
 

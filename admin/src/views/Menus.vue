@@ -39,7 +39,11 @@
 
         <a-table-column title="是否启用可见" :width="130">
           <template #cell="{ record }">
-            <a-switch :model-value="record.is_visible === 1" @change="(val) => toggleVisibility(record, val)" />
+            <a-switch
+              :model-value="record.is_visible === 1"
+              :loading="visibilityLoadingIds.has(record.id)"
+              @change="(val) => toggleVisibility(record, val)"
+            />
           </template>
         </a-table-column>
 
@@ -62,7 +66,12 @@
     </a-table>
 
     <!-- 新建/编辑菜单 Modal -->
-    <a-modal v-model:visible="modalVisible" :title="isEdit ? '编辑系统菜单' : '新建系统菜单项'" @ok="handleModalSave">
+    <a-modal
+      v-model:visible="modalVisible"
+      :title="isEdit ? '编辑系统菜单' : '新建系统菜单项'"
+      :ok-loading="saveLoading"
+      :on-before-ok="handleModalSave"
+    >
       <a-form :model="form" layout="vertical">
         <a-form-item label="菜单显示名称" required>
           <a-input v-model="form.name" placeholder="如：财务报表 / 规则引擎" />
@@ -102,12 +111,14 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';
-import { API_BASE } from '../config';
+import request from '../utils/request';
 
 const menuList = ref([]);
 const tableLoading = ref(false);
+const visibilityLoadingIds = ref(new Set());
 
 const modalVisible = ref(false);
+const saveLoading = ref(false);
 const isEdit = ref(false);
 const editId = ref('');
 
@@ -123,24 +134,14 @@ const form = ref({
 const fetchMenus = async () => {
   tableLoading.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/admin/sys-menus`);
-    const responseText = await res.text();
-    let data;
-    try {
-      data = responseText ? JSON.parse(responseText) : {};
-    } catch (parseError) {
-      throw new Error(`接口返回非 JSON（HTTP ${res.status}）`);
+    const data = await request(`/api/admin/sys-menus`);
+    if (data.success) {
+      menuList.value = data.data || [];
+    } else {
+      throw new Error(data.message || `接口请求失败`);
     }
-    if (!res.ok || !data.success) {
-      throw new Error(data.message || `接口请求失败（HTTP ${res.status}）`);
-    }
-    menuList.value = data.data || [];
   } catch (e) {
-    console.error('获取系统菜单列表失败', {
-      endpoint: `${API_BASE}/api/admin/sys-menus`,
-      error: e
-    });
-    Message.error(`获取系统菜单列表失败：${e?.message || '请检查 API 地址、服务状态和跨域配置'}`);
+    console.error('获取系统菜单列表失败', e);
   } finally {
     tableLoading.value = false;
   }
@@ -175,64 +176,67 @@ const editMenu = (record) => {
 };
 
 const toggleVisibility = async (record, val) => {
+  if (visibilityLoadingIds.value.has(record.id)) return;
+  visibilityLoadingIds.value = new Set(visibilityLoadingIds.value).add(record.id);
   try {
-    const res = await fetch(`${API_BASE}/api/admin/sys-menus/${record.id}`, {
+    const data = await request(`/api/admin/sys-menus/${record.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...record,
         is_visible: val ? 1 : 0
       })
     });
-    const data = await res.json();
     if (data.success) {
       Message.success('菜单状态已更新');
-      fetchMenus();
+      await fetchMenus();
+    } else {
+      Message.error(data.message || `菜单状态更新失败`);
     }
-  } catch (e) {}
+  } catch (e) {
+  } finally {
+    const loadingIds = new Set(visibilityLoadingIds.value);
+    loadingIds.delete(record.id);
+    visibilityLoadingIds.value = loadingIds;
+  }
 };
 
 const handleModalSave = async () => {
+  if (saveLoading.value) return false;
   if (!form.value.name || !form.value.key || !form.value.path) {
     Message.warning('菜单名称、Key与Path为必填项');
     return false;
   }
 
   const url = isEdit.value 
-    ? `${API_BASE}/api/admin/sys-menus/${editId.value}`
-    : `${API_BASE}/api/admin/sys-menus`;
+    ? `/api/admin/sys-menus/${editId.value}`
+    : `/api/admin/sys-menus`;
   const method = isEdit.value ? 'PUT' : 'POST';
 
+  saveLoading.value = true;
   try {
-    const res = await fetch(url, {
+    const data = await request(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
     });
-    const responseText = await res.text();
-    let data;
-    try {
-      data = responseText ? JSON.parse(responseText) : {};
-    } catch (parseError) {
-      data = { success: false, message: `服务端返回了无法解析的响应（HTTP ${res.status}）` };
-    }
 
-    if (res.ok && data.success) {
+    if (data.success) {
       Message.success(data.message || '保存成功');
-      modalVisible.value = false;
       fetchMenus();
+      return true;
     } else {
-      Message.error(data.message || `保存失败（HTTP ${res.status}）`);
+      Message.error(data.message || `保存失败`);
+      return false;
     }
   } catch (e) {
-    Message.error(`网络请求失败：${e?.message || '请检查 API 服务地址、服务状态和跨域配置'}`);
+    return false;
+  } finally {
+    saveLoading.value = false;
   }
 };
 
 const deleteMenu = async (id) => {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/sys-menus/${id}`, { method: 'DELETE' });
-    const data = await res.json();
+    const data = await request(`/api/admin/sys-menus/${id}`, { method: 'DELETE' });
     if (data.success) {
       Message.success('菜单记录已彻底删除');
       fetchMenus();
@@ -240,7 +244,6 @@ const deleteMenu = async (id) => {
       Message.error(data.message || '删除失败');
     }
   } catch (e) {
-    Message.error('删除操作异常');
   }
 };
 

@@ -119,6 +119,7 @@ import { computed, ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Message } from "@arco-design/web-vue";
 import { isPageLoading } from "../router";
+import request from "../utils/request";
 
 const route = useRoute();
 const router = useRouter();
@@ -143,11 +144,14 @@ const ALL_MENU_CONFIG = [
   { key: 'AuditLogs', name: '操作日志', icon: 'IconHistory' }
 ];
 
+const sidebarMenuConfig = ref(ALL_MENU_CONFIG);
+
 const visibleMenuList = computed(() => {
+  const menuConfig = sidebarMenuConfig.value;
   if (!allowedMenus.value || allowedMenus.value.length === 0) {
-    return ALL_MENU_CONFIG;
+    return menuConfig;
   }
-  return ALL_MENU_CONFIG.filter(m => allowedMenus.value.includes(m.key));
+  return menuConfig.filter(m => allowedMenus.value.includes(m.key));
 });
 
 const activeKey = computed(() => {
@@ -171,6 +175,30 @@ const handleLogout = () => {
   localStorage.removeItem("admin_menus");
   Message.success("成功退出登录！");
   router.push("/login");
+};
+
+const fetchSidebarMenus = async () => {
+  try {
+    const data = await request(`/api/admin/sys-menus`);
+    if (!data.success || !Array.isArray(data.data)) return;
+
+    const sortedMenus = data.data
+      .map((menu) => ({
+        key: menu.key,
+        name: menu.name,
+        icon: menu.icon || 'IconMenu',
+        path: menu.path,
+        sort_order: Number(menu.sort_order) || 0
+      }))
+      .sort((a, b) => a.sort_order - b.sort_order);
+
+    if (sortedMenus.length) {
+      sidebarMenuConfig.value = sortedMenus;
+    }
+  } catch (error) {
+    // Keep the built-in menu fallback when the sidebar refresh cannot reach the API.
+    console.warn('刷新侧边栏菜单失败，使用默认菜单配置', error);
+  }
 };
 
 const toggleTheme = () => {
@@ -200,6 +228,9 @@ onMounted(() => {
   } else {
     document.body.removeAttribute("arco-theme");
   }
+
+  // Render the static menu immediately, then refresh order from the online D1 data.
+  fetchSidebarMenus();
 });
 </script>
 
