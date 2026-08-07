@@ -12,9 +12,14 @@ const nativeFetch = window.fetch.bind(window);
 window.fetch = (input, init = {}) => {
   const adminUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
   const headers = new Headers(init.headers || {});
-  if (adminUser.id) headers.set('X-Admin-Id', adminUser.id);
-  if (adminUser.username) headers.set('X-Admin-Username', adminUser.username);
-  if (adminUser.nickname) headers.set('X-Admin-Name', adminUser.nickname);
+  const method = String(init.method || (input && input.method) || 'GET').toUpperCase();
+  // Read-only list/detail requests stay simple and avoid CORS preflight.
+  // Audit identity is only needed for operations that mutate data.
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    if (adminUser.id) headers.set('X-Admin-Id', adminUser.id);
+    if (adminUser.username) headers.set('X-Admin-Username', adminUser.username);
+    if (adminUser.nickname) headers.set('X-Admin-Name', adminUser.nickname);
+  }
   return nativeFetch(input, { ...init, headers });
 };
 
