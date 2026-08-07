@@ -155,7 +155,14 @@ const activeKey = computed(() => {
 });
 
 const handleMenuClick = (key) => {
-  router.push({ name: key });
+  if (!router.hasRoute(key)) {
+    Message.error(`菜单路由未配置：${key}`);
+    return;
+  }
+  router.push({ name: key }).catch((error) => {
+    console.error('切换菜单失败', { key, error });
+    Message.error('菜单切换失败，请刷新页面后重试');
+  });
 };
 
 const handleLogout = () => {
@@ -277,34 +284,44 @@ onMounted(() => {
   overflow: hidden !important;
   background: #ffffff !important;
   border: 1px solid #e5e6eb;
+  min-height: 0;
 }
 
-:deep(.arco-layout-sider-children),
-:deep(.arco-menu),
-:deep(.arco-menu-inner),
-.sidebar-menu {
+:deep(.arco-layout-sider-children) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   overflow: hidden !important;
-  overflow-x: hidden !important;
-  overflow-y: hidden !important;
-}
-
-:deep(.arco-layout-sider-children::-webkit-scrollbar),
-:deep(.arco-menu::-webkit-scrollbar),
-:deep(.arco-menu-inner::-webkit-scrollbar),
-.sidebar-menu::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
 }
 
 .sidebar-menu {
   background: transparent !important;
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
   padding-top: 12px;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(197, 168, 128, 0.65) transparent;
+}
+
+.sidebar-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-menu::-webkit-scrollbar-thumb {
+  background: rgba(197, 168, 128, 0.65);
+  border-radius: 3px;
 }
 
 :deep(.arco-menu-inner) {
   padding: 8px;
+  min-height: min-content;
 }
 
 /* 基础菜单项：预留透明边框，固定盒模型，防止切换选中时产生 1px 抖动 */

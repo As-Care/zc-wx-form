@@ -7,7 +7,9 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8787',
+        // Development uses the deployed Worker/D1 by default. Set
+        // VITE_API_PROXY_TARGET only when intentionally testing another API.
+        target: process.env.VITE_API_PROXY_TARGET || 'https://zc-api.carelife.top',
         changeOrigin: true
       }
     }

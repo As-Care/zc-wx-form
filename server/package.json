@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "wrangler dev src/index.ts --remote=false",
+    "dev": "wrangler dev src/index.ts --remote",
     "deploy": "wrangler deploy src/index.ts",
     "d1:migrate": "wrangler d1 execute zc-db --local --file=./schema.sql",
     "d1:seed": "wrangler d1 execute zc-db --local --file=./seed.sql"

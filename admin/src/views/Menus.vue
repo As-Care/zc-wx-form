@@ -102,8 +102,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { Message } from '@arco-design/web-vue';
-
-const API_BASE = 'https://zc-api.carelife.top';
+import { API_BASE } from '../config';
 
 const menuList = ref([]);
 const tableLoading = ref(false);
@@ -125,12 +124,23 @@ const fetchMenus = async () => {
   tableLoading.value = true;
   try {
     const res = await fetch(`${API_BASE}/api/admin/sys-menus`);
-    const data = await res.json();
-    if (data.success) {
-      menuList.value = data.data || [];
+    const responseText = await res.text();
+    let data;
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch (parseError) {
+      throw new Error(`接口返回非 JSON（HTTP ${res.status}）`);
     }
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || `接口请求失败（HTTP ${res.status}）`);
+    }
+    menuList.value = data.data || [];
   } catch (e) {
-    Message.error('获取系统菜单列表失败');
+    console.error('获取系统菜单列表失败', {
+      endpoint: `${API_BASE}/api/admin/sys-menus`,
+      error: e
+    });
+    Message.error(`获取系统菜单列表失败：${e?.message || '请检查 API 地址、服务状态和跨域配置'}`);
   } finally {
     tableLoading.value = false;
   }
@@ -199,15 +209,23 @@ const handleModalSave = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form.value)
     });
-    const data = await res.json();
-    if (data.success) {
+    const responseText = await res.text();
+    let data;
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch (parseError) {
+      data = { success: false, message: `服务端返回了无法解析的响应（HTTP ${res.status}）` };
+    }
+
+    if (res.ok && data.success) {
       Message.success(data.message || '保存成功');
+      modalVisible.value = false;
       fetchMenus();
     } else {
-      Message.error(data.message || '保存失败');
+      Message.error(data.message || `保存失败（HTTP ${res.status}）`);
     }
   } catch (e) {
-    Message.error('网络请求失败');
+    Message.error(`网络请求失败：${e?.message || '请检查 API 服务地址、服务状态和跨域配置'}`);
   }
 };
 
