@@ -384,6 +384,37 @@ function getBearerTokenUserId(c: any): string | null {
   return c.get("user")?.id || null;
 }
 
+type CustomerAccess =
+  | { id: string }
+  | { status: 400 | 401 | 403; message: string };
+
+/**
+ * Mini-program requests may only operate on their own customer record.
+ * Administrators with customer-management permission may explicitly select a
+ * target customer so the admin order and customer-management screens work.
+ */
+async function resolveCustomerAccess(
+  c: any,
+  db: D1Database,
+  requestedUserId?: string | null,
+): Promise<CustomerAccess> {
+  const admin = c.get("admin") as AdminIdentity | undefined;
+  if (admin) {
+    if (!(await hasAdminMenuAccess(db, admin, "Users"))) {
+      return { status: 403, message: "当前账号没有客户管理权限" };
+    }
+    const id = String(requestedUserId || "").trim();
+    return id
+      ? { id }
+      : { status: 400, message: "请选择需要操作的客户" };
+  }
+
+  const user = c.get("user") as UserIdentity | undefined;
+  return user
+    ? { id: user.id }
+    : { status: 401, message: "登录状态无效，请重新登录" };
+}
+
 function normalizeImageUrls(value: unknown): string {
   const items = Array.isArray(value) ? value : [value];
   return items
@@ -681,14 +712,14 @@ app.post("/api/admin/customers", async (c) => {
  */
 app.get("/api/user/profile", async (c) => {
   const db = c.env.DB;
-  const currentUser = c.get("user");
-  if (!currentUser) {
-    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
+  const access = await resolveCustomerAccess(c, db, c.req.query("user_id"));
+  if ("status" in access) {
+    return c.json({ success: false, message: access.message }, access.status);
   }
 
   const user = await db
     .prepare("SELECT * FROM users WHERE id = ?")
-    .bind(currentUser.id)
+    .bind(access.id)
     .first<User>();
   if (!user) {
     return c.json({ success: false, message: "未找到该用户" }, 404);
@@ -703,22 +734,33 @@ app.get("/api/user/profile", async (c) => {
  */
 app.post("/api/user/profile", async (c) => {
   const db = c.env.DB;
-  const currentUser = c.get("user");
-  if (!currentUser) {
-    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
-  }
   const body = await c.req.json();
   const { nickname, avatar_url, phone } = body;
-  const id = currentUser.id;
+  const access = await resolveCustomerAccess(c, db, body.user_id);
+  if ("status" in access) {
+    return c.json({ success: false, message: access.message }, access.status);
+  }
+  const id = access.id;
+  const isAdmin = Boolean(c.get("admin"));
   const cleanPhone = String(phone || "").trim();
 
   if (cleanPhone && !/^1[3-9]\d{9}$/.test(cleanPhone)) {
     return c.json({ success: false, message: "请输入有效的手机号码" }, 400);
   }
   if (cleanPhone) {
-    const claimResult = await claimLegacyCustomerDataByPhone(db, id, cleanPhone);
-    if (claimResult.conflict) {
-      return c.json({ success: false, message: "该手机号已绑定其他微信账号，请联系门店处理" }, 409);
+    if (isAdmin) {
+      const duplicate = await db
+        .prepare("SELECT id FROM users WHERE phone = ? AND id != ? LIMIT 1")
+        .bind(cleanPhone, id)
+        .first<{ id: string }>();
+      if (duplicate) {
+        return c.json({ success: false, message: "该手机号已被其他客户绑定" }, 409);
+      }
+    } else {
+      const claimResult = await claimLegacyCustomerDataByPhone(db, id, cleanPhone);
+      if (claimResult.conflict) {
+        return c.json({ success: false, message: "该手机号已绑定其他微信账号，请联系门店处理" }, 409);
+      }
     }
   }
 
@@ -729,11 +771,11 @@ app.post("/api/user/profile", async (c) => {
       nickname = COALESCE(?, nickname),
       avatar_url = COALESCE(?, avatar_url),
       phone = COALESCE(?, phone),
-      role = 'customer'
+      role = CASE WHEN ? THEN role ELSE 'customer' END
     WHERE id = ?
   `,
     )
-    .bind(nickname || null, avatar_url || null, cleanPhone || null, id)
+    .bind(nickname || null, avatar_url || null, cleanPhone || null, isAdmin ? 1 : 0, id)
     .run();
 
   const user = await db
@@ -870,6 +912,13 @@ app.post("/api/user/sync", async (c) => {
  */
 app.get("/api/users", async (c) => {
   const db = c.env.DB;
+  const admin = c.get("admin");
+  if (!admin) {
+    return c.json({ success: false, message: "请先登录后台管理系统" }, 401);
+  }
+  if (!(await hasAdminMenuAccess(db, admin, "Users"))) {
+    return c.json({ success: false, message: "当前账号没有客户管理权限" }, 403);
+  }
 
   const nickname = c.req.query("nickname");
   const phone = c.req.query("phone");
@@ -1036,9 +1085,9 @@ app.delete("/api/admin/users/:id", async (c) => {
  */
 app.get("/api/user/addresses", async (c) => {
   const db = c.env.DB;
-  const currentUser = c.get("user");
-  if (!currentUser) {
-    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
+  const access = await resolveCustomerAccess(c, db, c.req.query("user_id"));
+  if ("status" in access) {
+    return c.json({ success: false, message: access.message }, access.status);
   }
 
 
@@ -1046,7 +1095,7 @@ app.get("/api/user/addresses", async (c) => {
     .prepare(
       "SELECT * FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC, created_at DESC",
     )
-    .bind(currentUser.id)
+    .bind(access.id)
     .all();
 
   return c.json({ success: true, data: results || [] });
@@ -1058,13 +1107,10 @@ app.get("/api/user/addresses", async (c) => {
  */
 app.post("/api/user/addresses", async (c) => {
   const db = c.env.DB;
-  const currentUser = c.get("user");
-  if (!currentUser) {
-    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
-  }
   const body = await c.req.json();
   const {
     id,
+    user_id,
     name,
     phone,
     province,
@@ -1073,6 +1119,10 @@ app.post("/api/user/addresses", async (c) => {
     detail_address,
     is_default,
   } = body;
+  const access = await resolveCustomerAccess(c, db, user_id);
+  if ("status" in access) {
+    return c.json({ success: false, message: access.message }, access.status);
+  }
 
   if (!name || !phone || !detail_address) {
     return c.json(
@@ -1085,7 +1135,7 @@ app.post("/api/user/addresses", async (c) => {
   if (is_default) {
     await db
       .prepare("UPDATE user_addresses SET is_default = 0 WHERE user_id = ?")
-      .bind(currentUser.id)
+      .bind(access.id)
       .run();
   }
 
@@ -1109,7 +1159,7 @@ app.post("/api/user/addresses", async (c) => {
         detail_address,
         defaultVal,
         id,
-        currentUser.id,
+        access.id,
       )
       .run();
 
@@ -1125,7 +1175,7 @@ app.post("/api/user/addresses", async (c) => {
       )
       .bind(
         newId,
-        currentUser.id,
+        access.id,
         name,
         phone,
         province || "",
@@ -1146,12 +1196,12 @@ app.post("/api/user/addresses", async (c) => {
  */
 app.delete("/api/user/addresses/:id", async (c) => {
   const db = c.env.DB;
-  const currentUser = c.get("user");
-  if (!currentUser) {
-    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
+  const access = await resolveCustomerAccess(c, db, c.req.query("user_id"));
+  if ("status" in access) {
+    return c.json({ success: false, message: access.message }, access.status);
   }
   const id = c.req.param("id");
-  await db.prepare("DELETE FROM user_addresses WHERE id = ? AND user_id = ?").bind(id, currentUser.id).run();
+  await db.prepare("DELETE FROM user_addresses WHERE id = ? AND user_id = ?").bind(id, access.id).run();
   return c.json({ success: true, message: "地址已删除" });
 });
 
@@ -1161,21 +1211,25 @@ app.delete("/api/user/addresses/:id", async (c) => {
  */
 app.patch("/api/user/addresses/:id/default", async (c) => {
   const db = c.env.DB;
-  const currentUser = c.get("user");
-  if (!currentUser) {
-    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
+  let body: any = {};
+  try {
+    body = await c.req.json();
+  } catch (error) {}
+  const access = await resolveCustomerAccess(c, db, body.user_id || c.req.query("user_id"));
+  if ("status" in access) {
+    return c.json({ success: false, message: access.message }, access.status);
   }
   const id = c.req.param("id");
 
   await db
     .prepare("UPDATE user_addresses SET is_default = 0 WHERE user_id = ?")
-    .bind(currentUser.id)
+    .bind(access.id)
     .run();
   await db
     .prepare(
       "UPDATE user_addresses SET is_default = 1 WHERE id = ? AND user_id = ?",
     )
-    .bind(id, currentUser.id)
+    .bind(id, access.id)
     .run();
 
   return c.json({ success: true, message: "默认地址设置成功" });
