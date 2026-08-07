@@ -65,6 +65,9 @@ CREATE TABLE IF NOT EXISTS orders (
   special_charges_amount DECIMAL(10,2) DEFAULT 0.00,
   final_amount DECIMAL(10,2) NOT NULL,
   status VARCHAR(32) DEFAULT 'pending_review',
+  creator_type VARCHAR(20) DEFAULT 'customer',
+  creator_id VARCHAR(64),
+  creator_name VARCHAR(128),
   admin_remark TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP

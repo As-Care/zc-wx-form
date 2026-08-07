@@ -138,6 +138,12 @@
 
         <!-- 关联的收货 / 安装地址列表 -->
         <a-card title="📍 已保存的收货与安装地址" :loading="addressLoading">
+          <template #extra>
+            <a-button type="outline" size="small" @click="openAddressModal()">
+              <template #icon><icon-plus /></template>
+              新增地址
+            </a-button>
+          </template>
           <div v-if="userAddresses && userAddresses.length > 0">
             <div
               v-for="addr in userAddresses"
@@ -146,7 +152,10 @@
             >
               <div class="addr-header flex-between mb-1">
                 <span class="addr-name"><strong>{{ addr.name }}</strong> ({{ addr.phone }})</span>
-                <a-tag v-if="addr.is_default" color="gold" size="small">默认地址</a-tag>
+                <a-space>
+                  <a-tag v-if="addr.is_default" color="gold" size="small">默认地址</a-tag>
+                  <a-button type="text" size="mini" @click="openAddressModal(addr)">修改</a-button>
+                </a-space>
               </div>
               <div class="addr-detail">
                 📍 {{ addr.province || '' }}{{ addr.city || '' }}{{ addr.district || '' }} {{ addr.detail_address }}
@@ -227,7 +236,42 @@
         <a-form-item label="联系电话" required>
           <a-input v-model="createForm.phone" placeholder="请输入11位手机号" />
         </a-form-item>
+        <a-divider orientation="left">收货/安装地址</a-divider>
+        <a-form-item label="省 / 市 / 区">
+          <a-grid :cols="3" :col-gap="12">
+            <a-grid-item><a-input v-model="createForm.province" placeholder="省份" /></a-grid-item>
+            <a-grid-item><a-input v-model="createForm.city" placeholder="城市" /></a-grid-item>
+            <a-grid-item><a-input v-model="createForm.district" placeholder="区县" /></a-grid-item>
+          </a-grid>
+        </a-form-item>
+        <a-form-item label="详细收货/安装地址" required>
+          <a-textarea v-model="createForm.detail_address" placeholder="请输入小区、街道、门牌号" :auto-size="{ minRows: 2, maxRows: 4 }" />
+        </a-form-item>
         <div class="create-customer-tip">该客户暂时没有微信 OpenID，后续使用相同手机号在小程序注册后会自动合并。</div>
+      </a-form>
+    </a-modal>
+
+    <a-modal v-model:visible="addressModalVisible" :title="addressForm.id ? '修改收货/安装地址' : '新增收货/安装地址'" :on-before-ok="handleSaveAddress">
+      <a-form :model="addressForm" layout="vertical">
+        <a-form-item label="联系人姓名" required>
+          <a-input v-model="addressForm.name" placeholder="请输入联系人姓名" />
+        </a-form-item>
+        <a-form-item label="联系电话" required>
+          <a-input v-model="addressForm.phone" placeholder="请输入11位手机号" />
+        </a-form-item>
+        <a-form-item label="省 / 市 / 区">
+          <a-grid :cols="3" :col-gap="12">
+            <a-grid-item><a-input v-model="addressForm.province" placeholder="省份" /></a-grid-item>
+            <a-grid-item><a-input v-model="addressForm.city" placeholder="城市" /></a-grid-item>
+            <a-grid-item><a-input v-model="addressForm.district" placeholder="区县" /></a-grid-item>
+          </a-grid>
+        </a-form-item>
+        <a-form-item label="详细收货/安装地址" required>
+          <a-textarea v-model="addressForm.detail_address" placeholder="请输入小区、街道、门牌号" :auto-size="{ minRows: 2, maxRows: 4 }" />
+        </a-form-item>
+        <a-form-item label="默认地址">
+          <a-switch v-model="addressForm.is_default" />
+        </a-form-item>
       </a-form>
     </a-modal>
   </div>
@@ -254,6 +298,7 @@ const tableLoading = ref(true);
 
 const modalVisible = ref(false);
 const createModalVisible = ref(false);
+const addressModalVisible = ref(false);
 const detailDrawerVisible = ref(false);
 const selectedUser = ref(null);
 const userAddresses = ref([]);
@@ -272,7 +317,27 @@ const editForm = ref({
   phone: ''
 });
 
-const createForm = ref({ nickname: '', phone: '' });
+const DEFAULT_REGION = {
+  province: '湖北省',
+  city: '省直辖县级行政区划',
+  district: '仙桃市'
+};
+
+const createForm = ref({
+  nickname: '',
+  phone: '',
+  ...DEFAULT_REGION,
+  detail_address: ''
+});
+
+const addressForm = ref({
+  id: '',
+  name: '',
+  phone: '',
+  ...DEFAULT_REGION,
+  detail_address: '',
+  is_default: true
+});
 
 const getCustomerRoleText = (record) => {
   return record && record.role === 'admin_created' ? '管理员创建' : '微信客户';
@@ -354,8 +419,82 @@ const editUser = (record) => {
 };
 
 const openCreateCustomer = () => {
-  createForm.value = { nickname: '', phone: '' };
+  createForm.value = {
+    nickname: '',
+    phone: '',
+    ...DEFAULT_REGION,
+    detail_address: ''
+  };
   createModalVisible.value = true;
+};
+
+const saveAddress = async (userId, form) => {
+  const res = await fetch(`${API_BASE}/api/user/addresses`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user_id: userId,
+      id: form.id || undefined,
+      name: form.name,
+      phone: form.phone,
+      province: form.province,
+      city: form.city,
+      district: form.district,
+      detail_address: form.detail_address,
+      is_default: form.is_default !== false
+    })
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.message || `保存地址失败 (HTTP ${res.status})`);
+  return data;
+};
+
+const openAddressModal = (address = null) => {
+  if (!selectedUser.value) return;
+  addressForm.value = address
+    ? {
+        id: address.id,
+        name: address.name || selectedUser.value.nickname || '',
+        phone: address.phone || selectedUser.value.phone || '',
+        province: address.province || DEFAULT_REGION.province,
+        city: address.city || DEFAULT_REGION.city,
+        district: address.district || DEFAULT_REGION.district,
+        detail_address: address.detail_address || '',
+        is_default: Boolean(address.is_default)
+      }
+    : {
+        id: '',
+        name: selectedUser.value.nickname || '',
+        phone: selectedUser.value.phone || '',
+        ...DEFAULT_REGION,
+        detail_address: '',
+        is_default: userAddresses.value.length === 0
+      };
+  addressModalVisible.value = true;
+};
+
+const validateAddress = (form) => {
+  if (!form.name || !form.name.trim()) return '请填写联系人姓名';
+  if (!/^1[3-9]\d{9}$/.test((form.phone || '').trim())) return '请输入有效的手机号码';
+  if (!form.detail_address || !form.detail_address.trim()) return '请填写详细收货/安装地址';
+  return '';
+};
+
+const handleSaveAddress = async () => {
+  const validationMessage = validateAddress(addressForm.value);
+  if (validationMessage) {
+    Message.warning(validationMessage);
+    return false;
+  }
+  try {
+    await saveAddress(selectedUser.value.id, addressForm.value);
+    Message.success(addressForm.value.id ? '地址修改成功！' : '地址保存成功！');
+    await viewCustomerDetails(selectedUser.value);
+    return true;
+  } catch (e) {
+    Message.error(e.message || '地址保存失败');
+    return false;
+  }
 };
 
 const handleCreateCustomer = async () => {
@@ -367,6 +506,15 @@ const handleCreateCustomer = async () => {
   }
   if (!/^1[3-9]\d{9}$/.test(phone)) {
     Message.warning('请输入有效的手机号码！');
+    return false;
+  }
+  const addressValidationMessage = validateAddress({
+    name: nickname,
+    phone,
+    detail_address: createForm.value.detail_address
+  });
+  if (addressValidationMessage) {
+    Message.warning(addressValidationMessage);
     return false;
   }
 
@@ -381,7 +529,16 @@ const handleCreateCustomer = async () => {
       Message.error(data.message || `创建失败 (HTTP ${res.status})`);
       return false;
     }
-    Message.success('客户创建成功！');
+    await saveAddress(data.user.id, {
+      name: nickname,
+      phone,
+      province: createForm.value.province,
+      city: createForm.value.city,
+      district: createForm.value.district,
+      detail_address: createForm.value.detail_address,
+      is_default: true
+    });
+    Message.success('客户及默认地址创建成功！');
     await fetchUsers();
     return true;
   } catch (e) {

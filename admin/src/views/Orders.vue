@@ -2,6 +2,10 @@
   <div class="orders-view">
     <div class="header-bar flex-between mb-4">
       <h2 class="view-title">订单管理 (状态扭转与特殊费用核算)</h2>
+      <a-button type="primary" @click="createDrawerVisible = true">
+        <template #icon><icon-plus /></template>
+        创建订单
+      </a-button>
     </div>
 
     <!-- 高级搜索筛选卡片 -->
@@ -130,6 +134,13 @@
           </template>
         </a-table-column>
 
+        <a-table-column title="创建者" :width="150">
+          <template #cell="{ record }">
+            <div><strong>{{ record.creator_name || record.customer_name }}</strong></div>
+            <small style="color: #86909c;">{{ record.creator_type === 'admin' ? '后台管理员' : '客户本人' }}</small>
+          </template>
+        </a-table-column>
+
         <!-- 左右并排单行按钮样式 -->
         <a-table-column title="操作" :width="240">
           <template #cell="{ record }">
@@ -162,6 +173,11 @@
       @refresh="fetchOrders"
     />
 
+    <AdminOrderCreateDrawer
+      v-model:visible="createDrawerVisible"
+      @created="handleOrderCreated"
+    />
+
   </div>
 </template>
 
@@ -171,6 +187,7 @@ import { useRoute } from 'vue-router';
 import { Message } from '@arco-design/web-vue';
 import OrderDetailDrawer from '../components/OrderDetailDrawer.vue';
 import StatusUpdateModal from '../components/StatusUpdateModal.vue';
+import AdminOrderCreateDrawer from '../components/AdminOrderCreateDrawer.vue';
 
 const route = useRoute();
 
@@ -189,6 +206,7 @@ const pageSize = ref(10);
 const total = ref(0);
 
 const modalVisible = ref(false);
+const createDrawerVisible = ref(false);
 const detailDrawerVisible = ref(false);
 const currentOrderDetail = ref(null);
 
@@ -294,6 +312,9 @@ const fetchOrders = async () => {
         final_amount: o.final_amount || 0,
         status: o.status || 'pending_review',
         admin_remark: o.admin_remark || '',
+        creator_type: o.creator_type || 'customer',
+        creator_id: o.creator_id || o.user_id || '',
+        creator_name: o.creator_name || o.customer_name || '客户本人',
         items: o.items || []
       }));
       total.value = data.pagination ? data.pagination.total : orders.value.length;
@@ -329,6 +350,11 @@ const viewOrderDetail = async (record) => {
 const openModal = (record) => {
   currentRecord.value = { ...record };
   modalVisible.value = true;
+};
+
+const handleOrderCreated = () => {
+  page.value = 1;
+  fetchOrders();
 };
 
 const deleteOrder = async (record) => {

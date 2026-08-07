@@ -103,7 +103,10 @@ export interface Order {
   extra_amount: number;
   special_charges_amount: number;
   final_amount: number;
-  status: 'pending_review' | 'producing' | 'installing' | 'completed';
+  status: 'pending_review' | 'producing' | 'installing' | 'completed' | 'cancelled';
+  creator_type?: 'customer' | 'admin';
+  creator_id?: string;
+  creator_name?: string;
   admin_remark: string;
   items?: OrderItem[];
   created_at?: string;

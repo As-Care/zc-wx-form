@@ -1234,6 +1234,15 @@ async function initOrdersTable(db: any) {
     await db.prepare("ALTER TABLE orders ADD COLUMN scene_images TEXT").run();
   } catch (e) {}
   try {
+    await db.prepare("ALTER TABLE orders ADD COLUMN creator_type TEXT DEFAULT 'customer'").run();
+  } catch (e) {}
+  try {
+    await db.prepare("ALTER TABLE orders ADD COLUMN creator_id TEXT").run();
+  } catch (e) {}
+  try {
+    await db.prepare("ALTER TABLE orders ADD COLUMN creator_name TEXT").run();
+  } catch (e) {}
+  try {
     await db.prepare("ALTER TABLE order_items ADD COLUMN remark TEXT").run();
   } catch (e) {}
   try {
@@ -1259,11 +1268,16 @@ app.post("/api/orders", async (c) => {
     customer_phone,
     install_address,
     customer_remark,
+    admin_remark,
     scene_images,
     product_id,
     product_name,
     base_price_sqm,
     min_area,
+    status: requestedStatus,
+    creator_type,
+    creator_id,
+    creator_name,
     customSets: rawCustomSets,
     items: rawItems,
   } = body;
@@ -1289,6 +1303,9 @@ app.post("/api/orders", async (c) => {
   const orderId = `ord_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const orderNo = `ZC${dateStr}${Math.floor(1000 + Math.random() * 9000)}`;
+  const allowedStatuses = new Set(["pending_review", "producing", "installing", "completed", "cancelled"]);
+  const initialStatus = allowedStatuses.has(requestedStatus) ? requestedStatus : "pending_review";
+  const isAdminCreated = creator_type === "admin";
 
   // 外键安全校验与容错: 防止 invalid user_id / product_id 触发 SQLite 外键约束异常
   // 以下单联系电话 (customer_phone) 作为订单与客户账号的唯一关键强绑定
@@ -1402,8 +1419,8 @@ app.post("/api/orders", async (c) => {
     .prepare(
       `
     INSERT INTO orders 
-    (id, order_no, user_id, customer_name, customer_phone, install_address, customer_remark, scene_images, total_sets, total_area, base_amount, extra_amount, special_charges_amount, final_amount, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 'pending_review')
+    (id, order_no, user_id, customer_name, customer_phone, install_address, customer_remark, scene_images, total_sets, total_area, base_amount, extra_amount, special_charges_amount, final_amount, status, creator_type, creator_id, creator_name, admin_remark)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, ?, ?, ?, ?, ?)
   `,
     )
     .bind(
@@ -1416,6 +1433,11 @@ app.post("/api/orders", async (c) => {
       customer_remark || "",
       scene_images || "",
       totalSets,
+      initialStatus,
+      isAdminCreated ? "admin" : "customer",
+      isAdminCreated ? creator_id || "" : validUserId || rawUserId,
+      isAdminCreated ? creator_name || "管理员" : customer_name || "客户本人",
+      admin_remark || "",
     )
     .run();
 
@@ -1610,10 +1632,16 @@ app.post("/api/orders", async (c) => {
       `
     INSERT INTO order_status_logs 
     (id, order_id, operator_name, from_status, to_status, remark) 
-    VALUES (?, ?, ?, '', 'pending_review', '新建门窗多套定制订单')
+    VALUES (?, ?, ?, '', ?, ?)
   `,
     )
-    .bind(`log_${Date.now()}`, orderId, customer_name || "客户")
+    .bind(
+      `log_${Date.now()}`,
+      orderId,
+      isAdminCreated ? creator_name || "管理员" : customer_name || "客户本人",
+      initialStatus,
+      isAdminCreated ? "管理员代客户创建订单" : "客户本人创建门窗多套定制订单",
+    )
     .run();
 
   return c.json({
@@ -1623,6 +1651,7 @@ app.post("/api/orders", async (c) => {
     total_sets: totalSets,
     total_area: totalBilledArea,
     final_amount: totalFinalAmount,
+    status: initialStatus,
   });
 });
 

@@ -2,7 +2,7 @@
   <a-drawer
     :visible="visible"
     @update:visible="val => emit('update:visible', val)"
-    title="小程序订单全量规格与核算详情"
+    title="订单全量规格与核算详情"
     :width="780"
     :footer="false"
   >
@@ -29,6 +29,8 @@
           <a-descriptions-item label="客户姓名">{{ order.customer_name }}</a-descriptions-item>
           <a-descriptions-item label="联系电话">{{ order.customer_phone }}</a-descriptions-item>
           <a-descriptions-item label="安装详细地址" :span="2">{{ order.install_address }}</a-descriptions-item>
+          <a-descriptions-item label="订单创建者">{{ order.creator_name || order.customer_name }}</a-descriptions-item>
+          <a-descriptions-item label="创建方式">{{ order.creator_type === 'admin' ? '后台管理员代客创建' : '微信客户本人创建' }}</a-descriptions-item>
         </a-descriptions>
       </a-card>
 
