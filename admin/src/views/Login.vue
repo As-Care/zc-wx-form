@@ -134,8 +134,8 @@ const handleLogin = async () => {
       body: JSON.stringify(form.value)
     });
 
-    if (data.success) {
-      localStorage.setItem("admin_token", data.token || "zc_admin_token_2026");
+    if (data.success && data.token && data.user) {
+      localStorage.setItem("admin_token", data.token);
       localStorage.setItem("admin_user", JSON.stringify(data.user || {}));
       localStorage.setItem("admin_menus", JSON.stringify(data.menus || []));
       Message.success(`欢迎归来，${data.user?.nickname || data.user?.username || '管理员'}！`);
@@ -144,7 +144,7 @@ const handleLogin = async () => {
       Message.error(data.message || "登录失败，请检查账号和密码");
     }
   } catch (e) {
-    Message.error("登录服务连接异常");
+    Message.error(e?.message || "登录服务连接异常");
   } finally {
     loading.value = false;
   }

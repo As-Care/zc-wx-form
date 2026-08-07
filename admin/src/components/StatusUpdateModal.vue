@@ -1,5 +1,5 @@
 <template>
-  <a-modal :visible="visible" @update:visible="val => emit('update:visible', val)" title="展晨门窗 - 订单状态与特殊费用修改" :on-before-ok="handleBeforeSaveOrder">
+  <a-modal :visible="visible" @update:visible="val => emit('update:visible', val)" title="展晨门窗 - 订单状态与特殊费用修改" :ok-loading="saving" :on-before-ok="handleBeforeSaveOrder">
     <a-form :model="editForm" layout="vertical">
       <a-form-item label="订单编号">
         <a-input v-model="editForm.order_no" readonly />
@@ -29,6 +29,7 @@
 <script setup>
 import { ref, watch, defineProps, defineEmits } from 'vue';
 import { Message } from '@arco-design/web-vue';
+import request from '../utils/request';
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -37,7 +38,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:visible', 'refresh']);
 
-const API_BASE = 'https://zc-api.carelife.top';
+const saving = ref(false);
 
 const editForm = ref({
   id: '',
@@ -60,29 +61,31 @@ watch(() => props.orderRecord, (newVal) => {
 }, { immediate: true });
 
 const handleBeforeSaveOrder = async () => {
+  if (saving.value) return false;
+  saving.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/admin/orders/${editForm.value.id}/status`, {
+    const data = await request(`/api/admin/orders/${editForm.value.id}/status`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         new_status: editForm.value.status,
         special_charges_amount: editForm.value.special_charges_amount,
-        admin_remark: editForm.value.admin_remark,
-        operator_name: '展晨总管理'
-      })
+        admin_remark: editForm.value.admin_remark
+      }),
+      silent: true
     });
-    const data = await res.json();
-    if (res.ok && data.success) {
+    if (data.success) {
       Message.success('保存成功！');
       emit('refresh');
       return true;
     } else {
-      Message.error(data.message || `订单状态修改失败 (HTTP ${res.status})`);
+      Message.error(data.message || '订单状态修改失败');
       return false;
     }
   } catch (e) {
-    Message.error('无法连接后端服务，更新失败');
+    Message.error(e?.message || '无法连接后端服务，更新失败');
     return false;
+  } finally {
+    saving.value = false;
   }
 };
 </script>

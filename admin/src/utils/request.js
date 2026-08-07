@@ -3,25 +3,14 @@ import { API_BASE } from '../config';
 import router from '../router';
 
 export default async function request(url, options = {}) {
-  const defaultHeaders = {
-    'Content-Type': 'application/json',
-  };
+  const defaultHeaders = { Accept: 'application/json' };
+  const isLoginRequest = url.endsWith('/api/admin/login') || url === '/api/admin/login';
 
   const token = localStorage.getItem('admin_token');
-  if (token) {
+  if (token && !isLoginRequest) {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
   }
   
-  const adminUserStr = localStorage.getItem('admin_user');
-  if (adminUserStr) {
-    try {
-      const adminUser = JSON.parse(adminUserStr);
-      if (adminUser.id) defaultHeaders['X-Admin-Id'] = encodeURIComponent(adminUser.id);
-      if (adminUser.username) defaultHeaders['X-Admin-Username'] = encodeURIComponent(adminUser.username);
-      if (adminUser.nickname || adminUser.username) defaultHeaders['X-Admin-Name'] = encodeURIComponent(adminUser.nickname || adminUser.username);
-    } catch (e) {}
-  }
-
   const finalOptions = {
     ...options,
     headers: {
@@ -29,6 +18,9 @@ export default async function request(url, options = {}) {
       ...options.headers,
     },
   };
+  if (typeof options.body === 'string' && !finalOptions.headers['Content-Type']) {
+    finalOptions.headers['Content-Type'] = 'application/json';
+  }
 
   const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url}`;
   
@@ -38,8 +30,12 @@ export default async function request(url, options = {}) {
     const timeoutId = setTimeout(() => controller.abort(), options.timeout || 15000);
     finalOptions.signal = controller.signal;
 
-    const response = await fetch(fullUrl, finalOptions);
-    clearTimeout(timeoutId);
+    let response;
+    try {
+      response = await fetch(fullUrl, finalOptions);
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (response.status === 401) {
       Message.warning('登录已失效或无权访问，请重新登录');

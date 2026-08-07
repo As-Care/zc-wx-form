@@ -39,6 +39,8 @@ export interface ProductOption {
   sort_order: number;
   image_url?: string;
   priceText?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Product {

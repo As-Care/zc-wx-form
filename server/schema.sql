@@ -118,3 +118,18 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   details_json TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 9. 管理后台会话（Cloudflare Workers + D1）
+CREATE TABLE IF NOT EXISTS admin_sessions (
+  token VARCHAR(96) PRIMARY KEY,
+  admin_id VARCHAR(64) NOT NULL REFERENCES admin_users(id),
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 列表筛选与批量读取的索引
+CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_status_created_at ON orders(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_customer_phone ON orders(customer_phone);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_admin_sessions_admin_expires ON admin_sessions(admin_id, expires_at);

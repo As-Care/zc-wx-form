@@ -11,15 +11,108 @@ import {
 } from "./types";
 import { calculateDoorWindowPrice } from "./services/pricing";
 
-const app = new Hono<{ Bindings: Env }>();
+type AdminIdentity = {
+  id: string;
+  username: string;
+  nickname: string;
+  role_id: string;
+  role_code: string;
+};
 
+const app = new Hono<{ Bindings: Env; Variables: { admin: AdminIdentity } }>();
 
-function decodeHeaderValue(value: string) {
-  try {
-    return decodeURIComponent(value);
-  } catch (e) {
-    return value;
-  }
+let adminSessionsInitialized = false;
+let adminSessionsInitializationPromise: Promise<void> | null = null;
+let orderIndexesInitialized = false;
+let orderIndexesInitializationPromise: Promise<void> | null = null;
+
+async function initOrderQueryIndexes(db: D1Database) {
+  if (orderIndexesInitialized) return;
+  if (orderIndexesInitializationPromise) return orderIndexesInitializationPromise;
+
+  orderIndexesInitializationPromise = (async () => {
+    await db.prepare("CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC)").run();
+    await db.prepare("CREATE INDEX IF NOT EXISTS idx_orders_status_created_at ON orders(status, created_at DESC)").run();
+    await db.prepare("CREATE INDEX IF NOT EXISTS idx_orders_customer_phone ON orders(customer_phone)").run();
+    await db.prepare("CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id)").run();
+    orderIndexesInitialized = true;
+  })().finally(() => {
+    orderIndexesInitializationPromise = null;
+  });
+  return orderIndexesInitializationPromise;
+}
+
+async function initAdminSessions(db: D1Database) {
+  if (adminSessionsInitialized) return;
+  if (adminSessionsInitializationPromise) return adminSessionsInitializationPromise;
+
+  adminSessionsInitializationPromise = (async () => {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS admin_sessions (
+        token TEXT PRIMARY KEY,
+        admin_id TEXT NOT NULL,
+        expires_at DATETIME NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+    await db.prepare(
+      "CREATE INDEX IF NOT EXISTS idx_admin_sessions_admin_expires ON admin_sessions(admin_id, expires_at)",
+    ).run();
+    adminSessionsInitialized = true;
+  })().finally(() => {
+    adminSessionsInitializationPromise = null;
+  });
+  return adminSessionsInitializationPromise;
+}
+
+async function createAdminSession(db: D1Database, adminId: string) {
+  await initAdminSessions(db);
+  const token = `zc_admin_token_${crypto.randomUUID()}`;
+  await db.prepare("DELETE FROM admin_sessions WHERE expires_at <= CURRENT_TIMESTAMP").run();
+  await db.prepare(
+    "INSERT INTO admin_sessions (token, admin_id, expires_at) VALUES (?, ?, datetime('now', '+7 days'))",
+  ).bind(token, adminId).run();
+  return token;
+}
+
+async function getAdminFromSession(db: D1Database, authorization: string): Promise<AdminIdentity | null> {
+  const match = authorization.match(/^Bearer\s+(zc_admin_token_[A-Za-z0-9-]+)$/i);
+  if (!match) return null;
+  await initAdminSessions(db);
+  const admin = await db.prepare(`
+    SELECT a.id, a.username, a.nickname, a.role_id, r.code AS role_code
+    FROM admin_sessions s
+    JOIN admin_users a ON a.id = s.admin_id
+    LEFT JOIN roles r ON r.id = a.role_id
+    WHERE s.token = ? AND s.expires_at > CURRENT_TIMESTAMP AND a.status = 1
+  `).bind(match[1]).first<AdminIdentity>();
+  return admin || null;
+}
+
+const ADMIN_ROUTE_MENU: Array<[string, string]> = [
+  ["/api/admin/audit-logs", "AuditLogs"],
+  ["/api/admin/sys-menus", "Menus"],
+  ["/api/admin/roles", "Roles"],
+  ["/api/admin/users", "Admins"],
+  ["/api/admin/customers", "Users"],
+  ["/api/admin/orders", "Orders"],
+  ["/api/admin/categories", "Categories"],
+  ["/api/admin/products", "Products"],
+  ["/api/admin/receivers", "StaffConfig"],
+  ["/api/admin/config", "Settings"],
+  ["/api/admin/stats", "Overview"],
+];
+
+function getRequiredMenu(path: string) {
+  return ADMIN_ROUTE_MENU.find(([prefix]) => path === prefix || path.startsWith(`${prefix}/`))?.[1] || null;
+}
+
+async function hasAdminMenuAccess(db: D1Database, admin: AdminIdentity, menuKey: string) {
+  if (admin.role_code === "root") return true;
+  const permission = await db.prepare(
+    "SELECT 1 FROM role_menus WHERE role_id = ? AND menu_key = ?",
+  ).bind(admin.role_id, menuKey).first();
+  return Boolean(permission);
 }
 
 
@@ -81,16 +174,11 @@ function getAuditEventType(path: string) {
   return key ? AUDIT_EVENT_MAP[key] : "系统操作";
 }
 
-// The admin frontend supplies identity headers for every mutating request.
-// This keeps audit recording centralized and prevents individual pages from
-// accidentally forgetting to create an operation record.
+// Write audit logs only after the request is authenticated. Identity headers
+// are never trusted as the source of the acting administrator.
 app.use("*", async (c, next) => {
-  const adminId = decodeHeaderValue(c.req.header("X-Admin-Id") || "");
-  const adminUsername = decodeHeaderValue(c.req.header("X-Admin-Username") || "");
-  const adminName = decodeHeaderValue(c.req.header("X-Admin-Name") || "");
   const method = c.req.method.toUpperCase();
   const path = new URL(c.req.url).pathname;
-  if (!adminId && !adminUsername && !adminName) return next();
 
   let body: any = {};
   if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
@@ -114,7 +202,10 @@ app.use("*", async (c, next) => {
     }
   } catch (e) {}
 
-  const response = await next();
+  await next();
+  const response = c.res;
+  const admin = c.get("admin");
+  if (!admin) return response;
   if (!["POST", "PUT", "PATCH", "DELETE"].includes(method)) return response;
   if (path === "/api/admin/login" || path === "/api/admin/audit-logs") return response;
   if (response.status < 200 || response.status >= 300) return response;
@@ -131,9 +222,9 @@ app.use("*", async (c, next) => {
   await writeAuditLog(c.env.DB, {
     event_type: isOrderStatus ? "订单状态" : getAuditEventType(path),
     action: actionText,
-    actor_id: adminId,
-    actor_username: adminUsername,
-    actor_name: adminName,
+    actor_id: admin.id,
+    actor_username: admin.username,
+    actor_name: admin.nickname || admin.username,
     target_type: getAuditEventType(path),
     target_id: targetId,
     target_name: detailName,
@@ -172,16 +263,43 @@ app.use("*", cors({
   allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 }));
 
-// Admin routes auth middleware
-app.use("/api/admin/*", async (c, next) => {
-  if (c.req.path === "/api/admin/login") {
-    return await next();
+// Validate an administrator session for every request carrying an admin token.
+// This also covers the legacy /api/orders routes used by the admin dashboard.
+app.use("*", async (c, next) => {
+  if (c.req.method === "OPTIONS") return next();
+
+  const path = c.req.path;
+  if (path === "/api/admin/login") return next();
+  const authorization = c.req.header("Authorization") || "";
+  if (authorization.startsWith("Bearer zc_admin_token_")) {
+    const admin = await getAdminFromSession(c.env.DB, authorization);
+    if (!admin) {
+      return c.json({ success: false, message: "登录已失效，请重新登录" }, 401);
+    }
+    c.set("admin", admin);
   }
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer zc_admin_token_")) {
-    return c.json({ success: false, message: "Unauthorized" }, 401);
+
+  if (!path.startsWith("/api/admin/")) {
+    if (path === "/api/orders" || path.startsWith("/api/orders/")) {
+      const admin = c.get("admin");
+      if (admin && !(await hasAdminMenuAccess(c.env.DB, admin, "Orders"))) {
+        return c.json({ success: false, message: "当前账号没有订单管理权限" }, 403);
+      }
+    }
+    return next();
   }
-  await next();
+
+  const admin = c.get("admin");
+  if (!admin) {
+    return c.json({ success: false, message: "请先登录后台管理系统" }, 401);
+  }
+  if (path === "/api/admin/logout") return next();
+
+  const requiredMenu = getRequiredMenu(path);
+  if (!requiredMenu || !(await hasAdminMenuAccess(c.env.DB, admin, requiredMenu))) {
+    return c.json({ success: false, message: "当前账号没有该功能权限" }, 403);
+  }
+  return next();
 });
 
 // 全局异常捕获中间件
@@ -526,7 +644,7 @@ async function mergeDuplicateUsersByPhone(db: any) {
       .run();
 
     // 2. 查找拥有重复手机号的用户记录 (COUNT > 1)
-    const { results: dupes } = await db
+    const duplicateResult = await db
       .prepare(
         `
       SELECT phone, COUNT(*) as cnt 
@@ -536,15 +654,17 @@ async function mergeDuplicateUsersByPhone(db: any) {
       HAVING cnt > 1
     `,
       )
-      .all<{ phone: string; cnt: number }>();
+      .all();
+    const dupes = (duplicateResult.results || []) as Array<{ phone: string; cnt: number }>;
 
     for (const dup of dupes || []) {
-      const { results: phoneUsers } = await db
+      const phoneUserResult = await db
         .prepare(
           'SELECT * FROM users WHERE phone = ? ORDER BY (CASE WHEN openid LIKE "wx_openid_usr_%" THEN 2 WHEN openid LIKE "wx_openid_demo_%" THEN 3 ELSE 1 END), created_at ASC',
         )
         .bind(dup.phone)
-        .all<any>();
+        .all();
+      const phoneUsers = (phoneUserResult.results || []) as any[];
 
       if (phoneUsers && phoneUsers.length > 1) {
         const primaryUser = phoneUsers[0];
@@ -1208,11 +1328,18 @@ app.post("/api/orders", async (c) => {
     min_area,
     status: requestedStatus,
     creator_type,
-    creator_id,
-    creator_name,
     customSets: rawCustomSets,
     items: rawItems,
   } = body;
+
+  const admin = c.get("admin");
+  if (creator_type === "admin" && !admin) {
+    return c.json({ success: false, message: "请先登录后台管理系统" }, 401);
+  }
+  const customerTokenUserId = getBearerTokenUserId(c);
+  if (!admin && !customerTokenUserId) {
+    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
+  }
 
   const cleanPhone = (customer_phone || "").trim();
   if (!cleanPhone || !/^1[3-9]\d{9}$/.test(cleanPhone)) {
@@ -1243,6 +1370,9 @@ app.post("/api/orders", async (c) => {
   // 以下单联系电话 (customer_phone) 作为订单与客户账号的唯一关键强绑定
   let validUserId: string | null = null;
   const rawUserId = (user_id || "").trim();
+  if (!admin && rawUserId && rawUserId !== customerTokenUserId) {
+    return c.json({ success: false, message: "无权为其他客户创建订单" }, 403);
+  }
 
   if (cleanPhone) {
     try {
@@ -1367,8 +1497,8 @@ app.post("/api/orders", async (c) => {
       totalSets,
       initialStatus,
       isAdminCreated ? "admin" : "customer",
-      isAdminCreated ? creator_id || "" : validUserId || rawUserId,
-      isAdminCreated ? creator_name || "管理员" : customer_name || "客户本人",
+      isAdminCreated ? admin!.id : validUserId || rawUserId,
+      isAdminCreated ? admin!.nickname || admin!.username : customer_name || "客户本人",
       admin_remark || "",
     )
     .run();
@@ -1424,6 +1554,7 @@ app.post("/api/orders", async (c) => {
             price: Number(so.price || 0),
             price_type: so.price_type || "fixed",
             is_default: so.is_default ? 1 : 0,
+            sort_order: Number(so.sort_order || 0),
             image_url: so.image_url || "",
             created_at: "",
             updated_at: ""
@@ -1570,7 +1701,7 @@ app.post("/api/orders", async (c) => {
     .bind(
       `log_${Date.now()}`,
       orderId,
-      isAdminCreated ? creator_name || "管理员" : customer_name || "客户本人",
+      isAdminCreated ? admin!.nickname || admin!.username : customer_name || "客户本人",
       initialStatus,
       isAdminCreated ? "管理员代客户创建订单" : "客户本人创建门窗多套定制订单",
     )
@@ -1593,14 +1724,13 @@ app.post("/api/orders", async (c) => {
  */
 app.get("/api/orders", async (c) => {
   const db = c.env.DB;
-  const authorization = c.req.header("Authorization") || "";
-  const isMiniProgramRequest = c.req.header("X-Client") === "miniprogram";
-  const isAdmin = authorization.includes("zc_admin_token_");
+  await initOrderQueryIndexes(db);
+  const isAdmin = Boolean(c.get("admin"));
   const tokenUserId = getBearerTokenUserId(c);
 
   // A request carrying a mini-program token must be scoped to that user.
   // Never trust a user_id supplied by the client when a token is present.
-  if ((authorization && !isAdmin || isMiniProgramRequest) && !tokenUserId) {
+  if (!isAdmin && !tokenUserId) {
     return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
   }
   const userId = tokenUserId || (isAdmin ? c.req.query("user_id") : null);
@@ -1609,6 +1739,8 @@ app.get("/api/orders", async (c) => {
   const customer = c.req.query("customer");
   const productName = c.req.query("product_name");
   const keyword = c.req.query("keyword") || c.req.query("search");
+  const startTime = (c.req.query("start_time") || "").trim();
+  const endTime = (c.req.query("end_time") || "").trim();
 
   const page = Math.max(1, parseInt(c.req.query("page") || "1", 10));
   const pageSize = Math.max(
@@ -1648,6 +1780,14 @@ app.get("/api/orders", async (c) => {
       " AND (o.order_no LIKE ? OR o.customer_name LIKE ? OR o.customer_phone LIKE ? OR u.nickname LIKE ? OR oi.product_name LIKE ?)";
     params.push(kw, kw, kw, kw, kw);
   }
+  if (startTime) {
+    whereClause += " AND o.created_at >= ?";
+    params.push(startTime);
+  }
+  if (endTime) {
+    whereClause += " AND o.created_at <= ?";
+    params.push(endTime);
+  }
 
   // 1. 查询符合条件的总记录数
   const countSql = `SELECT COUNT(DISTINCT o.id) as total FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id LEFT JOIN users u ON o.user_id = u.id${whereClause}`;
@@ -1665,11 +1805,14 @@ app.get("/api/orders", async (c) => {
     .bind(...dataParams)
     .all<Order>();
 
-  // 抓取各订单的明细项用于卡片预览
-  for (const order of orders || []) {
+  // Fetch item snapshots for the whole page in one query to avoid N+1 reads.
+  const orderIds = (orders || []).map((order) => order.id);
+  const itemsByOrder = new Map<string, OrderItem[]>();
+  if (orderIds.length) {
+    const placeholders = orderIds.map(() => "?").join(", ");
     const { results: items } = await db
-      .prepare("SELECT * FROM order_items WHERE order_id = ?")
-      .bind(order.id)
+      .prepare(`SELECT * FROM order_items WHERE order_id IN (${placeholders})`)
+      .bind(...orderIds)
       .all<OrderItem>();
     (items || []).forEach((it) => {
       let summary: any[] = [];
@@ -1707,9 +1850,14 @@ app.get("/api/orders", async (c) => {
         }
       }
       it.options_summary = summary;
+      const orderItems = itemsByOrder.get(it.order_id) || [];
+      orderItems.push(it);
+      itemsByOrder.set(it.order_id, orderItems);
     });
-    order.items = items || [];
   }
+  (orders || []).forEach((order) => {
+    order.items = itemsByOrder.get(order.id) || [];
+  });
 
   return c.json({
     success: true,
@@ -1730,6 +1878,9 @@ app.get("/api/orders", async (c) => {
 app.delete("/api/orders/:id", async (c) => {
   const db = c.env.DB;
   const id = c.req.param("id");
+  if (!c.get("admin")) {
+    return c.json({ success: false, message: "请先登录后台管理系统" }, 401);
+  }
 
   try {
     // 检查订单是否存在
@@ -1765,11 +1916,10 @@ app.delete("/api/orders/:id", async (c) => {
 app.get("/api/orders/:id", async (c) => {
   const db = c.env.DB;
   const id = c.req.param("id");
-  const authorization = c.req.header("Authorization") || "";
-  const isMiniProgramRequest = c.req.header("X-Client") === "miniprogram";
+  const isAdmin = Boolean(c.get("admin"));
   const tokenUserId = getBearerTokenUserId(c);
 
-  if ((authorization || isMiniProgramRequest) && !tokenUserId) {
+  if (!isAdmin && !tokenUserId) {
     return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
   }
 
@@ -1782,7 +1932,7 @@ app.get("/api/orders/:id", async (c) => {
   }
 
   // Do not reveal whether another customer's order exists.
-  if (tokenUserId && order.user_id !== tokenUserId) {
+  if (!isAdmin && tokenUserId && order.user_id !== tokenUserId) {
     return c.json({ success: false, message: "无权查看该订单" }, 403);
   }
 
@@ -1933,33 +2083,6 @@ app.post("/api/admin/login", async (c) => {
     .bind(cleanUser, cleanPass)
     .first<any>();
 
-  if (
-    !adminAccount &&
-    cleanUser === "admin" &&
-    (cleanPass === "zhanchen" ||
-      cleanPass === "zhanchen888" ||
-      cleanPass === "admin123")
-  ) {
-    const { results: allMenuRows } = await db
-      .prepare("SELECT key FROM sys_menus ORDER BY sort_order ASC")
-      .all<{ key: string }>();
-    const menus = (allMenuRows || []).map((m) => m.key);
-    return c.json({
-      success: true,
-      user: {
-        id: "admin_root",
-        username: "admin",
-        nickname: "展晨总管理",
-        role_id: "role_root",
-        role_name: "超级管理员",
-        role_code: "root",
-        phone: "13545941637",
-      },
-      menus,
-      token: "zc_admin_token_2026",
-    });
-  }
-
   if (!adminAccount) {
     return c.json({ success: false, message: "管理员账号或密码不正确" }, 401);
   }
@@ -2007,8 +2130,18 @@ app.post("/api/admin/login", async (c) => {
       phone: adminAccount.phone || "",
     },
     menus,
-    token: `zc_admin_token_${adminAccount.id}_${Date.now()}`,
+    token: await createAdminSession(db, adminAccount.id),
   });
+});
+
+app.post("/api/admin/logout", async (c) => {
+  const authorization = c.req.header("Authorization") || "";
+  const match = authorization.match(/^Bearer\s+(zc_admin_token_[A-Za-z0-9-]+)$/i);
+  if (match) {
+    await initAdminSessions(c.env.DB);
+    await c.env.DB.prepare("DELETE FROM admin_sessions WHERE token = ?").bind(match[1]).run();
+  }
+  return c.json({ success: true });
 });
 
 /* ================= 系统菜单 CRUD 接口 ================= */
@@ -2505,10 +2638,10 @@ app.get("/api/admin/stats", async (c) => {
  */
 app.patch("/api/admin/orders/:id/status", async (c) => {
   const db = c.env.DB;
+  const admin = c.get("admin");
   const id = c.req.param("id");
   const body = await c.req.json();
-  const { new_status, admin_remark, operator_name, special_charges_amount } =
-    body;
+  const { new_status, admin_remark, special_charges_amount } = body;
 
   const currentOrder = await db
     .prepare("SELECT * FROM orders WHERE id = ?")
@@ -2537,6 +2670,10 @@ app.patch("/api/admin/orders/:id/status", async (c) => {
   }
 
   const targetStatus = new_status || oldStatus;
+  const validStatuses = new Set(["pending_review", "producing", "installing", "completed", "cancelled"]);
+  if (!validStatuses.has(targetStatus)) {
+    return c.json({ success: false, message: "订单状态不合法" }, 400);
+  }
   const targetRemark = admin_remark || currentOrder.admin_remark || "";
 
   await db
@@ -2561,7 +2698,7 @@ app.patch("/api/admin/orders/:id/status", async (c) => {
     .bind(
       `log_${Date.now()}`,
       id,
-      operator_name || "接单员",
+      admin.nickname || admin.username,
       oldStatus,
       targetStatus,
       targetRemark || `状态变更: ${oldStatus} -> ${targetStatus}`,

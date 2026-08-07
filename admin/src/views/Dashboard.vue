@@ -169,7 +169,12 @@ const handleMenuClick = (key) => {
   });
 };
 
-const handleLogout = () => {
+const handleLogout = async () => {
+  try {
+    await request('/api/admin/logout', { method: 'POST', silent: true });
+  } catch (error) {
+    // Local cleanup still ends the session in this browser if the network is unavailable.
+  }
   localStorage.removeItem("admin_token");
   localStorage.removeItem("admin_user");
   localStorage.removeItem("admin_menus");

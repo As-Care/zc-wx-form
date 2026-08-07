@@ -241,10 +241,10 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { Message } from "@arco-design/web-vue";
+import request from "../utils/request";
 
 const props = defineProps({ visible: { type: Boolean, default: false } });
 const emit = defineEmits(["update:visible", "created"]);
-const API_BASE = "https://zc-api.carelife.top";
 
 const loading = ref(false);
 const submitting = ref(false);
@@ -288,8 +288,8 @@ watch(
     loading.value = true;
     try {
       const [customerRes, productRes] = await Promise.all([
-        fetch(`${API_BASE}/api/users`).then((res) => res.json()),
-        fetch(`${API_BASE}/api/products`).then((res) => res.json()),
+        request("/api/users", { silent: true }),
+        request("/api/products", { silent: true }),
       ]);
       customers.value = customerRes.success ? customerRes.data || [] : [];
       products.value = productRes.success ? productRes.data || [] : [];
@@ -316,10 +316,10 @@ const handleCustomerChange = async (userId) => {
   form.value.install_address = "";
   selectedAddressId.value = "";
   try {
-    const res = await fetch(
-      `${API_BASE}/api/user/addresses?user_id=${encodeURIComponent(userId)}`,
+    const data = await request(
+      `/api/user/addresses?user_id=${encodeURIComponent(userId)}`,
+      { silent: true },
     );
-    const data = await res.json();
     addresses.value = data.success ? data.data || [] : [];
     const defaultAddress =
       addresses.value.find((item) => Number(item.is_default) === 1) ||
@@ -367,8 +367,7 @@ const createSet = (index) => {
 const handleProductChange = async (productId) => {
   loading.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/products/${productId}`);
-    const data = await res.json();
+    const data = await request(`/api/products/${productId}`, { silent: true });
     if (!data.success) throw new Error(data.message || "商品加载失败");
     productDetail.value = data.data;
     customSets.value = [createSet(1)];
@@ -472,9 +471,8 @@ const submitOrder = async () => {
         image_url: option.image_url || "",
       })),
     }));
-    const res = await fetch(`${API_BASE}/api/orders`, {
+    const data = await request("/api/orders", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form.value,
         product_name: productDetail.value.name,
@@ -490,10 +488,9 @@ const submitOrder = async () => {
         creator_id: adminUser.id || "",
         creator_name: adminUser.username || adminUser.nickname || "管理员",
       }),
+      silent: true,
     });
-    const data = await res.json();
-    if (!res.ok || !data.success)
-      throw new Error(data.message || `创建失败 (HTTP ${res.status})`);
+    if (!data.success) throw new Error(data.message || "创建失败");
     Message.success(`订单 ${data.order_no} 创建成功`);
     emit("created");
     emit("update:visible", false);
