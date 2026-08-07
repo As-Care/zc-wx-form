@@ -15,6 +15,14 @@ const app = new Hono<{ Bindings: Env }>();
 
 let auditLogsInitialized = false;
 
+function decodeHeaderValue(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch (e) {
+    return value;
+  }
+}
+
 async function initAuditLogsTable(db: any) {
   if (auditLogsInitialized) return;
   try {
@@ -105,9 +113,9 @@ function getAuditEventType(path: string) {
 // This keeps audit recording centralized and prevents individual pages from
 // accidentally forgetting to create an operation record.
 app.use("*", async (c, next) => {
-  const adminId = c.req.header("X-Admin-Id") || "";
-  const adminUsername = c.req.header("X-Admin-Username") || "";
-  const adminName = c.req.header("X-Admin-Name") || "";
+  const adminId = decodeHeaderValue(c.req.header("X-Admin-Id") || "");
+  const adminUsername = decodeHeaderValue(c.req.header("X-Admin-Username") || "");
+  const adminName = decodeHeaderValue(c.req.header("X-Admin-Name") || "");
   const method = c.req.method.toUpperCase();
   const path = new URL(c.req.url).pathname;
   if (!adminId && !adminUsername && !adminName) return next();
