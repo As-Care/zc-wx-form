@@ -113,9 +113,26 @@ Page({
         avatar_url: this.data.avatarUrl,
         phone: phone
       }
+    }).then((res) => {
+      // The server may return the pre-created customer's canonical ID after
+      // merging by phone. Persist that ID so subsequent order queries remain
+      // attached to the merged customer record.
+      if (res && res.success && res.user) {
+        const serverUser = res.user;
+        const canonicalInfo = {
+          ...info,
+          id: serverUser.id || info.id,
+          nickname: serverUser.nickname || info.nickname,
+          phone: serverUser.phone || info.phone,
+          avatarUrl: serverUser.avatar_url || info.avatarUrl
+        };
+        wx.setStorageSync('zc_user_info', canonicalInfo);
+        wx.setStorageSync('zc_token', `zc_token_${canonicalInfo.id}`);
+      }
     }).catch(() => {});
 
     wx.setStorageSync('zc_user_info', info);
+    wx.setStorageSync('zc_token', `zc_token_${userId}`);
 
     wx.showToast({
       title: '资料更新成功',

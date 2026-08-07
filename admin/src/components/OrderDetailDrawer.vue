@@ -14,9 +14,9 @@
             <span style="font-size: 12px; color: var(--color-text-3);">订单编号：</span>
             <strong style="font-size: 16px; color: var(--color-text-1);">{{ order.order_no }}</strong>
           </div>
-          <a-tag :color="getStatusColor(order.status)" size="large">
+          <span class="custom-status-tag" :style="getStatusStyle(order.status)" style="font-size: 14px; padding: 2px 10px;">
             {{ getStatusText(order.status) }}
-          </a-tag>
+          </span>
         </div>
         <div style="font-size: 12px; color: var(--color-text-3); margin-top: 6px;">
           下单时间：{{ order.created_at || '暂无时间' }}
@@ -148,15 +148,15 @@ const getStatusText = (status) => {
   return map[status] || status;
 };
 
-const getStatusColor = (status) => {
+const getStatusStyle = (status) => {
   const map = {
-    'pending_review': '#cbd5e1',
-    'producing': '#f97316',
-    'installing': '#eab308',
-    'completed': '#10b981',
-    'cancelled': '#94a3b8'
+    'pending_review': { backgroundColor: '#e2e8f0', color: '#64748b', borderColor: '#94a3b8' },
+    'producing': { backgroundColor: '#f97316', color: '#ffffff', borderColor: '#f97316' },
+    'installing': { backgroundColor: '#eab308', color: '#ffffff', borderColor: '#eab308' },
+    'completed': { backgroundColor: '#10b981', color: '#ffffff', borderColor: '#10b981' },
+    'cancelled': { backgroundColor: '#f1f5f9', color: '#94a3b8', borderColor: '#cbd5e1' }
   };
-  return map[status] || '#cbd5e1';
+  return map[status] || map['pending_review'];
 };
 
 const getItemRemark = (item, order) => {
@@ -302,5 +302,12 @@ body[arco-theme='dark'] .options-detail-panel {
 .price-row {
   margin-bottom: 8px;
   color: var(--color-text-2);
+}
+
+.custom-status-tag {
+  display: inline-block;
+  border-radius: 4px;
+  font-weight: 500;
+  text-align: center;
 }
 </style>

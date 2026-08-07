@@ -3,7 +3,7 @@
 -- 1. 用户表
 CREATE TABLE IF NOT EXISTS users (
   id VARCHAR(64) PRIMARY KEY,
-  openid VARCHAR(128) UNIQUE NOT NULL,
+  openid VARCHAR(128) UNIQUE,
   nickname VARCHAR(64),
   avatar_url TEXT,
   phone VARCHAR(20),

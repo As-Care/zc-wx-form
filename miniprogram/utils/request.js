@@ -14,13 +14,20 @@ function request(options) {
   }
 
   return new Promise((resolve, reject) => {
-    const token = wx.getStorageSync('zc_token') || '';
+    // Older sessions only persisted zc_user_info. Derive the compatible token
+    // once so order APIs can still enforce ownership after an app upgrade.
+    const savedUser = wx.getStorageSync('zc_user_info') || {};
+    const token = wx.getStorageSync('zc_token') || (savedUser.id ? `zc_token_${savedUser.id}` : '');
+    if (token && !wx.getStorageSync('zc_token')) {
+      wx.setStorageSync('zc_token', token);
+    }
     wx.request({
       url: options.url.startsWith('http') ? options.url : `${BASE_URL}${options.url}`,
       method: options.method || 'GET',
       data: options.data || {},
       header: {
         'Content-Type': 'application/json',
+        'X-Client': 'miniprogram',
         'Authorization': token ? `Bearer ${token}` : '',
         ...(options.header || {})
       },

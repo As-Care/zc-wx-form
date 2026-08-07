@@ -1,7 +1,11 @@
 <template>
   <div class="users-view">
     <div class="header-bar flex-between mb-4">
-      <h2 class="view-title">小程序注册客户列表</h2>
+      <h2 class="view-title">客户管理</h2>
+      <a-button type="primary" @click="openCreateCustomer">
+        <template #icon><icon-plus /></template>
+        创建客户
+      </a-button>
     </div>
 
     <!-- 搜索与多条件筛选面板 (学习商品方案管理样式) -->
@@ -68,7 +72,7 @@
 
         <a-table-column title="下单数量" :width="130">
           <template #cell="{ record }">
-            <span class="champagne-tag count-badge">
+            <span class="champagne-tag count-badge" style="cursor: pointer;" @click="goToOrders(record.phone)">
               <icon-history style="margin-right: 4px;" />
               {{ record.order_count || 0 }} 单
             </span>
@@ -77,13 +81,13 @@
 
         <a-table-column title="微信 OpenID" data-index="openid" :width="220">
           <template #cell="{ record }">
-            <small style="color: #86909c;">{{ record.openid }}</small>
+            <small style="color: #86909c;">{{ record.role === 'admin_created' ? '暂未注册微信' : (record.openid || '暂未注册微信') }}</small>
           </template>
         </a-table-column>
 
         <a-table-column title="角色身份" :width="120">
           <template #cell="{ record }">
-            <span class="champagne-tag role-badge">微信客户</span>
+            <span class="champagne-tag role-badge">{{ getCustomerRoleText(record) }}</span>
           </template>
         </a-table-column>
 
@@ -127,8 +131,8 @@
 
         <a-descriptions :column="1" border title="📋 基础账号档案" class="mb-4">
           <a-descriptions-item label="客户 ID">{{ selectedUser.id }}</a-descriptions-item>
-          <a-descriptions-item label="微信 OpenID">{{ selectedUser.openid || '暂无记录' }}</a-descriptions-item>
-          <a-descriptions-item label="角色身份">微信小程序客户 (Customer)</a-descriptions-item>
+          <a-descriptions-item label="微信 OpenID">{{ selectedUser.role === 'admin_created' ? '暂未注册微信' : (selectedUser.openid || '暂无记录') }}</a-descriptions-item>
+          <a-descriptions-item label="角色身份">{{ getCustomerRoleText(selectedUser) }}</a-descriptions-item>
           <a-descriptions-item label="累计下单数量">{{ selectedUser.order_count || 0 }} 笔定制订单</a-descriptions-item>
         </a-descriptions>
 
@@ -214,12 +218,34 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <a-modal v-model:visible="createModalVisible" title="创建客户档案" :on-before-ok="handleCreateCustomer">
+      <a-form :model="createForm" layout="vertical">
+        <a-form-item label="客户姓名/昵称" required>
+          <a-input v-model="createForm.nickname" placeholder="请输入客户姓名或昵称" />
+        </a-form-item>
+        <a-form-item label="联系电话" required>
+          <a-input v-model="createForm.phone" placeholder="请输入11位手机号" />
+        </a-form-item>
+        <div class="create-customer-tip">该客户暂时没有微信 OpenID，后续使用相同手机号在小程序注册后会自动合并。</div>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { Message } from '@arco-design/web-vue';
+
+const router = useRouter();
+const goToOrders = (phone) => {
+  if (!phone) {
+    Message.warning('该客户尚未绑定手机号');
+    return;
+  }
+  router.push({ path: '/dashboard/orders', query: { customer: phone } });
+};
 
 const API_BASE = 'https://zc-api.carelife.top';
 
@@ -227,6 +253,7 @@ const users = ref([]);
 const tableLoading = ref(true);
 
 const modalVisible = ref(false);
+const createModalVisible = ref(false);
 const detailDrawerVisible = ref(false);
 const selectedUser = ref(null);
 const userAddresses = ref([]);
@@ -244,6 +271,12 @@ const editForm = ref({
   avatar_url: '',
   phone: ''
 });
+
+const createForm = ref({ nickname: '', phone: '' });
+
+const getCustomerRoleText = (record) => {
+  return record && record.role === 'admin_created' ? '管理员创建' : '微信客户';
+};
 
 // 严格过滤掉管理员 (role !== 'admin')
 const customerList = computed(() => {
@@ -318,6 +351,43 @@ const editUser = (record) => {
   };
   uploading.value = false;
   modalVisible.value = true;
+};
+
+const openCreateCustomer = () => {
+  createForm.value = { nickname: '', phone: '' };
+  createModalVisible.value = true;
+};
+
+const handleCreateCustomer = async () => {
+  const nickname = (createForm.value.nickname || '').trim();
+  const phone = (createForm.value.phone || '').trim();
+  if (!nickname) {
+    Message.warning('【客户姓名/昵称】不能为空！');
+    return false;
+  }
+  if (!/^1[3-9]\d{9}$/.test(phone)) {
+    Message.warning('请输入有效的手机号码！');
+    return false;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/customers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname, phone })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      Message.error(data.message || `创建失败 (HTTP ${res.status})`);
+      return false;
+    }
+    Message.success('客户创建成功！');
+    await fetchUsers();
+    return true;
+  } catch (e) {
+    Message.error('无法连接后端服务');
+    return false;
+  }
 };
 
 const onBeforeUpload = () => {
@@ -402,6 +472,7 @@ onMounted(() => {
 
 <style scoped>
 .users-view { display: flex; flex-direction: column; }
+.create-customer-tip { color: #86909c; font-size: 13px; line-height: 1.6; }
 .view-title { font-size: 20px; font-weight: 700; margin: 0; }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .flex-row { display: flex; flex-direction: row; align-items: center; }

@@ -222,6 +222,8 @@
 .sub-title {
   font-size: 22rpx;
   color: #94A3B8;
+  margin-bottom: 20rpx;
+  display: block;
 }
 
 .scene-preview-sec {
@@ -285,7 +287,9 @@
   font-size: 24rpx;
   color: #94A3B8;
   flex-shrink: 0;
-  width: 140rpx;
+  white-space: nowrap;
+  width: auto;
+  margin-right: 24rpx;
 }
 
 .info-val {

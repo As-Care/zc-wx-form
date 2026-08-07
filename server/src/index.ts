@@ -13,6 +13,26 @@ import { calculateDoorWindowPrice } from "./services/pricing";
 
 const app = new Hono<{ Bindings: Env }>();
 
+async function mergeCustomerData(db: any, fromUserId: string, toUserId: string) {
+  if (!fromUserId || !toUserId || fromUserId === toUserId) return;
+  await db.prepare("UPDATE orders SET user_id = ? WHERE user_id = ?").bind(toUserId, fromUserId).run();
+  await db.prepare("UPDATE user_addresses SET user_id = ? WHERE user_id = ?").bind(toUserId, fromUserId).run();
+  await db.prepare("DELETE FROM users WHERE id = ?").bind(fromUserId).run();
+}
+
+/**
+ * Resolve the customer identity carried by the mini-program token.
+ * Admin pages currently use the legacy unauthenticated order query path,
+ * while mini-program requests always send a Bearer token.
+ */
+function getBearerTokenUserId(c: any): string | null {
+  const authorization = c.req.header("Authorization") || "";
+  if (!authorization) return null;
+
+  const match = authorization.match(/^Bearer\s+zc_token_(.+)$/i);
+  return match && match[1] ? match[1].trim() : null;
+}
+
 // 启用全局 CORS 跨域支持
 app.use("*", cors());
 
@@ -136,6 +156,32 @@ app.post("/api/auth/wx-login", async (c) => {
     .bind(openid)
     .first<User>();
 
+  // A customer created by an administrator can claim that record after
+  // registering in the mini-program with the same phone number.
+  const cleanPhone = String(phone || "").trim();
+  const precreatedUser = !user && cleanPhone
+    ? await db
+        .prepare("SELECT * FROM users WHERE phone = ? AND role = 'admin_created' ORDER BY created_at ASC LIMIT 1")
+        .bind(cleanPhone)
+        .first<User>()
+    : null;
+
+  if (precreatedUser) {
+    await db
+      .prepare("UPDATE users SET openid = ?, nickname = ?, avatar_url = ?, phone = ?, role = 'customer' WHERE id = ?")
+      .bind(openid, nickname, avatar_url, cleanPhone, precreatedUser.id)
+      .run();
+    user = await db.prepare("SELECT * FROM users WHERE id = ?").bind(precreatedUser.id).first<User>();
+  } else if (user && cleanPhone) {
+    const duplicatePrecreated = await db
+      .prepare("SELECT id FROM users WHERE phone = ? AND role = 'admin_created' AND id != ? ORDER BY created_at ASC LIMIT 1")
+      .bind(cleanPhone, user.id)
+      .first<{ id: string }>();
+    if (duplicatePrecreated) {
+      await mergeCustomerData(db, duplicatePrecreated.id, user.id);
+    }
+  }
+
   if (!user) {
     const userId = `user_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
     await db
@@ -163,6 +209,48 @@ app.post("/api/auth/wx-login", async (c) => {
     user,
     token: `zc_token_${user.id}`,
   });
+});
+
+/**
+ * Create a customer record from the admin console before the customer has
+ * opened the mini-program. OpenID remains empty until the phone is claimed.
+ */
+app.post("/api/admin/customers", async (c) => {
+  const db = c.env.DB;
+  const body = await c.req.json();
+  const nickname = String(body.nickname || "").trim();
+  const phone = String(body.phone || "").trim();
+
+  if (!nickname || !phone) {
+    return c.json({ success: false, message: "客户姓名/昵称和联系电话均为必填项" }, 400);
+  }
+  if (!/^1[3-9]\d{9}$/.test(phone)) {
+    return c.json({ success: false, message: "请输入有效的手机号码" }, 400);
+  }
+
+  const existing = await db.prepare("SELECT id, nickname, role FROM users WHERE phone = ? LIMIT 1").bind(phone).first<any>();
+  if (existing) {
+    return c.json({ success: false, message: `联系电话已被客户【${existing.nickname || existing.id}】绑定` }, 409);
+  }
+
+  const id = `customer_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
+  try {
+    await db
+      .prepare("INSERT INTO users (id, openid, nickname, avatar_url, phone, role) VALUES (?, NULL, ?, '', ?, 'admin_created')")
+      .bind(id, nickname, phone)
+      .run();
+  } catch (error) {
+    // Existing deployments may still have users.openid declared NOT NULL.
+    // Keep the record claimable while migrations are rolled out; this value
+    // is never exposed as a real OpenID and is replaced at mini-program login.
+    await db
+      .prepare("INSERT INTO users (id, openid, nickname, avatar_url, phone, role) VALUES (?, ?, ?, '', ?, 'admin_created')")
+      .bind(id, `admin_created_${id}`, nickname, phone)
+      .run();
+  }
+
+  const user = await db.prepare("SELECT * FROM users WHERE id = ?").bind(id).first<any>();
+  return c.json({ success: true, user, message: "客户创建成功" });
 });
 
 /**
@@ -198,16 +286,49 @@ app.post("/api/user/profile", async (c) => {
 
   const id = user_id || `user_${Date.now()}`;
 
+  // The mini-program profile page can be the first authenticated action for
+  // a user. Keep that flow from producing a token for a non-existent user.
+  const existingUser = await db
+    .prepare("SELECT id FROM users WHERE id = ?")
+    .bind(id)
+    .first<{ id: string }>();
+  if (!existingUser) {
+    await db
+      .prepare(
+        `INSERT OR IGNORE INTO users (id, openid, nickname, avatar_url, phone, role)
+         VALUES (?, ?, ?, ?, ?, 'customer')`,
+      )
+      .bind(
+        id,
+        `wx_openid_${id}`,
+        nickname || "展晨尊享客户",
+        avatar_url || "",
+        phone || "",
+      )
+      .run();
+  }
+
   if (phone && phone.trim()) {
     const cleanPhone = phone.trim();
     const existing = await db
       .prepare(
-        "SELECT id, nickname FROM users WHERE phone = ? AND id != ? AND openid != ? AND openid != ?",
+        "SELECT id, nickname, role, openid FROM users WHERE phone = ? AND id != ? AND openid != ? AND openid != ?",
       )
       .bind(cleanPhone, id, id, `wx_openid_${id}`)
-      .first<{ id: string; nickname: string }>();
+      .first<{ id: string; nickname: string; role: string; openid: string }>();
 
     if (existing) {
+      if (existing.role === "admin_created") {
+        await mergeCustomerData(db, id, existing.id);
+        await db
+          .prepare(
+            "UPDATE users SET nickname = COALESCE(?, nickname), avatar_url = COALESCE(?, avatar_url), role = 'customer' WHERE id = ?",
+          )
+          .bind(nickname || null, avatar_url || null, existing.id)
+          .run();
+        const mergedUser = await db.prepare("SELECT * FROM users WHERE id = ?").bind(existing.id).first<User>();
+        return c.json({ success: true, user: mergedUser, merged: true });
+      }
       return c.json(
         {
           success: false,
@@ -1511,7 +1632,16 @@ app.post("/api/orders", async (c) => {
  */
 app.get("/api/orders", async (c) => {
   const db = c.env.DB;
-  const userId = c.req.query("user_id");
+  const authorization = c.req.header("Authorization") || "";
+  const isMiniProgramRequest = c.req.header("X-Client") === "miniprogram";
+  const tokenUserId = getBearerTokenUserId(c);
+
+  // A request carrying a mini-program token must be scoped to that user.
+  // Never trust a user_id supplied by the client when a token is present.
+  if ((authorization || isMiniProgramRequest) && !tokenUserId) {
+    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
+  }
+  const userId = tokenUserId || c.req.query("user_id");
   const status = c.req.query("status");
   const orderNo = c.req.query("order_no");
   const customer = c.req.query("customer");
@@ -1673,6 +1803,13 @@ app.delete("/api/orders/:id", async (c) => {
 app.get("/api/orders/:id", async (c) => {
   const db = c.env.DB;
   const id = c.req.param("id");
+  const authorization = c.req.header("Authorization") || "";
+  const isMiniProgramRequest = c.req.header("X-Client") === "miniprogram";
+  const tokenUserId = getBearerTokenUserId(c);
+
+  if ((authorization || isMiniProgramRequest) && !tokenUserId) {
+    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
+  }
 
   const order = await db
     .prepare("SELECT * FROM orders WHERE id = ?")
@@ -1680,6 +1817,11 @@ app.get("/api/orders/:id", async (c) => {
     .first<Order>();
   if (!order) {
     return c.json({ success: false, message: "未找到对应订单记录" }, 404);
+  }
+
+  // Do not reveal whether another customer's order exists.
+  if (tokenUserId && order.user_id !== tokenUserId) {
+    return c.json({ success: false, message: "无权查看该订单" }, 403);
   }
 
   const { results: items } = await db

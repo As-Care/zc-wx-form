@@ -124,7 +124,9 @@
 
         <a-table-column title="当前状态" :width="120">
           <template #cell="{ record }">
-            <a-tag :color="getStatusColor(record.status)">{{ getStatusText(record.status) }}</a-tag>
+            <div class="status-col">
+              <span class="custom-status-tag" :style="getStatusStyle(record.status)">{{ getStatusText(record.status) }}</span>
+            </div>
           </template>
         </a-table-column>
 
@@ -165,9 +167,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { Message } from '@arco-design/web-vue';
 import OrderDetailDrawer from '../components/OrderDetailDrawer.vue';
 import StatusUpdateModal from '../components/StatusUpdateModal.vue';
+
+const route = useRoute();
 
 const API_BASE = 'https://zc-api.carelife.top';
 
@@ -212,15 +217,15 @@ const getStatusText = (status) => {
   return map[status] || status;
 };
 
-const getStatusColor = (status) => {
+const getStatusStyle = (status) => {
   const map = {
-    'pending_review': '#cbd5e1',
-    'producing': '#f97316',
-    'installing': '#eab308',
-    'completed': '#10b981',
-    'cancelled': '#94a3b8'
+    'pending_review': { backgroundColor: '#e2e8f0', color: '#64748b', borderColor: '#94a3b8' },
+    'producing': { backgroundColor: '#f97316', color: '#ffffff', borderColor: '#f97316' },
+    'installing': { backgroundColor: '#eab308', color: '#ffffff', borderColor: '#eab308' },
+    'completed': { backgroundColor: '#10b981', color: '#ffffff', borderColor: '#10b981' },
+    'cancelled': { backgroundColor: '#f1f5f9', color: '#94a3b8', borderColor: '#cbd5e1' }
   };
-  return map[status] || '#cbd5e1';
+  return map[status] || map['pending_review'];
 };
 
 const handleSearch = () => {
@@ -344,6 +349,9 @@ const deleteOrder = async (record) => {
 };
 
 onMounted(() => {
+  if (route.query.customer) {
+    searchForm.value.customer = route.query.customer;
+  }
   fetchOrders();
 });
 </script>
@@ -368,5 +376,15 @@ onMounted(() => {
 
 .mb-4 {
   margin-bottom: 16px;
+}
+
+.custom-status-tag {
+  display: inline-block;
+  padding: 0 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 24px;
+  font-weight: 500;
+  text-align: center;
 }
 </style>

@@ -13,7 +13,7 @@ export interface User {
   nickname: string;
   avatar_url: string;
   phone: string;
-  role: 'customer' | 'admin';
+  role: 'customer' | 'admin' | 'admin_created';
   created_at?: string;
 }
 
