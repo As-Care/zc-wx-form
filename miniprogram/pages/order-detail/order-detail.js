@@ -17,6 +17,10 @@ const STATUS_INFO_MAP = {
   'completed': {
     text: '已完成',
     desc: '门窗已顺利提货交付，感谢您选择展晨门窗！'
+  },
+  'cancelled': {
+    text: '已取消',
+    desc: '该订单已由商家取消，如有疑问请联系门店客服。'
   }
 };
 
@@ -137,7 +141,7 @@ Page({
 
     const steps = ALL_STEPS.map((step, idx) => ({
       ...step,
-      active: idx <= (currentIndex >= 0 ? currentIndex : 0)
+      active: currentStatus !== 'cancelled' && idx <= (currentIndex >= 0 ? currentIndex : 0)
     }));
 
     this.setData({ steps });

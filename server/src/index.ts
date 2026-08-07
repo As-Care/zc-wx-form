@@ -225,6 +225,10 @@ app.use("*", async (c, next) => {
       targetContext = await c.env.DB.prepare(
         "SELECT id, nickname, phone FROM users WHERE id = ?",
       ).bind(routeTargetId).first<any>() || {};
+    } else if (routeTargetId && path.includes("/api/admin/products/")) {
+      targetContext = await c.env.DB.prepare(
+        "SELECT id, name FROM products WHERE id = ?",
+      ).bind(routeTargetId).first<any>() || {};
     }
   } catch (e) {}
 
@@ -239,10 +243,16 @@ app.use("*", async (c, next) => {
   const targetId = body.id || body.user_id || body.product_id || body.order_id || routeTargetId || "";
   const actionMap: Record<string, string> = { POST: "新增", PUT: "修改", PATCH: "更新", DELETE: "删除" };
   const action = actionMap[method] || method;
-  const detailName = body.order_no || targetContext.order_no || body.nickname || targetContext.nickname || body.name || body.product_name || body.username || "";
+  const detailName = body.order_no || targetContext.order_no || body.nickname || targetContext.nickname || body.name || targetContext.name || body.product_name || body.username || "";
   const isOrderStatus = path.includes("/api/admin/orders/") && path.endsWith("/status");
+  const isProductStatus = path.includes("/api/admin/products/") && path.endsWith("/status");
+  const isProductHot = path.includes("/api/admin/products/") && path.endsWith("/hot");
   const actionText = isOrderStatus
     ? `修改订单 ${targetId} 状态为 ${body.new_status || ""}`
+    : isProductStatus
+      ? `修改商品 ${targetId} 状态为 ${Number(body.is_active) === 1 ? "上架" : "下架"}`
+      : isProductHot
+        ? `修改商品 ${targetId} 热门推荐为 ${Number(body.is_hot) === 1 ? "热门" : "普通"}`
     : `${action}${getAuditEventType(path)}${detailName ? `：${detailName}` : ""}`;
 
   await writeAuditLog(c.env.DB, {
@@ -1140,8 +1150,8 @@ app.get("/api/categories", async (c) => {
 
 
 /**
- * 获取商品列表 (支持按 category_id 筛选)
- * GET /api/products?category_id=cat_1&hot=1
+ * 获取商品列表 (支持按分类、热门和关键词筛选)
+ * GET /api/products?category_id=cat_1&hot=1&keyword=系统窗
  */
 app.get("/api/products", async (c) => {
   const db = c.env.DB;
@@ -1153,37 +1163,48 @@ app.get("/api/products", async (c) => {
   const categoryName = c.req.query("category_name") || c.req.query("category");
   const targetCategory = categoryId || categoryName;
   const hotOnly = c.req.query("hot") === "1";
+  const keyword = (c.req.query("keyword") || c.req.query("search") || "").trim();
 
   try {
     await initProductHotField(db);
+    const filters = ["is_active = 1"];
+    const params: string[] = [];
+
+    if (hotOnly) {
+      filters.push("is_hot = 1");
+    }
+    if (targetCategory) {
+      filters.push("(category_id = ? OR category_name = ? OR name LIKE ?)");
+      params.push(targetCategory, targetCategory, `%${targetCategory}%`);
+    }
+    if (keyword) {
+      filters.push("(name LIKE ? OR description LIKE ? OR category_name LIKE ?)");
+      params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+    }
+
     const { results } = await db
       .prepare(
-        hotOnly
-          ? "SELECT * FROM products WHERE is_active = 1 AND is_hot = 1 ORDER BY sort_order ASC, created_at DESC"
-          : "SELECT * FROM products WHERE is_active = 1 ORDER BY sort_order ASC, created_at DESC",
+        `SELECT * FROM products WHERE ${filters.join(" AND ")} ORDER BY sort_order ASC, created_at DESC`,
       )
+      .bind(...params)
       .all<any>();
     let list = results || [];
 
-    if (targetCategory) {
-      list = list.filter(
-        (p: any) =>
-          p.category_id === targetCategory ||
-          p.category_name === targetCategory ||
-          (p.name && targetCategory && p.name.includes(targetCategory)),
-      );
-    }
-
-    // 单次 Batch 批量拉取全量选配规则并在内存映射，完全消除 N+1 数据库网络耗时
+    // 单次批量拉取当前商品的选配规则，避免 N+1 查询和无关规则传输。
     const optionsGroupMap: Record<string, any[]> = {};
     try {
-      const { results: allOptions } = await db
-        .prepare("SELECT * FROM product_options ORDER BY sort_order ASC")
-        .all<any>();
-      (allOptions || []).forEach((o: any) => {
-        if (!optionsGroupMap[o.product_id]) optionsGroupMap[o.product_id] = [];
-        optionsGroupMap[o.product_id].push(o);
-      });
+      const productIds = list.map((product: any) => product.id);
+      if (productIds.length > 0) {
+        const placeholders = productIds.map(() => "?").join(", ");
+        const { results: allOptions } = await db
+          .prepare(`SELECT * FROM product_options WHERE product_id IN (${placeholders}) ORDER BY sort_order ASC`)
+          .bind(...productIds)
+          .all<any>();
+        (allOptions || []).forEach((o: any) => {
+          if (!optionsGroupMap[o.product_id]) optionsGroupMap[o.product_id] = [];
+          optionsGroupMap[o.product_id].push(o);
+        });
+      }
     } catch (e) {}
 
     for (const prod of list) {
@@ -1192,7 +1213,8 @@ app.get("/api/products", async (c) => {
 
     return c.json({ success: true, data: list });
   } catch (err) {
-    return c.json({ success: true, data: [] });
+    console.error("get products failed:", err);
+    return c.json({ success: false, message: "商品加载失败，请稍后重试" }, 500);
   }
 });
 
@@ -1392,9 +1414,12 @@ app.post("/api/orders", async (c) => {
   const orderId = `ord_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const orderNo = `ZC${dateStr}${Math.floor(1000 + Math.random() * 9000)}`;
-  const allowedStatuses = new Set(["pending_review", "producing", "installing", "completed", "cancelled"]);
-  const initialStatus = allowedStatuses.has(requestedStatus) ? requestedStatus : "pending_review";
   const isAdminCreated = creator_type === "admin";
+  const allowedStatuses = new Set(["pending_review", "producing", "installing", "completed", "cancelled"]);
+  // 小程序用户只能创建待复核订单，不能通过请求伪造已取消或其他状态。
+  const initialStatus = isAdminCreated && allowedStatuses.has(requestedStatus)
+    ? requestedStatus
+    : "pending_review";
 
   // 外键安全校验与容错: 防止 invalid user_id / product_id 触发 SQLite 外键约束异常
   // 以下单联系电话 (customer_phone) 作为订单与客户账号的唯一关键强绑定
@@ -1786,10 +1811,6 @@ app.get("/api/orders", async (c) => {
     whereClause += " AND o.user_id = ?";
     params.push(userId);
   }
-  if (status && status !== "all") {
-    whereClause += " AND o.status = ?";
-    params.push(status);
-  }
   if (orderNo && orderNo.trim() !== "") {
     whereClause += " AND o.order_no LIKE ?";
     params.push(`%${orderNo.trim()}%`);
@@ -1819,6 +1840,14 @@ app.get("/api/orders", async (c) => {
     params.push(endTime);
   }
 
+  // 状态计数不受当前状态页签影响，供小程序一次请求渲染全部页签数量。
+  const statusCountsWhereClause = whereClause;
+  const statusCountsParams = [...params];
+  if (status && status !== "all") {
+    whereClause += " AND o.status = ?";
+    params.push(status);
+  }
+
   // 1. 查询符合条件的总记录数
   const countSql = `SELECT COUNT(DISTINCT o.id) as total FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id LEFT JOIN users u ON o.user_id = u.id${whereClause}`;
   const countRes = await db
@@ -1826,6 +1855,17 @@ app.get("/api/orders", async (c) => {
     .bind(...params)
     .first<{ total: number }>();
   const total = countRes ? countRes.total : 0;
+
+  const { results: statusCountRows } = await db
+    .prepare(
+      `SELECT o.status, COUNT(DISTINCT o.id) as total FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id LEFT JOIN users u ON o.user_id = u.id${statusCountsWhereClause} GROUP BY o.status`,
+    )
+    .bind(...statusCountsParams)
+    .all<{ status: string; total: number }>();
+  const statusCounts = (statusCountRows || []).reduce<Record<string, number>>((counts, row) => {
+    counts[row.status] = Number(row.total || 0);
+    return counts;
+  }, {});
 
   // 2. 分页查询当前页订单列表
   const dataSql = `SELECT DISTINCT o.* FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id LEFT JOIN users u ON o.user_id = u.id${whereClause} ORDER BY o.created_at DESC LIMIT ? OFFSET ?`;
@@ -1898,6 +1938,7 @@ app.get("/api/orders", async (c) => {
       total,
       totalPages: Math.ceil(total / pageSize),
     },
+    status_counts: statusCounts,
   });
 });
 
@@ -2937,6 +2978,59 @@ app.get("/api/admin/products", async (c) => {
   }
 
   return c.json({ success: true, data: list });
+});
+
+/**
+ * 管理端 单独更新商品上下架状态
+ * PATCH /api/admin/products/:id/status
+ */
+app.patch("/api/admin/products/:id/status", async (c) => {
+  const db = c.env.DB;
+  const id = c.req.param("id");
+  const body = await c.req.json();
+  const isActive = Number(body.is_active);
+
+  if (![0, 1].includes(isActive)) {
+    return c.json({ success: false, message: "商品状态参数不合法" }, 400);
+  }
+
+  const result = await db
+    .prepare("UPDATE products SET is_active = ? WHERE id = ?")
+    .bind(isActive, id)
+    .run();
+
+  if (!result.meta.changes) {
+    return c.json({ success: false, message: "未找到商品记录" }, 404);
+  }
+
+  return c.json({ success: true, id, is_active: isActive, message: "商品状态更新成功" });
+});
+
+/**
+ * 管理端 单独更新商品热门推荐状态
+ * PATCH /api/admin/products/:id/hot
+ */
+app.patch("/api/admin/products/:id/hot", async (c) => {
+  const db = c.env.DB;
+  await initProductHotField(db);
+  const id = c.req.param("id");
+  const body = await c.req.json();
+  const isHot = Number(body.is_hot);
+
+  if (![0, 1].includes(isHot)) {
+    return c.json({ success: false, message: "热门推荐参数不合法" }, 400);
+  }
+
+  const result = await db
+    .prepare("UPDATE products SET is_hot = ? WHERE id = ?")
+    .bind(isHot, id)
+    .run();
+
+  if (!result.meta.changes) {
+    return c.json({ success: false, message: "未找到商品记录" }, 404);
+  }
+
+  return c.json({ success: true, id, is_hot: isHot, message: "热门推荐更新成功" });
 });
 
 /**

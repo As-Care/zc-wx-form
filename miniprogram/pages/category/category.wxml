@@ -16,6 +16,12 @@
 
   <!-- 右侧高奢商品方案网格 -->
   <scroll-view class="product-main" scroll-y show-scrollbar="{{false}}">
+    <view class="product-search-row flex-row">
+      <text class="product-search-icon">🔍</text>
+      <input class="product-search-input" value="{{searchKeyword}}" placeholder="搜索商品名称、分类或描述" placeholder-style="color:#64748B;" bindinput="onSearchInput" bindconfirm="onSearchConfirm" confirm-type="search" />
+      <text class="product-search-clear" wx:if="{{searchKeyword}}" bindtap="clearSearch">清除</text>
+    </view>
+
     <!-- 分类头部 Header (共 x 款，删去系统方案) -->
     <view class="cat-header flex-between">
       <text class="cat-header-title">{{activeCatName}}</text>
@@ -47,6 +53,12 @@
     </view>
 
     <!-- 暂无商品空状态提示 -->
+    <view class="empty-product-box flex-column" wx:elif="{{loadError}}">
+      <text class="empty-title">商品加载失败</text>
+      <text class="empty-sub">请检查网络后重新加载</text>
+      <button class="category-retry-btn" bindtap="retryProducts">重新加载</button>
+    </view>
+
     <view class="empty-product-box flex-column" wx:else>
       <text class="empty-icon">📦</text>
       <text class="empty-title">该分类暂无定制商品方案</text>

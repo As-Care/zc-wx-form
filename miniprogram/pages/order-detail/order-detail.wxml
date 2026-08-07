@@ -11,7 +11,7 @@
     </view>
   </view>
   <!-- 可视化进度时间轴 -->
-  <view class="glass-card timeline-card">
+  <view class="glass-card timeline-card" wx:if="{{order.status !== 'cancelled'}}">
     <text class="card-title">① 订单排产与提货进度时间轴</text>
     <view class="timeline flex-between">
       <view class="step-item flex-column {{step.active ? 'active' : ''}}" wx:for="{{steps}}" wx:key="name" wx:for-item="step">

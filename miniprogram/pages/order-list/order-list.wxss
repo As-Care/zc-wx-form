@@ -119,6 +119,12 @@
   border: 1rpx solid rgba(16, 185, 129, 0.35);
 }
 
+.status-badge.status-cancelled {
+  color: #FCA5A5;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1rpx solid rgba(239, 68, 68, 0.32);
+}
+
 /* 订单商品: 左对齐 + 适中紧凑间距 */
 .order-body {
   margin-bottom: 18rpx;
@@ -261,6 +267,38 @@
 .empty-box {
   align-items: center;
   padding: 100rpx 0;
+}
+
+.order-loading-box,
+.order-error-box {
+  align-items: center;
+  padding: 100rpx 32rpx;
+  color: #9A9EA7;
+  font-size: 25rpx;
+  text-align: center;
+}
+
+.order-loading-more {
+  padding: 24rpx 0 40rpx;
+  text-align: center;
+  color: #9A9EA7;
+  font-size: 23rpx;
+}
+
+.order-retry-btn {
+  margin-top: 22rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  padding: 0 32rpx;
+  color: #C5A880;
+  font-size: 24rpx;
+  background: rgba(197, 168, 128, 0.12);
+  border: 1rpx solid rgba(197, 168, 128, 0.35);
+  border-radius: 32rpx;
+}
+
+.order-retry-btn::after {
+  border: none;
 }
 
 .empty-icon {

@@ -18,6 +18,10 @@
 
   <!-- 订单列表内容 -->
   <view class="order-list">
+    <view class="order-loading-box flex-column" wx:if="{{loading && filteredOrders.length === 0}}">
+      <text>订单加载中...</text>
+    </view>
+
     <view class="order-card glass-card" wx:for="{{filteredOrders}}" wx:key="id" bindtap="navToOrderDetail" data-id="{{item.id}}">
       
       <!-- 1. 订单头: 订单号 + 复制按钮 + 状态 -->
@@ -66,8 +70,15 @@
 
     </view>
 
+    <view class="order-error-box flex-column" wx:if="{{loadError}}">
+      <text class="empty-text">{{loadError}}</text>
+      <button class="order-retry-btn" bindtap="retryOrders">重新加载</button>
+    </view>
+
+    <view class="order-loading-more" wx:if="{{loading && filteredOrders.length > 0}}">加载更多订单...</view>
+
     <!-- 空状态 -->
-    <view class="empty-box flex-column" wx:if="{{filteredOrders.length === 0}}">
+    <view class="empty-box flex-column" wx:if="{{loaded && !loading && !loadError && filteredOrders.length === 0}}">
       <text class="empty-icon">📋</text>
       <text class="empty-text">暂无此类状态的门窗订单</text>
     </view>

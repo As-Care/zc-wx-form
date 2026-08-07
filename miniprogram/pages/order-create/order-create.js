@@ -9,7 +9,9 @@ Page({
     displayTotalPrice: '0.00',
     customer_name: '',
     customer_phone: '',
-    install_address: ''
+    install_address: '',
+    submitting: false,
+    orderSubmitted: false
   },
 
   onLoad() {
@@ -117,6 +119,7 @@ Page({
   },
 
   submitOrder() {
+    if (this.data.submitting || this.data.orderSubmitted) return;
     if (!this.data.customer_name || !this.data.customer_name.trim()) {
       wx.showToast({ title: '请填写联系人姓名', icon: 'none', duration: 2000 });
       return;
@@ -131,7 +134,8 @@ Page({
       return;
     }
 
-    wx.showLoading({ title: '提交订单中...' });
+    this.setData({ submitting: true });
+    wx.showLoading({ title: '提交订单中...', mask: true });
 
     const allSceneImgs = [];
     const allRemarks = [];
@@ -183,8 +187,8 @@ Page({
       method: 'POST',
       data: payload
     }).then(res => {
-      wx.hideLoading();
       if (res.success) {
+        this.setData({ orderSubmitted: true });
         wx.showToast({ title: '下单成功！', icon: 'success' });
         wx.removeStorageSync('orderDraft');
         setTimeout(() => {
@@ -194,12 +198,10 @@ Page({
         wx.showToast({ title: res.message || '提交失败，请重试', icon: 'none' });
       }
     }).catch(() => {
+      wx.showToast({ title: '网络异常，订单未提交，请重试', icon: 'none' });
+    }).finally(() => {
       wx.hideLoading();
-      wx.showToast({ title: '订单提交成功！', icon: 'success' });
-      wx.removeStorageSync('orderDraft');
-      setTimeout(() => {
-        wx.switchTab({ url: '/pages/order-list/order-list' });
-      }, 1200);
+      this.setData({ submitting: false });
     });
   }
 });

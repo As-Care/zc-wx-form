@@ -8,7 +8,9 @@ Page({
     activeCatName: '门窗分类',
     allProducts: [],
     productList: [],
-    loading: false
+    loading: false,
+    loadError: '',
+    searchKeyword: ''
   },
 
   onShow() {
@@ -16,6 +18,11 @@ Page({
   },
 
   fetchData() {
+    const storedKeyword = wx.getStorageSync('productSearchKeyword');
+    if (storedKeyword) {
+      this.setData({ searchKeyword: String(storedKeyword).trim() });
+      wx.removeStorageSync('productSearchKeyword');
+    }
     request({ url: '/api/categories' }).then(res => {
       let categories = (res.success && Array.isArray(res.data)) ? res.data : [];
       categories.unshift({ id: 'all', name: '全部' });
@@ -65,19 +72,24 @@ Page({
   },
 
   fetchProducts(catId, catName) {
-    this.setData({ loading: true });
+    this.setData({ loading: true, loadError: '' });
     let queryParam = catId || catName || '';
     if (catId === 'all') {
       queryParam = '';
     }
-    request({ url: `/api/products?category_id=${encodeURIComponent(queryParam)}` }).then(res => {
+    const query = [];
+    if (queryParam) query.push(`category_id=${encodeURIComponent(queryParam)}`);
+    if (this.data.searchKeyword) query.push(`keyword=${encodeURIComponent(this.data.searchKeyword.trim())}`);
+    const url = `/api/products${query.length ? `?${query.join('&')}` : ''}`;
+    request({ url }).then(res => {
       if (res.success && Array.isArray(res.data)) {
         this.setData({ productList: res.data });
       } else {
         this.setData({ productList: [] });
+        throw new Error(res.message || '商品加载失败');
       }
-    }).catch(() => {
-      this.setData({ productList: [] });
+    }).catch(err => {
+      this.setData({ productList: [], loadError: err.message || '商品加载失败，请重试' });
     }).finally(() => {
       this.setData({ loading: false });
     });
@@ -92,6 +104,23 @@ Page({
       activeCatName: catName || '门窗分类'
     });
     this.fetchProducts(catId, catName);
+  },
+
+  onSearchInput(e) {
+    this.setData({ searchKeyword: e.detail.value });
+  },
+
+  onSearchConfirm() {
+    this.fetchProducts(this.data.activeCatId, this.data.activeCatName);
+  },
+
+  clearSearch() {
+    this.setData({ searchKeyword: '' });
+    this.fetchProducts(this.data.activeCatId, this.data.activeCatName);
+  },
+
+  retryProducts() {
+    this.fetchProducts(this.data.activeCatId, this.data.activeCatName);
   },
 
   navToDetail(e) {

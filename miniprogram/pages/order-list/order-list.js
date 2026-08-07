@@ -6,8 +6,10 @@ const STATUS_MAP = {
   'producing': { label: '生产中', class: 'status-producing' },
   'installing': { label: '待提货', class: 'status-installing' },
   'completed': { label: '已完成', class: 'status-completed' },
-  'cancelled': { label: '已取消', class: 'status-pending' }
+  'cancelled': { label: '已取消', class: 'status-cancelled' }
 };
+
+const PAGE_SIZE = 10;
 
 Page({
   data: {
@@ -16,85 +18,107 @@ Page({
       { key: 'pending_review', title: '待复核', count: 0 },
       { key: 'producing', title: '生产中', count: 0 },
       { key: 'installing', title: '待提货', count: 0 },
-      { key: 'completed', title: '已完成', count: 0 }
+      { key: 'completed', title: '已完成', count: 0 },
+      { key: 'cancelled', title: '已取消', count: 0 }
     ],
     activeStatus: 'all',
     orderList: [],
-    filteredOrders: []
+    filteredOrders: [],
+    page: 0,
+    totalPages: 0,
+    hasMore: true,
+    loading: false,
+    loaded: false,
+    loadError: ''
   },
 
   onShow() {
-    this.fetchOrders();
+    this.fetchOrders({ reset: true });
   },
 
   onPullDownRefresh() {
-    wx.showToast({
-      title: '正在刷新',
-      icon: 'loading',
-      duration: 1000
-    });
-    this.fetchOrders().then(() => {
-      wx.stopPullDownRefresh();
-    }).catch(() => {
+    this.fetchOrders({ reset: true }).finally(() => {
       wx.stopPullDownRefresh();
     });
+  },
+
+  onReachBottom() {
+    this.fetchOrders();
   },
 
   switchTab(e) {
     const status = e.currentTarget.dataset.status;
-    this.setData({ activeStatus: status });
-    this.filterOrders(status);
+    if (!status || status === this.data.activeStatus) return;
+    this.setData({
+      activeStatus: status,
+      orderList: [],
+      filteredOrders: [],
+      page: 0,
+      totalPages: 0,
+      hasMore: true,
+      loaded: false,
+      loadError: ''
+    });
+    this.fetchOrders({ reset: true });
   },
 
-  fetchOrders() {
-    return request({ url: '/api/orders' }).then(res => {
-      if (res.success && res.data) {
-        const formatted = res.data.map(item => {
-          const info = STATUS_MAP[item.status] || { label: '待复核', class: 'status-pending' };
-          return {
-            ...item,
-            statusText: info.label,
-            statusClass: info.class
-          };
-        });
+  fetchOrders({ reset = false } = {}) {
+    if (this.data.loading || (!reset && !this.data.hasMore)) return Promise.resolve();
 
-        // 统计各个 Tab 的订单数量
-        const counts = {
-          all: formatted.length,
-          pending_review: 0,
-          producing: 0,
-          installing: 0,
-          completed: 0
-        };
+    const nextPage = reset ? 1 : this.data.page + 1;
+    const query = [
+      `page=${nextPage}`,
+      `pageSize=${PAGE_SIZE}`
+    ];
+    if (this.data.activeStatus !== 'all') {
+      query.push(`status=${encodeURIComponent(this.data.activeStatus)}`);
+    }
 
-        formatted.forEach(o => {
-          if (counts[o.status] !== undefined) {
-            counts[o.status]++;
-          }
-        });
-
-        const updatedTabs = this.data.statusTabs.map(tab => ({
-          ...tab,
-          count: counts[tab.key] || 0
-        }));
-
-        this.setData({
-          orderList: formatted,
-          statusTabs: updatedTabs
-        });
-
-        this.filterOrders(this.data.activeStatus);
+    this.setData({ loading: true, loadError: '' });
+    return request({ url: `/api/orders?${query.join('&')}` }).then(res => {
+      if (!res.success || !Array.isArray(res.data)) {
+        throw new Error(res.message || '订单加载失败');
       }
+
+      const formatted = res.data.map(item => {
+        const info = STATUS_MAP[item.status] || { label: '待复核', class: 'status-pending' };
+        return {
+          ...item,
+          statusText: info.label,
+          statusClass: info.class
+        };
+      });
+      const orders = reset ? formatted : this.data.orderList.concat(formatted);
+      const statusCounts = res.status_counts || {};
+      const allCount = Object.keys(statusCounts).reduce((total, key) => total + Number(statusCounts[key] || 0), 0);
+      const updatedTabs = this.data.statusTabs.map(tab => ({
+        ...tab,
+        count: tab.key === 'all' ? allCount : Number(statusCounts[tab.key] || 0)
+      }));
+      const pagination = res.pagination || {};
+      const totalPages = Number(pagination.totalPages || 0);
+
+      this.setData({
+        orderList: orders,
+        filteredOrders: orders,
+        statusTabs: updatedTabs,
+        page: nextPage,
+        totalPages,
+        hasMore: nextPage < totalPages,
+        loaded: true
+      });
+    }).catch(err => {
+      this.setData({
+        loaded: true,
+        loadError: err.message || '订单加载失败，请重试'
+      });
+    }).finally(() => {
+      this.setData({ loading: false });
     });
   },
 
-  filterOrders(status) {
-    if (status === 'all') {
-      this.setData({ filteredOrders: this.data.orderList });
-    } else {
-      const filtered = this.data.orderList.filter(o => o.status === status);
-      this.setData({ filteredOrders: filtered });
-    }
+  retryOrders() {
+    this.fetchOrders({ reset: this.data.orderList.length === 0 });
   },
 
   copyOrderNo(e) {

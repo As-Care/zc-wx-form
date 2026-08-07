@@ -145,6 +145,7 @@
               v-model="record.is_active"
               :checked-value="1"
               :unchecked-value="0"
+              :loading="statusLoadingIds.has(record.id)"
               @change="(val) => handleStatusChange(record, val)"
             >
               <template #checked>已上架</template>
@@ -629,6 +630,7 @@ const searchForm = ref({
 
 const products = ref([]);
 const tableLoading = ref(true);
+const statusLoadingIds = ref(new Set());
 const hotLoadingIds = ref(new Set());
 
 const modalVisible = ref(false);
@@ -743,26 +745,24 @@ const editProduct = (record) => {
 };
 
 const handleStatusChange = async (record, val) => {
+  if (statusLoadingIds.value.has(record.id)) return;
+  statusLoadingIds.value = new Set(statusLoadingIds.value).add(record.id);
   try {
-    const data = await request(`/api/admin/products`, {
-      method: "POST",
-      body: JSON.stringify({
-        ...record,
-        is_active: val,
-      }),
+    const data = await request(`/api/admin/products/${record.id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_active: val ? 1 : 0 }),
+      silent: true,
     });
-    if (data.success) {
-      Message.success(
-        `已成功${val === 1 ? "上架" : "下架"}商品【${record.name}】`,
-      );
-      await fetchProducts();
-    } else {
-      Message.error("商品上下架状态保存失败");
-      record.is_active = val === 1 ? 0 : 1;
-    }
+    if (!data.success) throw new Error(data.message || "商品上下架状态保存失败");
+    record.is_active = val ? 1 : 0;
+    Message.success(`已成功${val ? "上架" : "下架"}商品【${record.name}】`);
   } catch (e) {
-    Message.error("无法连接后端服务");
-    record.is_active = val === 1 ? 0 : 1;
+    record.is_active = val ? 0 : 1;
+    Message.error(e?.message || "商品上下架状态保存失败");
+  } finally {
+    const loadingIds = new Set(statusLoadingIds.value);
+    loadingIds.delete(record.id);
+    statusLoadingIds.value = loadingIds;
   }
 };
 
@@ -770,14 +770,14 @@ const handleHotChange = async (record, val) => {
   if (hotLoadingIds.value.has(record.id)) return;
   hotLoadingIds.value = new Set(hotLoadingIds.value).add(record.id);
   try {
-    const data = await request(`/api/admin/products`, {
-      method: "POST",
-      body: JSON.stringify({ ...record, is_hot: val ? 1 : 0 }),
+    const data = await request(`/api/admin/products/${record.id}/hot`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_hot: val ? 1 : 0 }),
       silent: true,
     });
     if (!data.success) throw new Error(data.message || "热门推荐状态保存失败");
+    record.is_hot = val ? 1 : 0;
     Message.success(`商品【${record.name}】已${val ? "设为" : "取消"}热门推荐`);
-    await fetchProducts();
   } catch (e) {
     Message.error(e?.message || "热门推荐状态保存失败");
   } finally {

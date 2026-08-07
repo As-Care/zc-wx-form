@@ -27,6 +27,10 @@ Page({
     ],
     categories: [],
     products: [],
+    productsLoading: false,
+    productsLoaded: false,
+    productsError: '',
+    searchKeyword: '',
     storeInfo: app.globalData.storeInfo
   },
 
@@ -64,15 +68,34 @@ Page({
   },
 
   fetchProducts() {
+    this.setData({ productsLoading: true, productsError: '' });
     return request({ url: '/api/products?hot=1' }).then(res => {
       if (res.success && Array.isArray(res.data)) {
         this.setData({ products: res.data });
       } else {
         this.setData({ products: [] });
+        throw new Error(res.message || '热门商品加载失败');
       }
-    }).catch(() => {
+    }).catch(err => {
       this.setData({ products: [] });
+      this.setData({ productsError: err.message || '热门商品加载失败，请重试' });
+    }).finally(() => {
+      this.setData({ productsLoading: false, productsLoaded: true });
     });
+  },
+
+  onSearchInput(e) {
+    this.setData({ searchKeyword: e.detail.value });
+  },
+
+  submitSearch() {
+    const keyword = (this.data.searchKeyword || '').trim();
+    if (!keyword) {
+      wx.showToast({ title: '请输入要搜索的商品', icon: 'none' });
+      return;
+    }
+    wx.setStorageSync('productSearchKeyword', keyword);
+    wx.switchTab({ url: '/pages/category/category' });
   },
 
   // 跳转到产品页并透传 ID / Name 选择目标分类
