@@ -2007,7 +2007,7 @@ app.post("/api/admin/login", async (c) => {
       phone: adminAccount.phone || "",
     },
     menus,
-    token: `zc_token_${adminAccount.id}_${Date.now()}`,
+    token: `zc_admin_token_${adminAccount.id}_${Date.now()}`,
   });
 });
 
