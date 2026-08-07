@@ -73,7 +73,7 @@ Page({
   },
 
   // 保存个人资料并返回 (姓名与11位手机号必填校验)
-  saveProfile() {
+  async saveProfile() {
     const name = (this.data.nickname || '').trim();
     const phone = (this.data.phone || '').trim();
 
@@ -103,36 +103,38 @@ Page({
       phone: phone
     };
 
-    // 同步发送更新请求到服务端 API
-    request({
-      url: '/api/user/profile',
-      method: 'POST',
-      data: {
-        user_id: userId,
-        nickname: name,
-        avatar_url: this.data.avatarUrl,
-        phone: phone
-      }
-    }).then((res) => {
-      // The server may return the pre-created customer's canonical ID after
-      // merging by phone. Persist that ID so subsequent order queries remain
-      // attached to the merged customer record.
-      if (res && res.success && res.user) {
-        const serverUser = res.user;
-        const canonicalInfo = {
-          ...info,
-          id: serverUser.id || info.id,
-          nickname: serverUser.nickname || info.nickname,
-          phone: serverUser.phone || info.phone,
-          avatarUrl: serverUser.avatar_url || info.avatarUrl
-        };
-        wx.setStorageSync('zc_user_info', canonicalInfo);
-        wx.setStorageSync('zc_token', `zc_token_${canonicalInfo.id}`);
-      }
-    }).catch(() => {});
+    let canonicalInfo = info;
+    try {
+      const res = await request({
+        url: '/api/user/profile',
+        method: 'POST',
+        data: {
+          user_id: userId,
+          nickname: name,
+          avatar_url: this.data.avatarUrl,
+          phone: phone
+        }
+      });
+      if (!res || !res.success) throw new Error(res && res.message);
 
-    wx.setStorageSync('zc_user_info', info);
-    wx.setStorageSync('zc_token', `zc_token_${userId}`);
+      const serverUser = res.user || {};
+      canonicalInfo = {
+        ...info,
+        id: serverUser.id || info.id,
+        nickname: serverUser.nickname || info.nickname,
+        phone: serverUser.phone || info.phone,
+        avatarUrl: serverUser.avatar_url || info.avatarUrl
+      };
+    } catch (err) {
+      wx.showToast({ title: err.message || '资料保存失败，请重试', icon: 'none' });
+      return;
+    }
+
+    wx.setStorageSync('zc_user_info', canonicalInfo);
+    wx.setStorageSync('zc_token', `zc_token_${canonicalInfo.id}`);
+    const app = getApp();
+    app.globalData.userInfo = canonicalInfo;
+    app.globalData.token = `zc_token_${canonicalInfo.id}`;
 
     wx.showToast({
       title: '资料更新成功',

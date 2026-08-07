@@ -72,7 +72,8 @@
 
     <view class="order-error-box flex-column" wx:if="{{loadError}}">
       <text class="empty-text">{{loadError}}</text>
-      <button class="order-retry-btn" bindtap="retryOrders">重新加载</button>
+      <button class="order-retry-btn" wx:if="{{requiresLogin}}" bindtap="goToLogin">前往登录</button>
+      <button class="order-retry-btn" wx:else bindtap="retryOrders">重新加载</button>
     </view>
 
     <view class="order-loading-more" wx:if="{{loading && filteredOrders.length > 0}}">加载更多订单...</view>

@@ -292,6 +292,19 @@ function getBearerTokenUserId(c: any): string | null {
   return match && match[1] ? match[1].trim() : null;
 }
 
+function normalizeImageUrls(value: unknown): string {
+  const items = Array.isArray(value) ? value : [value];
+  return items
+    .map((item: any) => {
+      if (typeof item === "string") return item.trim();
+      if (!item || typeof item !== "object") return "";
+      const url = item.url || item.response?.url || item.file?.url;
+      return typeof url === "string" ? url.trim() : "";
+    })
+    .filter(Boolean)
+    .join(",");
+}
+
 // 启用全局 CORS 跨域支持。后台审计需要携带管理员身份 Header，必须
 // 显式加入预检允许列表，否则浏览器会拦截所有后台 API 请求。
 app.use("*", cors({
@@ -418,7 +431,7 @@ app.post("/api/auth/wx-login", async (c) => {
     body.avatar_url ||
     body.avatar ||
     "https://zc-oss.carelife.top/common/zc-logo.jpg";
-  const phone = body.phone || "13344443333";
+  const phone = String(body.phone || "").trim();
 
   let openid = "";
   const appId = c.env.WX_APP_ID;
@@ -1530,6 +1543,7 @@ app.post("/api/orders", async (c) => {
   let totalBaseAmount = 0;
   let totalExtraAmount = 0;
   let totalFinalAmount = 0;
+  const normalizedSceneImages = normalizeImageUrls(scene_images);
 
   // 插入订单主表记录 (包含现场图片 scene_images)
   await db
@@ -1548,7 +1562,7 @@ app.post("/api/orders", async (c) => {
       customer_phone || "",
       install_address || "",
       customer_remark || "",
-      scene_images || "",
+      normalizedSceneImages,
       totalSets,
       initialStatus,
       isAdminCreated ? "admin" : "customer",
@@ -1569,12 +1583,9 @@ app.post("/api/orders", async (c) => {
     const selectedOptionsMap = set.selected_options || {};
 
     const itemRemark = set.remark || set.customer_remark || set.note || "";
-    const itemImages =
-      set.scene_images ||
-      set.scene_image ||
-      (Array.isArray(set.images)
-        ? JSON.stringify(set.images)
-        : set.images || "");
+    const itemImages = normalizeImageUrls(
+      set.scene_images || set.scene_image || set.images,
+    );
 
     // 筛选当前套系选中的选配规则 (完全按下单当时的前端已选中文快照保存，确保与后续商品修改彻底隔离)
     const selectedOptionObjects: ProductOption[] = [];

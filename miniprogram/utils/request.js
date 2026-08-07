@@ -13,7 +13,13 @@ function request(options) {
     });
   }
 
-  return new Promise((resolve, reject) => {
+  const app = getApp();
+  const loginPromise = app && app.globalData && app.globalData.loginPromise;
+  const waitForLogin = loginPromise && typeof loginPromise.then === 'function'
+    ? loginPromise.catch(() => null)
+    : Promise.resolve();
+
+  return waitForLogin.then(() => new Promise((resolve, reject) => {
     // Older sessions only persisted zc_user_info. Derive the compatible token
     // once so order APIs can still enforce ownership after an app upgrade.
     const savedUser = wx.getStorageSync('zc_user_info') || {};
@@ -44,7 +50,7 @@ function request(options) {
         reject(err);
       }
     });
-  });
+  }));
 }
 
 module.exports = {

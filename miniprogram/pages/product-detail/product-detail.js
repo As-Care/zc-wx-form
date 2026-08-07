@@ -171,10 +171,24 @@ Page({
     const currentImgs = activeSet.scene_images || [];
     if (currentImgs.length >= 6) return;
 
+    wx.showActionSheet({
+      itemList: ['拍照', '从手机相册选择'],
+      success: (action) => {
+        this.selectSetSceneImages(action.tapIndex === 0 ? ['camera'] : ['album']);
+      },
+    });
+  },
+
+  selectSetSceneImages(sourceType) {
+    const activeSet = this.data.customSets[this.data.activeSetIndex];
+    if (!activeSet) return;
+    const currentImgs = activeSet.scene_images || [];
+    const remainingCount = 6 - currentImgs.length;
+
     wx.chooseMedia({
-      count: 6 - currentImgs.length,
+      count: sourceType[0] === 'camera' ? 1 : remainingCount,
       mediaType: ['image'],
-      sourceType: ['album', 'camera'],
+      sourceType,
       success: (res) => {
         const tempFiles = res.tempFiles || [];
         tempFiles.forEach(file => {
@@ -207,7 +221,12 @@ Page({
             }
           });
         });
-      }
+      },
+      fail: (err) => {
+        if ((err.errMsg || '').includes('auth deny')) {
+          wx.showToast({ title: '请允许微信使用相机后重试', icon: 'none' });
+        }
+      },
     });
   },
 

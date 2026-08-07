@@ -29,7 +29,8 @@ Page({
     hasMore: true,
     loading: false,
     loaded: false,
-    loadError: ''
+    loadError: '',
+    requiresLogin: false
   },
 
   onShow() {
@@ -74,7 +75,7 @@ Page({
       query.push(`status=${encodeURIComponent(this.data.activeStatus)}`);
     }
 
-    this.setData({ loading: true, loadError: '' });
+    this.setData({ loading: true, loadError: '', requiresLogin: false });
     return request({ url: `/api/orders?${query.join('&')}` }).then(res => {
       if (!res.success || !Array.isArray(res.data)) {
         throw new Error(res.message || '订单加载失败');
@@ -108,9 +109,11 @@ Page({
         loaded: true
       });
     }).catch(err => {
+      const message = err.message || '订单加载失败，请重试';
       this.setData({
         loaded: true,
-        loadError: err.message || '订单加载失败，请重试'
+        loadError: message,
+        requiresLogin: /登录|401|Unauthorized/i.test(message)
       });
     }).finally(() => {
       this.setData({ loading: false });
@@ -119,6 +122,10 @@ Page({
 
   retryOrders() {
     this.fetchOrders({ reset: this.data.orderList.length === 0 });
+  },
+
+  goToLogin() {
+    wx.navigateTo({ url: '/pages/login/login' });
   },
 
   copyOrderNo(e) {

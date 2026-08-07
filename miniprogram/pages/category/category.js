@@ -101,7 +101,8 @@ Page({
     const catName = cat ? (cat.name || cat.sub_title) : '';
     this.setData({
       activeCatId: catId,
-      activeCatName: catName || '门窗分类'
+      activeCatName: catName || '门窗分类',
+      searchKeyword: ''
     });
     this.fetchProducts(catId, catName);
   },
