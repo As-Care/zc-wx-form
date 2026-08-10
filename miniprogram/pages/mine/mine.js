@@ -20,6 +20,7 @@ Page({
   },
 
   onShow() {
+    app.refreshOrderStatusNotices();
     // 读取已保存的个人信息
     const saved = wx.getStorageSync('zc_user_info');
     if (saved && (saved.nickname || saved.phone)) {

@@ -4,12 +4,12 @@
       <h2 class="view-title">门窗商品方案管理</h2>
       <a-space>
         <a-button
+          type="primary"
           :disabled="selectedProductIds.length === 0"
           :loading="batchStatusSaving"
           @click="batchUpdateStatus(1)"
         >批量上架</a-button>
         <a-button
-          status="warning"
           :disabled="selectedProductIds.length === 0"
           :loading="batchStatusSaving"
           @click="batchUpdateStatus(0)"

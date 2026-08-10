@@ -4,6 +4,7 @@ import Login from '../views/Login.vue';
 import Dashboard from '../views/Dashboard.vue';
 import Orders from '../views/Orders.vue';
 import Products from '../views/Products.vue';
+import Banners from '../views/Banners.vue';
 import Categories from '../views/Categories.vue';
 import Users from '../views/Users.vue';
 import Overview from '../views/Overview.vue';
@@ -44,6 +45,11 @@ const routes = [
         path: 'products',
         name: 'Products',
         component: Products
+      },
+      {
+        path: 'banners',
+        name: 'Banners',
+        component: Banners
       },
       {
         path: 'categories',

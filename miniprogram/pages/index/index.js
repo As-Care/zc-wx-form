@@ -5,26 +5,9 @@ const app = getApp();
 Page({
   data: {
     bannerIndex: 0,
-    banners: [
-      {
-        id: 1,
-        title: '展晨108热桥级系统窗',
-        subtitle: '尊享静谧生活 · 高端门窗定制',
-        image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80'
-      },
-      {
-        id: 2,
-        title: '展晨极简16窄边推拉门',
-        subtitle: '视野无界 · 顺滑重型下轨',
-        image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80'
-      },
-      {
-        id: 3,
-        title: '展晨尊享系统封阳台/阳光房',
-        subtitle: '全气候级隔热 · 抗风暴结构',
-        image: 'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=800&q=80'
-      }
-    ],
+    banners: [],
+    bannersLoaded: false,
+    bannersError: '',
     categories: [],
     products: [],
     productsLoading: false,
@@ -36,12 +19,19 @@ Page({
 
   onLoad() {
     this.fetchCategories();
+    this.fetchBanners();
     this.fetchProducts();
+  },
+
+  onShow() {
+    // 页面切换时同步检查订单状态，原生订单 tab 会显示未读红点。
+    app.refreshOrderStatusNotices();
   },
 
   onPullDownRefresh() {
     Promise.all([
       this.fetchCategories(),
+      this.fetchBanners(),
       this.fetchProducts()
     ]).finally(() => {
       wx.stopPullDownRefresh();
@@ -53,6 +43,24 @@ Page({
     this.setData({
       bannerIndex: e.detail.current
     });
+  },
+
+  fetchBanners() {
+    this.setData({ bannersError: '' });
+    return request({ url: '/api/banners' }).then(res => {
+      if (!res.success || !Array.isArray(res.data)) {
+        throw new Error(res.message || 'Banner 加载失败');
+      }
+      this.setData({ banners: res.data, bannerIndex: 0, bannersLoaded: true });
+    }).catch(err => {
+      this.setData({ banners: [], bannersLoaded: true, bannersError: err.message || 'Banner 加载失败' });
+    });
+  },
+
+  onBannerTap(e) {
+    const productId = e.currentTarget.dataset.productId;
+    if (!productId) return;
+    wx.navigateTo({ url: `/pages/product-detail/product-detail?id=${productId}` });
   },
 
   fetchCategories() {

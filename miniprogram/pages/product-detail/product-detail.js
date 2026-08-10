@@ -104,6 +104,11 @@ Page({
     }
   },
 
+  onShow() {
+    // 进入商品详情时也检查订单状态，避免必须重启小程序才能看到提醒。
+    getApp().refreshOrderStatusNotices();
+  },
+
   fetchProductDetail(id) {
     wx.showLoading({ title: '加载配置中...', mask: true });
     request({ url: `/api/products/${id}` }).then(res => {

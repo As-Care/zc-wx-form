@@ -11,33 +11,35 @@
   </view>
 
   <!-- 炫酷 3D 缩放卡片 Banner 轮播 -->
-  <swiper 
-    class="banner-swiper" 
-    autoplay 
-    circular 
-    interval="4000" 
-    duration="500"
-    previous-margin="24rpx" 
-    next-margin="24rpx" 
-    bindchange="onBannerChange"
-  >
-    <swiper-item wx:for="{{banners}}" wx:key="id">
-      <view class="swiper-card-box {{bannerIndex === index ? 'active' : ''}}">
-        <view class="swiper-card">
-          <image class="banner-img" src="{{item.image}}" mode="aspectFill"></image>
-          <view class="banner-mask">
-            <text class="banner-title">{{item.title}}</text>
-            <text class="banner-subtitle">{{item.subtitle}}</text>
+  <block wx:if="{{banners.length > 0}}">
+    <swiper
+      class="banner-swiper"
+      autoplay
+      circular
+      interval="4000"
+      duration="500"
+      previous-margin="24rpx"
+      next-margin="24rpx"
+      bindchange="onBannerChange"
+    >
+      <swiper-item wx:for="{{banners}}" wx:key="id">
+        <view class="swiper-card-box {{bannerIndex === index ? 'active' : ''}}">
+          <view class="swiper-card" bindtap="onBannerTap" data-product-id="{{item.product_id}}">
+            <image class="banner-img" src="{{item.image_url}}" mode="aspectFill"></image>
+            <view class="banner-mask">
+              <text class="banner-title">{{item.name}}</text>
+              <text class="banner-subtitle" wx:if="{{item.subtitle}}">{{item.subtitle}}</text>
+            </view>
           </view>
         </view>
-      </view>
-    </swiper-item>
-  </swiper>
+      </swiper-item>
+    </swiper>
 
-  <!-- 炫酷指示器 -->
-  <view class="indicator-bar flex-row">
-    <view class="dot {{bannerIndex === index ? 'active' : ''}}" wx:for="{{banners}}" wx:key="id"></view>
-  </view>
+    <!-- 炫酷指示器 -->
+    <view class="indicator-bar flex-row">
+      <view class="dot {{bannerIndex === index ? 'active' : ''}}" wx:for="{{banners}}" wx:key="id"></view>
+    </view>
+  </block>
 
   <!-- 金刚区分类入口 -->
   <view class="grid-section flex-between">

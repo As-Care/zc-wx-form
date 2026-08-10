@@ -52,6 +52,21 @@ CREATE TABLE IF NOT EXISTS product_options (
   sort_order INT DEFAULT 0
 );
 
+-- 4.1 首页 Banner 管理
+CREATE TABLE IF NOT EXISTS banners (
+  id VARCHAR(64) PRIMARY KEY,
+  name VARCHAR(128) NOT NULL,
+  subtitle VARCHAR(256) DEFAULT '',
+  image_url TEXT NOT NULL,
+  product_id VARCHAR(64),
+  sort_order INT DEFAULT 0,
+  is_active INT DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_banners_active_sort ON banners(is_active, sort_order);
+
 -- 5. 订单主表
 CREATE TABLE IF NOT EXISTS orders (
   id VARCHAR(64) PRIMARY KEY,

@@ -14,6 +14,7 @@ Page({
   },
 
   onShow() {
+    getApp().refreshOrderStatusNotices();
     this.fetchData();
   },
 

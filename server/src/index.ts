@@ -36,6 +36,8 @@ let orderIndexesInitialized = false;
 let orderIndexesInitializationPromise: Promise<void> | null = null;
 let productHotFieldInitialized = false;
 let productHotFieldInitializationPromise: Promise<void> | null = null;
+let bannerTableInitialized = false;
+let bannerTableInitializationPromise: Promise<void> | null = null;
 
 async function initProductHotField(db: D1Database) {
   if (productHotFieldInitialized) return;
@@ -59,6 +61,32 @@ async function initProductHotField(db: D1Database) {
     productHotFieldInitializationPromise = null;
   });
   return productHotFieldInitializationPromise;
+}
+
+async function initBannerTable(db: D1Database) {
+  if (bannerTableInitialized) return;
+  if (bannerTableInitializationPromise) return bannerTableInitializationPromise;
+
+  bannerTableInitializationPromise = (async () => {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS banners (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        subtitle TEXT DEFAULT '',
+        image_url TEXT NOT NULL,
+        product_id TEXT,
+        sort_order INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+    await db.prepare("CREATE INDEX IF NOT EXISTS idx_banners_active_sort ON banners(is_active, sort_order)").run();
+    bannerTableInitialized = true;
+  })().finally(() => {
+    bannerTableInitializationPromise = null;
+  });
+  return bannerTableInitializationPromise;
 }
 
 async function initOrderQueryIndexes(db: D1Database) {
@@ -2997,6 +3025,26 @@ app.get("/api/admin/categories", async (c) => {
 });
 
 /**
+ * 小程序首页 Banner 列表（只返回启用项）。
+ */
+app.get("/api/banners", async (c) => {
+  const db = c.env.DB;
+  await initBannerTable(db);
+  const { results } = await db
+    .prepare(
+      `SELECT b.id, b.name, b.subtitle, b.image_url,
+              CASE WHEN p.is_active = 1 THEN b.product_id ELSE NULL END AS product_id,
+              b.sort_order, b.is_active, b.created_at, b.updated_at, p.name AS product_name
+       FROM banners b
+       LEFT JOIN products p ON p.id = b.product_id
+       WHERE b.is_active = 1
+       ORDER BY b.sort_order ASC, b.created_at DESC`,
+    )
+    .all<any>();
+  return c.json({ success: true, data: results || [] });
+});
+
+/**
  * 管理端 分类管理 CRUD (创建、编辑、物理删除、快捷修改排序)
  * POST /api/admin/categories
  */
@@ -3157,6 +3205,129 @@ app.get("/api/admin/products", async (c) => {
   }
 
   return c.json({ success: true, data: list });
+});
+
+/* ================= 首页 Banner 管理接口 ================= */
+
+app.get("/api/admin/banners", async (c) => {
+  const db = c.env.DB;
+  await initBannerTable(db);
+  const { results } = await db
+    .prepare(
+      `SELECT b.*, p.name AS product_name
+       FROM banners b
+       LEFT JOIN products p ON p.id = b.product_id
+       ORDER BY b.sort_order ASC, b.created_at DESC`,
+    )
+    .all<any>();
+  return c.json({ success: true, data: results || [] });
+});
+
+async function resolveBannerProduct(db: D1Database, rawProductId: any) {
+  const productId = String(rawProductId || "").trim();
+  if (!productId) return null;
+  const product = await db
+    .prepare("SELECT id FROM products WHERE id = ?")
+    .bind(productId)
+    .first<{ id: string }>();
+  return product ? product.id : undefined;
+}
+
+app.post("/api/admin/banners", async (c) => {
+  const db = c.env.DB;
+  await initBannerTable(db);
+  const body = await c.req.json();
+  const name = String(body.name || "").trim();
+  const imageUrl = String(body.image_url || "").trim();
+  if (!name || !imageUrl) {
+    return c.json({ success: false, message: "Banner 名称和图片为必填项" }, 400);
+  }
+  const productId = await resolveBannerProduct(db, body.product_id);
+  if (productId === undefined) {
+    return c.json({ success: false, message: "绑定商品不存在" }, 400);
+  }
+
+  const id = `banner_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  await db
+    .prepare(
+      `INSERT INTO banners (id, name, subtitle, image_url, product_id, sort_order, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      id,
+      name,
+      String(body.subtitle || "").trim(),
+      imageUrl,
+      productId,
+      Number(body.sort_order || 0),
+      Number(body.is_active) === 0 ? 0 : 1,
+    )
+    .run();
+  return c.json({ success: true, id, message: "Banner 已新增" });
+});
+
+app.put("/api/admin/banners/:id", async (c) => {
+  const db = c.env.DB;
+  await initBannerTable(db);
+  const id = c.req.param("id");
+  const body = await c.req.json();
+  const name = String(body.name || "").trim();
+  const imageUrl = String(body.image_url || "").trim();
+  if (!name || !imageUrl) {
+    return c.json({ success: false, message: "Banner 名称和图片为必填项" }, 400);
+  }
+  const productId = await resolveBannerProduct(db, body.product_id);
+  if (productId === undefined) {
+    return c.json({ success: false, message: "绑定商品不存在" }, 400);
+  }
+
+  const result = await db
+    .prepare(
+      `UPDATE banners
+       SET name = ?, subtitle = ?, image_url = ?, product_id = ?, sort_order = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+    )
+    .bind(
+      name,
+      String(body.subtitle || "").trim(),
+      imageUrl,
+      productId,
+      Number(body.sort_order || 0),
+      Number(body.is_active) === 0 ? 0 : 1,
+      id,
+    )
+    .run();
+  if (!result.meta.changes) {
+    return c.json({ success: false, message: "未找到 Banner" }, 404);
+  }
+  return c.json({ success: true, id, message: "Banner 已保存" });
+});
+
+app.patch("/api/admin/banners/:id/status", async (c) => {
+  const db = c.env.DB;
+  await initBannerTable(db);
+  const id = c.req.param("id");
+  const body = await c.req.json();
+  const isActive = Number(body.is_active);
+  if (![0, 1].includes(isActive)) {
+    return c.json({ success: false, message: "Banner 状态参数不合法" }, 400);
+  }
+  const result = await db
+    .prepare("UPDATE banners SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+    .bind(isActive, id)
+    .run();
+  if (!result.meta.changes) {
+    return c.json({ success: false, message: "未找到 Banner" }, 404);
+  }
+  return c.json({ success: true, id, is_active: isActive });
+});
+
+app.delete("/api/admin/banners/:id", async (c) => {
+  const db = c.env.DB;
+  await initBannerTable(db);
+  const id = c.req.param("id");
+  await db.prepare("DELETE FROM banners WHERE id = ?").bind(id).run();
+  return c.json({ success: true, message: "Banner 已删除" });
 });
 
 /**
@@ -3885,6 +4056,18 @@ app.post("/api/admin/init-db", async (c) => {
         is_visible INTEGER DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`,
+      `CREATE TABLE IF NOT EXISTS banners (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        subtitle TEXT DEFAULT '',
+        image_url TEXT NOT NULL,
+        product_id TEXT,
+        sort_order INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_banners_active_sort ON banners(is_active, sort_order)`,
       `CREATE TABLE IF NOT EXISTS roles (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,

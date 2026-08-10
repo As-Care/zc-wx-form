@@ -1,9 +1,23 @@
 <!-- 展晨门窗 订单列表页 WXML -->
 <view class="container">
 
-  <view class="status-notice" wx:if="{{statusNoticeText}}">
-    <text class="status-notice-icon">●</text>
-    <text>{{statusNoticeText}}</text>
+  <view class="status-notice" wx:if="{{statusNotices.length > 0}}">
+    <view class="status-notice-header">
+      <text class="status-notice-icon">●</text>
+      <text>有 {{statusNotices.length}} 笔订单的状态已更新</text>
+    </view>
+    <scroll-view class="status-notice-list" scroll-y>
+      <view
+        class="status-notice-order"
+        wx:for="{{statusNotices}}"
+        wx:key="order_id"
+        bindtap="navToOrderDetail"
+        data-id="{{item.order_id}}"
+      >
+        <text>订单号：{{item.order_no || item.order_id}}</text>
+        <text class="status-notice-link">查看详情 ›</text>
+      </view>
+    </scroll-view>
   </view>
 
   <!-- 胶囊 Status Tabs (带 (x) 动态数量统计) -->

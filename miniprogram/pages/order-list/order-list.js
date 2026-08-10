@@ -31,16 +31,16 @@ Page({
     loaded: false,
     loadError: '',
     requiresLogin: false,
-    statusNoticeText: ''
+    statusNotices: []
   },
 
   onShow() {
     const app = getApp();
-    this.setData({ statusNoticeText: '' });
+    this.setData({ statusNotices: [] });
     app.refreshOrderStatusNotices().then(() => {
       const notices = app.consumeOrderStatusNotices();
       if (notices.length > 0) {
-        this.setData({ statusNoticeText: `有 ${notices.length} 笔订单的状态已更新，请查看最新进度` });
+        this.setData({ statusNotices: notices });
       }
     });
     const requestedStatus = app.globalData.orderListInitialStatus;
