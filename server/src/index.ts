@@ -141,7 +141,6 @@ async function createAdminSession(db: D1Database, adminId: string) {
 async function getAdminFromSession(db: D1Database, authorization: string): Promise<AdminIdentity | null> {
   const match = authorization.match(/^Bearer\s+(zc_admin_token_[A-Za-z0-9-]+)$/i);
   if (!match) return null;
-  await initAdminSessions(db);
   const admin = await db.prepare(`
     SELECT a.id, a.username, a.nickname, a.role_id, r.code AS role_code
     FROM admin_sessions s
@@ -188,7 +187,6 @@ async function createUserSession(db: D1Database, userId: string) {
 async function getUserFromSession(db: D1Database, authorization: string): Promise<UserIdentity | null> {
   const match = authorization.match(/^Bearer\s+(zc_user_token_[A-Za-z0-9-]+)$/i);
   if (!match) return null;
-  await initUserSessions(db);
   const user = await db.prepare(`
     SELECT u.id, u.openid, u.nickname, u.phone
     FROM user_sessions s
@@ -1928,7 +1926,6 @@ app.post("/api/orders", async (c) => {
  */
 app.get("/api/orders", async (c) => {
   const db = c.env.DB;
-  await initOrderQueryIndexes(db);
   const isAdmin = Boolean(c.get("admin"));
   const tokenUserId = getBearerTokenUserId(c);
 

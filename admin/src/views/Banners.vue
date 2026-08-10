@@ -109,12 +109,14 @@
           </a-spin>
         </a-form-item>
         <a-form-item label="绑定商品（可选）">
-          <a-select v-model="form.product_id" allow-clear placeholder="不绑定商品" style="width: 100%">
-            <a-option v-for="product in products" :key="product.id" :value="product.id">
-              {{ product.name }}{{ Number(product.is_active) === 1 ? '' : '（已下架）' }}
-            </a-option>
-          </a-select>
-          <div class="form-tip">绑定商品后，小程序点击该 Banner 会直接进入商品详情。</div>
+          <div class="product-bind-field">
+            <a-select v-model="form.product_id" allow-clear placeholder="不绑定商品" style="width: 100%">
+              <a-option v-for="product in products" :key="product.id" :value="product.id">
+                {{ product.name }}{{ Number(product.is_active) === 1 ? '' : '（已下架）' }}
+              </a-option>
+            </a-select>
+            <div class="form-tip">绑定商品后，小程序点击该 Banner 会直接进入商品详情。</div>
+          </div>
         </a-form-item>
         <a-form-item label="排序（数字越小越靠前）">
           <a-input-number v-model="form.sort_order" :min="0" :max="999" />
@@ -295,6 +297,7 @@ onMounted(() => {
 .header-bar { display: flex; align-items: center; }
 .view-title { margin: 0; font-size: 20px; font-weight: 700; }
 .muted-text { margin-top: 4px; color: var(--color-text-3); font-size: 12px; }
+.product-bind-field { width: 100%; display: flex; flex-direction: column; align-items: stretch; }
 .form-tip { margin-top: 6px; color: var(--color-text-3); font-size: 12px; }
 .image-preview-box { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
 .image-preview-box img { width: 360px; height: 160px; object-fit: cover; border-radius: 8px; border: 1px solid var(--color-border-2); }
