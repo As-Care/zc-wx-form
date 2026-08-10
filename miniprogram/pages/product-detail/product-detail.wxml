@@ -114,7 +114,16 @@
           ✕
         </view>
       </view>
-      <view class="img-add-btn flex-column flex-center" wx:if="{{!customSets[activeSetIndex].scene_images || customSets[activeSetIndex].scene_images.length < 6}}" bindtap="chooseSetSceneImg">
+      <view class="img-thumb-box img-uploading-box" wx:for="{{customSets[activeSetIndex].uploading_scene_images}}" wx:key="*this">
+        <image class="img-thumb" src="{{item}}" mode="aspectFill" />
+        <view class="img-state-mask">上传中</view>
+      </view>
+      <view class="img-thumb-box img-failed-box" wx:for="{{customSets[activeSetIndex].failed_scene_images}}" wx:key="path" catchtap="retrySetSceneImage" data-path="{{item.path}}">
+        <image class="img-thumb" src="{{item.path}}" mode="aspectFill" />
+        <view class="img-state-mask">上传失败<br/>点击重试</view>
+        <view class="img-del-btn flex-center" catchtap="deleteFailedSetSceneImg" data-path="{{item.path}}">✕</view>
+      </view>
+      <view class="img-add-btn flex-column flex-center" wx:if="{{(customSets[activeSetIndex].scene_images.length + customSets[activeSetIndex].uploading_scene_images.length + customSets[activeSetIndex].failed_scene_images.length) < 6}}" bindtap="chooseSetSceneImg">
         <text class="add-icon">+</text>
         <text class="add-text">上传照片</text>
       </view>

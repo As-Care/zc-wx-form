@@ -71,7 +71,7 @@
         >
           <div class="flex-between mb-2">
             <a-tag color="arcoblue" style="font-weight: 600">{{
-              item.label || `套系 ${idx + 1}`
+              getItemLabel(item, idx, order)
             }}</a-tag>
             <strong style="color: #b89768; font-size: 16px"
               >小计：¥
@@ -327,6 +327,32 @@ const getItemRemark = (item, order) => {
     return item.remark || item.customer_remark || item.note;
   }
   return order?.customer_remark || "";
+};
+
+const getLegacySetLabels = (order) => {
+  const remark = typeof order?.customer_remark === "string" ? order.customer_remark : "";
+  const labels = [];
+  const matcher = /【([^【】]+)】/g;
+  let matched;
+  while ((matched = matcher.exec(remark)) !== null) {
+    const label = matched[1].trim();
+    if (label) labels.push(label);
+  }
+  return labels;
+};
+
+const getItemLabel = (item, idx, order) => {
+  let label = String(item?.label || "").trim();
+  if (label.startsWith("【") && label.endsWith("】")) {
+    label = label.slice(1, -1).trim();
+  }
+
+  // 旧版服务端会生成“客户名-日期-序号”作为套名，优先从订单总备注恢复用户填写的名称。
+  if (/^.+-\d{6}-\d+$/.test(label)) {
+    const legacyLabel = getLegacySetLabels(order)[idx];
+    if (legacyLabel) return legacyLabel;
+  }
+  return label || `套系 ${idx + 1}`;
 };
 
 const getItemSceneImages = (item, order) => {

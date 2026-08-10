@@ -2,10 +2,23 @@
   <div class="products-view">
     <div class="header-bar flex-between mb-4">
       <h2 class="view-title">门窗商品方案管理</h2>
-      <a-button type="primary" @click="openProductModal">
-        <template #icon><icon-plus /></template>
-        新建门窗商品
-      </a-button>
+      <a-space>
+        <a-button
+          :disabled="selectedProductIds.length === 0"
+          :loading="batchStatusSaving"
+          @click="batchUpdateStatus(1)"
+        >批量上架</a-button>
+        <a-button
+          status="warning"
+          :disabled="selectedProductIds.length === 0"
+          :loading="batchStatusSaving"
+          @click="batchUpdateStatus(0)"
+        >批量下架</a-button>
+        <a-button type="primary" @click="openProductModal">
+          <template #icon><icon-plus /></template>
+          新建门窗商品
+        </a-button>
+      </a-space>
     </div>
 
     <!-- 搜索与多维度筛选面板 -->
@@ -63,9 +76,11 @@
       :data="products"
       :loading="tableLoading"
       :pagination="{ pageSize: 10 }"
+      :row-selection="rowSelection"
       border
       row-key="id"
       class="no-wrap-header-table"
+      @selection-change="handleProductSelectionChange"
     >
       <template #columns>
         <a-table-column title="商品主图" :width="110">
@@ -167,7 +182,7 @@
           </template>
         </a-table-column>
 
-        <a-table-column title="操作" :width="180">
+        <a-table-column title="操作" :width="250">
           <template #cell="{ record }">
             <div
               style="
@@ -192,6 +207,14 @@
                 @click="openOptionsDrawer(record)"
               >
                 选配规则
+              </a-button>
+              <a-button
+                type="outline"
+                size="small"
+                :loading="copyingProductIds.has(record.id)"
+                @click="copyProduct(record)"
+              >
+                复制
               </a-button>
             </div>
           </template>
@@ -610,7 +633,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { computed, ref, onMounted } from "vue";
 import { Message } from "@arco-design/web-vue";
 
 import request from "../utils/request";
@@ -632,6 +655,14 @@ const products = ref([]);
 const tableLoading = ref(true);
 const statusLoadingIds = ref(new Set());
 const hotLoadingIds = ref(new Set());
+const selectedProductIds = ref([]);
+const batchStatusSaving = ref(false);
+const copyingProductIds = ref(new Set());
+const rowSelection = computed(() => ({
+  type: "checkbox",
+  showCheckedAll: true,
+  selectedRowKeys: selectedProductIds.value,
+}));
 
 const modalVisible = ref(false);
 const optionsDrawerVisible = ref(false);
@@ -695,6 +726,52 @@ const handleReset = () => {
     name: "",
   };
   fetchProducts();
+};
+
+const handleProductSelectionChange = (rowKeys) => {
+  selectedProductIds.value = Array.isArray(rowKeys) ? rowKeys : [];
+};
+
+const batchUpdateStatus = async (isActive) => {
+  const ids = [...selectedProductIds.value];
+  if (!ids.length || batchStatusSaving.value) return;
+  batchStatusSaving.value = true;
+  try {
+    const data = await request("/api/admin/products/batch-status", {
+      method: "PATCH",
+      body: JSON.stringify({ ids, is_active: isActive }),
+    });
+    if (!data.success) throw new Error(data.message || "批量更新商品状态失败");
+    products.value = products.value.map((product) =>
+      ids.includes(product.id) ? { ...product, is_active: isActive } : product,
+    );
+    selectedProductIds.value = [];
+    Message.success(`已批量${isActive ? "上架" : "下架"}${data.updated || ids.length} 个商品`);
+  } catch (e) {
+    Message.error(e?.message || "批量更新商品状态失败");
+  } finally {
+    batchStatusSaving.value = false;
+  }
+};
+
+const copyProduct = async (record) => {
+  if (!record || copyingProductIds.value.has(record.id)) return;
+  copyingProductIds.value = new Set(copyingProductIds.value).add(record.id);
+  try {
+    const data = await request(`/api/admin/products/${record.id}/copy`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    if (!data.success) throw new Error(data.message || "复制商品失败");
+    Message.success(`商品已复制为“${data.name}”，当前默认下架`);
+    await fetchProducts();
+  } catch (e) {
+    Message.error(e?.message || "复制商品失败");
+  } finally {
+    const copyingIds = new Set(copyingProductIds.value);
+    copyingIds.delete(record.id);
+    copyingProductIds.value = copyingIds;
+  }
 };
 
 const openProductModal = () => {

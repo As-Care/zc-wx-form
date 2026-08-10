@@ -1,5 +1,5 @@
 // 展晨门窗 多套独立定制与算价器 Page 逻辑
-const { request } = require('../../utils/request');
+const { request, BASE_URL } = require('../../utils/request');
 const { calculatePrice } = require('../../utils/calculator');
 
 function getFormattedDate() {
@@ -150,6 +150,8 @@ Page({
       height_mm: this.data.product.default_height || '',
       selected_options,
       scene_images: [],
+      uploading_scene_images: [],
+      failed_scene_images: [],
       customer_remark: '',
       calcResult: {}
     };
@@ -182,51 +184,107 @@ Page({
   selectSetSceneImages(sourceType) {
     const activeSet = this.data.customSets[this.data.activeSetIndex];
     if (!activeSet) return;
-    const currentImgs = activeSet.scene_images || [];
-    const remainingCount = 6 - currentImgs.length;
+    const currentCount = (activeSet.scene_images || []).length
+      + (activeSet.uploading_scene_images || []).length
+      + (activeSet.failed_scene_images || []).length;
+    const remainingCount = 6 - currentCount;
+    if (remainingCount <= 0) return;
 
     wx.chooseMedia({
       count: sourceType[0] === 'camera' ? 1 : remainingCount,
       mediaType: ['image'],
       sourceType,
       success: (res) => {
-        const tempFiles = res.tempFiles || [];
-        tempFiles.forEach(file => {
-          wx.showLoading({ title: '上传现场图片...' });
-          wx.uploadFile({
-            url: 'https://zc-api.carelife.top/api/upload',
-            filePath: file.tempFilePath,
-            name: 'file',
-            success: (uploadRes) => {
-              wx.hideLoading();
-              try {
-                const data = JSON.parse(uploadRes.data);
-                if (data.success && data.url) {
-                  const updatedSets = [...this.data.customSets];
-                  const set = updatedSets[this.data.activeSetIndex];
-                  if (!set.scene_images) set.scene_images = [];
-                  set.scene_images.push(data.url);
-                  this.setData({ customSets: updatedSets });
-                  wx.showToast({ title: '上传成功', icon: 'success' });
-                } else {
-                  wx.showToast({ title: '上传失败', icon: 'none' });
-                }
-              } catch (e) {
-                wx.showToast({ title: '上传失败', icon: 'none' });
-              }
-            },
-            fail: () => {
-              wx.hideLoading();
-              wx.showToast({ title: '网络失败', icon: 'none' });
-            }
-          });
+        const tempPaths = (res.tempFiles || [])
+          .map(file => file.tempFilePath)
+          .filter(Boolean)
+          .slice(0, remainingCount);
+        if (!tempPaths.length) return;
+
+        const setId = activeSet.id;
+        this.updateSetSceneImages(setId, (set) => {
+          set.uploading_scene_images = (set.uploading_scene_images || []).concat(tempPaths);
+          return set;
         });
+        tempPaths.forEach(filePath => this.uploadSetSceneImage(setId, filePath));
       },
       fail: (err) => {
         if ((err.errMsg || '').includes('auth deny')) {
           wx.showToast({ title: '请允许微信使用相机后重试', icon: 'none' });
         }
       },
+    });
+  },
+
+  updateSetSceneImages(setId, updater) {
+    const customSets = this.data.customSets.map((rawSet) => {
+      if (rawSet.id !== setId) return rawSet;
+      return updater({
+        ...rawSet,
+        scene_images: [...(rawSet.scene_images || [])],
+        uploading_scene_images: [...(rawSet.uploading_scene_images || [])],
+        failed_scene_images: [...(rawSet.failed_scene_images || [])]
+      });
+    });
+    this.setData({ customSets });
+  },
+
+  uploadSetSceneImage(setId, filePath) {
+    wx.uploadFile({
+      url: `${BASE_URL}/api/upload`,
+      filePath,
+      name: 'file',
+      success: (uploadRes) => {
+        let data;
+        try {
+          data = JSON.parse(uploadRes.data || '{}');
+        } catch (e) {}
+
+        if (uploadRes.statusCode >= 200 && uploadRes.statusCode < 300 && data && data.success && data.url) {
+          this.updateSetSceneImages(setId, (set) => {
+            set.uploading_scene_images = (set.uploading_scene_images || []).filter(path => path !== filePath);
+            set.failed_scene_images = (set.failed_scene_images || []).filter(item => item.path !== filePath);
+            set.scene_images.push(data.url);
+            return set;
+          });
+          return;
+        }
+        this.markSetSceneImageFailed(setId, filePath, (data && data.message) || '图片上传失败');
+      },
+      fail: () => this.markSetSceneImageFailed(setId, filePath, '网络连接失败')
+    });
+  },
+
+  markSetSceneImageFailed(setId, filePath, message) {
+    this.updateSetSceneImages(setId, (set) => {
+      set.uploading_scene_images = (set.uploading_scene_images || []).filter(path => path !== filePath);
+      set.failed_scene_images = (set.failed_scene_images || []).filter(item => item.path !== filePath);
+      set.failed_scene_images.push({ path: filePath, message });
+      return set;
+    });
+    wx.showToast({ title: '图片上传失败，可点击重试', icon: 'none' });
+  },
+
+  retrySetSceneImage(e) {
+    const filePath = e.currentTarget.dataset.path;
+    const activeSet = this.data.customSets[this.data.activeSetIndex];
+    if (!activeSet || !filePath) return;
+    const setId = activeSet.id;
+    this.updateSetSceneImages(setId, (set) => {
+      set.failed_scene_images = (set.failed_scene_images || []).filter(item => item.path !== filePath);
+      set.uploading_scene_images.push(filePath);
+      return set;
+    });
+    this.uploadSetSceneImage(setId, filePath);
+  },
+
+  deleteFailedSetSceneImg(e) {
+    const filePath = e.currentTarget.dataset.path;
+    const activeSet = this.data.customSets[this.data.activeSetIndex];
+    if (!activeSet || !filePath) return;
+    this.updateSetSceneImages(activeSet.id, (set) => {
+      set.failed_scene_images = (set.failed_scene_images || []).filter(item => item.path !== filePath);
+      return set;
     });
   },
 

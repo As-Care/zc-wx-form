@@ -131,6 +131,9 @@ Page({
   },
 
   navToOrders(e) {
+    // switchTab 不支持携带 query 参数，使用一次性的全局状态把目标筛选传给订单页。
+    const status = (e && e.currentTarget && e.currentTarget.dataset.status) || 'all';
+    app.globalData.orderListInitialStatus = status;
     wx.switchTab({
       url: '/pages/order-list/order-list'
     });

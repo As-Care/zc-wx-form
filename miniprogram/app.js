@@ -7,6 +7,7 @@ App({
     userInfo: null,
     token: null,
     loginPromise: null,
+    orderNoticeRefreshPromise: null,
     // 官方门店品牌信息
     storeInfo: {
       name: '展晨门窗 (ZHANCHEN MENYE)',
@@ -23,7 +24,15 @@ App({
   onLaunch() {
     console.log('展晨门窗小程序已启动...');
     this.checkLoginStatus();
-    this.globalData.loginPromise = this.silentLogin();
+    this.globalData.loginPromise = this.silentLogin().then((user) => {
+      if (user) this.refreshOrderStatusNotices();
+      return user;
+    });
+  },
+
+  onShow() {
+    // 只在小程序重新回到前台时检查一次；无需订阅消息或常驻轮询。
+    this.refreshOrderStatusNotices();
   },
 
   checkLoginStatus() {
@@ -33,6 +42,78 @@ App({
       this.globalData.token = token;
       this.globalData.userInfo = userInfo;
     }
+  },
+
+  getOrderNoticeStorageKey() {
+    const user = this.globalData.userInfo || wx.getStorageSync('zc_user_info') || {};
+    return user.id ? `zc_order_status_notice_${user.id}` : '';
+  },
+
+  refreshOrderStatusNotices() {
+    if (this.globalData.orderNoticeRefreshPromise) {
+      return this.globalData.orderNoticeRefreshPromise;
+    }
+
+    const storageKey = this.getOrderNoticeStorageKey();
+    const token = wx.getStorageSync('zc_token') || '';
+    if (!storageKey || !token) return Promise.resolve();
+
+    const saved = wx.getStorageSync(storageKey) || {};
+    const hasCursor = Boolean(saved.cursor);
+    const query = hasCursor
+      ? `since=${encodeURIComponent(saved.cursor)}`
+      : 'baseline=1';
+
+    this.globalData.orderNoticeRefreshPromise = new Promise((resolve) => {
+      wx.request({
+        url: `${this.globalData.baseUrl}/api/orders/status-notices?${query}`,
+        header: {
+          'Content-Type': 'application/json',
+          'X-Client': 'miniprogram',
+          'Authorization': `Bearer ${token}`
+        },
+        success: (res) => {
+          const data = res.data || {};
+          if (!data.success) {
+            resolve();
+            return;
+          }
+
+          const previousUnread = Array.isArray(saved.unread) ? saved.unread : [];
+          const unreadMap = new Map(previousUnread.map((item) => [item.order_id, item]));
+          (Array.isArray(data.data) ? data.data : []).forEach((item) => {
+            if (item && item.order_id) unreadMap.set(item.order_id, item);
+          });
+          const unread = Array.from(unreadMap.values());
+          wx.setStorageSync(storageKey, {
+            cursor: data.cursor || saved.cursor || '',
+            unread
+          });
+
+          if (unread.length > 0) {
+            wx.showTabBarRedDot({ index: 2 });
+          } else {
+            wx.hideTabBarRedDot({ index: 2 });
+          }
+          resolve();
+        },
+        fail: () => resolve()
+      });
+    }).finally(() => {
+      this.globalData.orderNoticeRefreshPromise = null;
+    });
+
+    return this.globalData.orderNoticeRefreshPromise;
+  },
+
+  consumeOrderStatusNotices() {
+    const storageKey = this.getOrderNoticeStorageKey();
+    if (!storageKey) return [];
+    const saved = wx.getStorageSync(storageKey) || {};
+    const unread = Array.isArray(saved.unread) ? saved.unread : [];
+    wx.setStorageSync(storageKey, { ...saved, unread: [] });
+    wx.hideTabBarRedDot({ index: 2 });
+    return unread;
   },
 
   silentLogin() {

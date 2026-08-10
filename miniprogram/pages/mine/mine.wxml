@@ -19,32 +19,32 @@
   </view>
 
   <!-- 订单进度快捷入口 (使用专属图片 Icon) -->
-  <view class="glass-card order-status-card flex-column">
+  <view class="glass-card order-status-card flex-column" bindtap="navToOrders">
     <view class="card-header-row flex-between">
       <view class="card-title">我的订单进度</view>
       <view class="total-orders-text">合计：{{orderCounts.total || 0}} 笔订单</view>
     </view>
 
     <view class="status-grid flex-between">
-      <view class="status-item flex-column" bindtap="navToOrders" data-status="pending_review">
+      <view class="status-item flex-column" catchtap="navToOrders" data-status="pending_review">
         <image class="status-img-icon" src="https://zc-oss.carelife.top/common/icon-pending-review.png" mode="aspectFit"></image>
         <view class="status-label">待复核</view>
         <view class="status-count-badge">{{orderCounts.pending_review || 0}} 笔</view>
       </view>
 
-      <view class="status-item flex-column" bindtap="navToOrders" data-status="producing">
+      <view class="status-item flex-column" catchtap="navToOrders" data-status="producing">
         <image class="status-img-icon" src="https://zc-oss.carelife.top/common/icon-in-production.png" mode="aspectFit"></image>
         <view class="status-label">生产中</view>
         <view class="status-count-badge">{{orderCounts.producing || 0}} 笔</view>
       </view>
 
-      <view class="status-item flex-column" bindtap="navToOrders" data-status="installing">
+      <view class="status-item flex-column" catchtap="navToOrders" data-status="installing">
         <image class="status-img-icon" src="https://zc-oss.carelife.top/common/icon-ing-pickup.png" mode="aspectFit"></image>
         <view class="status-label">待提货</view>
         <view class="status-count-badge">{{orderCounts.installing || 0}} 笔</view>
       </view>
 
-      <view class="status-item flex-column" bindtap="navToOrders" data-status="completed">
+      <view class="status-item flex-column" catchtap="navToOrders" data-status="completed">
         <image class="status-img-icon" src="https://zc-oss.carelife.top/common/icon-completed.png" mode="aspectFit"></image>
         <view class="status-label">已完成</view>
         <view class="status-count-badge">{{orderCounts.completed || 0}} 笔</view>

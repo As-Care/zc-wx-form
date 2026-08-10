@@ -154,6 +154,8 @@ Page({
     const itemsPayload = this.data.setsList.map(set => ({
       product_id: (this.data.draft && this.data.draft.product_id) || '',
       product_name: set.label ? `${(this.data.draft && this.data.draft.product_name) || '门窗商品'} (${set.label})` : ((this.data.draft && this.data.draft.product_name) || '门窗商品'),
+      // 保存用户填写的“备注名”，订单详情无需再从总备注中反推。
+      label: set.label || '',
       width_mm: set.width_mm,
       height_mm: set.height_mm,
       quantity: 1,

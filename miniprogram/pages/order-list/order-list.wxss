@@ -4,6 +4,24 @@
   padding: 16rpx 24rpx 120rpx 24rpx;
 }
 
+.status-notice {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-bottom: 14rpx;
+  padding: 16rpx 20rpx;
+  color: #F5D89A;
+  font-size: 24rpx;
+  background: rgba(197, 168, 128, 0.12);
+  border: 1rpx solid rgba(197, 168, 128, 0.35);
+  border-radius: 14rpx;
+}
+
+.status-notice-icon {
+  color: #D4AF37;
+  font-size: 18rpx;
+}
+
 /* Status Tabs 胶囊风格 (粘性吸顶 + 紧凑间距) */
 .tabs-wrapper {
   position: sticky;

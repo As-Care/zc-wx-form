@@ -59,6 +59,24 @@ function formatOptionsSummary(it) {
   })).filter(o => o.option_name);
 }
 
+// 旧订单的套备注名只写入了订单总备注，例如“【客厅窗】需拆旧窗”。
+// 新订单会直接使用 item.label；仅在识别到服务端旧版兜底名称时才恢复旧名称。
+function getLegacySetLabels(order) {
+  const remark = typeof order?.customer_remark === 'string' ? order.customer_remark : '';
+  const labels = [];
+  const matcher = /【([^【】]+)】/g;
+  let matched;
+  while ((matched = matcher.exec(remark)) !== null) {
+    const label = matched[1].trim();
+    if (label) labels.push(label);
+  }
+  return labels;
+}
+
+function isGeneratedSetLabel(label) {
+  return /^.+-\d{6}-\d+$/.test(String(label || '').trim());
+}
+
 Page({
   data: {
     orderId: '',
@@ -85,6 +103,7 @@ Page({
           desc: '正在等待接单员复核'
         };
 
+        const legacySetLabels = getLegacySetLabels(target);
         const items = (target.items || []).map((it, idx) => {
           const optsSum = formatOptionsSummary(it);
 
@@ -100,11 +119,14 @@ Page({
               : (Array.isArray(target.scene_images) ? target.scene_images : []);
           }
 
-          const itemRemark = it.remark || '';
+          const itemRemark = it.remark || it.customer_remark || it.note || '';
           
           let cleanLabel = it.label || '';
           if (cleanLabel.startsWith('【') && cleanLabel.endsWith('】')) {
             cleanLabel = cleanLabel.substring(1, cleanLabel.length - 1);
+          }
+          if (isGeneratedSetLabel(cleanLabel) && legacySetLabels[idx]) {
+            cleanLabel = legacySetLabels[idx];
           }
 
           return {

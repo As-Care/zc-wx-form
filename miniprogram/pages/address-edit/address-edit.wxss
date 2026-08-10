@@ -75,8 +75,9 @@
   left: 0;
   right: 0;
   background: #121316;
-  padding: 16rpx 32rpx calc(34rpx + env(safe-area-inset-bottom));
+  padding: 16rpx 32rpx 50rpx;
   padding: 16rpx 32rpx calc(34rpx + constant(safe-area-inset-bottom));
+  padding: 16rpx 32rpx calc(34rpx + env(safe-area-inset-bottom));
   z-index: 100;
   box-sizing: border-box;
 }

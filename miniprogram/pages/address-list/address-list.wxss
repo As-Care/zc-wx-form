@@ -2,8 +2,9 @@
 
 .container {
   padding: 24rpx;
-  padding-bottom: calc(160rpx + env(safe-area-inset-bottom));
+  padding-bottom: 180rpx;
   padding-bottom: calc(160rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(160rpx + env(safe-area-inset-bottom));
 }
 
 .address-card {
@@ -151,8 +152,9 @@
   left: 0;
   right: 0;
   background: #121316;
-  padding: 16rpx 32rpx calc(34rpx + env(safe-area-inset-bottom));
+  padding: 16rpx 32rpx 50rpx;
   padding: 16rpx 32rpx calc(34rpx + constant(safe-area-inset-bottom));
+  padding: 16rpx 32rpx calc(34rpx + env(safe-area-inset-bottom));
   z-index: 100;
   box-sizing: border-box;
 }

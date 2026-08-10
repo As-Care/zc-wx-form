@@ -1,6 +1,11 @@
 <!-- 展晨门窗 订单列表页 WXML -->
 <view class="container">
 
+  <view class="status-notice" wx:if="{{statusNoticeText}}">
+    <text class="status-notice-icon">●</text>
+    <text>{{statusNoticeText}}</text>
+  </view>
+
   <!-- 胶囊 Status Tabs (带 (x) 动态数量统计) -->
   <view class="tabs-wrapper">
     <scroll-view class="tabs-scroll" scroll-x enable-flex show-scrollbar="{{false}}">

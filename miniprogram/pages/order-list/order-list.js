@@ -30,10 +30,27 @@ Page({
     loading: false,
     loaded: false,
     loadError: '',
-    requiresLogin: false
+    requiresLogin: false,
+    statusNoticeText: ''
   },
 
   onShow() {
+    const app = getApp();
+    this.setData({ statusNoticeText: '' });
+    app.refreshOrderStatusNotices().then(() => {
+      const notices = app.consumeOrderStatusNotices();
+      if (notices.length > 0) {
+        this.setData({ statusNoticeText: `有 ${notices.length} 笔订单的状态已更新，请查看最新进度` });
+      }
+    });
+    const requestedStatus = app.globalData.orderListInitialStatus;
+    // 该值只用于个人中心这一次跳转，避免用户以后打开订单页时仍被旧状态限制。
+    delete app.globalData.orderListInitialStatus;
+
+    if (requestedStatus && this.data.statusTabs.some(tab => tab.key === requestedStatus)) {
+      this.setActiveStatus(requestedStatus);
+      return;
+    }
     this.fetchOrders({ reset: true });
   },
 
@@ -50,6 +67,10 @@ Page({
   switchTab(e) {
     const status = e.currentTarget.dataset.status;
     if (!status || status === this.data.activeStatus) return;
+    this.setActiveStatus(status);
+  },
+
+  setActiveStatus(status) {
     this.setData({
       activeStatus: status,
       orderList: [],

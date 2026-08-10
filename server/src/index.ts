@@ -2063,6 +2063,63 @@ app.get("/api/orders", async (c) => {
 });
 
 /**
+ * 小程序订单状态未读提醒。
+ * 首次调用仅建立基线；后续只返回用户上次查看后由后台实际变更过状态的订单。
+ */
+app.get("/api/orders/status-notices", async (c) => {
+  const db = c.env.DB;
+  const tokenUserId = getBearerTokenUserId(c);
+  if (!tokenUserId) {
+    return c.json({ success: false, message: "登录状态无效，请重新登录" }, 401);
+  }
+
+  const since = (c.req.query("since") || "").trim();
+  const isBaseline = c.req.query("baseline") === "1";
+  const latestLog = await db
+    .prepare(
+      `SELECT l.created_at FROM order_status_logs l
+       INNER JOIN orders o ON o.id = l.order_id
+       WHERE o.user_id = ?
+       ORDER BY l.created_at DESC, l.id DESC LIMIT 1`,
+    )
+    .bind(tokenUserId)
+    .first<{ created_at: string }>();
+
+  // 旧用户首次升级到该版本时，不把历史状态全部误报成未读。
+  if (isBaseline || !since) {
+    return c.json({
+      success: true,
+      data: [],
+      cursor: latestLog?.created_at || "",
+    });
+  }
+
+  const { results } = await db
+    .prepare(
+      `SELECT l.order_id, l.to_status, l.created_at, o.order_no
+       FROM order_status_logs l
+       INNER JOIN orders o ON o.id = l.order_id
+       WHERE o.user_id = ? AND l.created_at > ?
+       ORDER BY l.created_at ASC, l.id ASC
+       LIMIT 100`,
+    )
+    .bind(tokenUserId, since)
+    .all<{ order_id: string; to_status: string; created_at: string; order_no: string }>();
+
+  const notices = (results || []).map((item) => ({
+    order_id: item.order_id,
+    order_no: item.order_no,
+    status: item.to_status,
+    changed_at: item.created_at,
+  }));
+  const cursor = notices.length
+    ? notices[notices.length - 1].changed_at
+    : since;
+
+  return c.json({ success: true, data: notices, cursor });
+});
+
+/**
  * 删除订单 (软删除或硬删除，这里采用硬删除)
  * DELETE /api/orders/:id
  */
@@ -2878,23 +2935,25 @@ app.patch("/api/admin/orders/:id/status", async (c) => {
     .bind(targetStatus, targetRemark, newSpecialCharges, newFinalAmount, id)
     .run();
 
-  // 写入状态扭转日志
-  await db
-    .prepare(
-      `
-    INSERT INTO order_status_logs (id, order_id, operator_name, from_status, to_status, remark) 
-    VALUES (?, ?, ?, ?, ?, ?)
-  `,
-    )
-    .bind(
-      `log_${Date.now()}`,
-      id,
-      admin.nickname || admin.username,
-      oldStatus,
-      targetStatus,
-      targetRemark || `状态变更: ${oldStatus} -> ${targetStatus}`,
-    )
-    .run();
+  // 仅真实的状态变化写入日志，避免修改商家备注也触发客户未读提醒。
+  if (oldStatus !== targetStatus) {
+    await db
+      .prepare(
+        `
+      INSERT INTO order_status_logs (id, order_id, operator_name, from_status, to_status, remark)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `,
+      )
+      .bind(
+        `log_${Date.now()}`,
+        id,
+        admin.nickname || admin.username,
+        oldStatus,
+        targetStatus,
+        targetRemark || `状态变更: ${oldStatus} -> ${targetStatus}`,
+      )
+      .run();
+  }
 
   return c.json({
     success: true,
@@ -3151,6 +3210,106 @@ app.patch("/api/admin/products/:id/hot", async (c) => {
   }
 
   return c.json({ success: true, id, is_hot: isHot, message: "热门推荐更新成功" });
+});
+
+/**
+ * 管理端批量上下架商品。
+ */
+app.patch("/api/admin/products/batch-status", async (c) => {
+  const db = c.env.DB;
+  const body = await c.req.json();
+  const ids = Array.from(
+    new Set(
+      (Array.isArray(body.ids) ? body.ids : [])
+        .map((id) => String(id || "").trim())
+        .filter(Boolean),
+    ),
+  );
+  const isActive = Number(body.is_active);
+
+  if (!ids.length) {
+    return c.json({ success: false, message: "请至少选择一个商品" }, 400);
+  }
+  if (![0, 1].includes(isActive)) {
+    return c.json({ success: false, message: "商品状态参数不合法" }, 400);
+  }
+
+  for (const id of ids) {
+    await db
+      .prepare("UPDATE products SET is_active = ? WHERE id = ?")
+      .bind(isActive, id)
+      .run();
+  }
+
+  return c.json({ success: true, updated: ids.length, is_active: isActive });
+});
+
+/**
+ * 管理端复制商品，并保留其全部选配规则。复制件默认下架、非热门，需确认后再发布。
+ */
+app.post("/api/admin/products/:id/copy", async (c) => {
+  const db = c.env.DB;
+  await initProductHotField(db);
+  const sourceId = c.req.param("id");
+  const source = await db
+    .prepare("SELECT * FROM products WHERE id = ?")
+    .bind(sourceId)
+    .first<any>();
+  if (!source) {
+    return c.json({ success: false, message: "未找到要复制的商品" }, 404);
+  }
+
+  const id = `prod_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const name = `${source.name}（副本）`;
+  await db
+    .prepare(
+      `INSERT INTO products
+        (id, category_id, category_name, name, description, cover_image, base_price_sqm, min_area, sort_order, is_active, is_hot, default_width, default_height)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?)`,
+    )
+    .bind(
+      id,
+      source.category_id || null,
+      source.category_name || "",
+      name,
+      source.description || "",
+      source.cover_image || "",
+      source.base_price_sqm || 0,
+      source.min_area || 1,
+      source.sort_order || 0,
+      source.default_width || null,
+      source.default_height || null,
+    )
+    .run();
+
+  const { results: options } = await db
+    .prepare("SELECT * FROM product_options WHERE product_id = ? ORDER BY sort_order ASC")
+    .bind(sourceId)
+    .all<any>();
+  for (let index = 0; index < (options || []).length; index += 1) {
+    const option = options[index];
+    await db
+      .prepare(
+        `INSERT INTO product_options
+          (id, product_id, group_name, group_title, option_name, price_type, price, is_default, sort_order, image_url)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        `opt_${id.replace(/[^a-zA-Z0-9]/g, "")}_${Date.now()}_${index}`,
+        id,
+        option.group_name || "其它选配",
+        option.group_title || option.group_name || "其它选配",
+        option.option_name || option.name || "",
+        option.price_type || "fixed",
+        Number(option.price || 0),
+        option.is_default ? 1 : 0,
+        index,
+        option.image_url || "",
+      )
+      .run();
+  }
+
+  return c.json({ success: true, id, name, message: "商品已复制，副本默认下架" });
 });
 
 /**
