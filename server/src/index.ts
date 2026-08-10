@@ -206,6 +206,7 @@ const ADMIN_ROUTE_MENU: Array<[string, string]> = [
   ["/api/admin/customers", "Users"],
   ["/api/admin/orders", "Orders"],
   ["/api/admin/categories", "Categories"],
+  ["/api/admin/banners", "Banners"],
   ["/api/admin/products", "Products"],
   ["/api/admin/receivers", "StaffConfig"],
   ["/api/admin/config", "Settings"],
