@@ -14,7 +14,10 @@
         bindtap="navToOrderDetail"
         data-id="{{item.order_id}}"
       >
-        <text>订单号：{{item.order_no || item.order_id}}</text>
+        <view class="status-notice-order-main">
+          <text class="status-badge {{item.statusClass || 'status-pending'}}">{{item.statusText || '待复核'}}</text>
+          <text class="status-notice-order-no">订单号：{{item.order_no || item.order_id}}</text>
+        </view>
         <text class="status-notice-link">查看详情 ›</text>
       </view>
     </scroll-view>

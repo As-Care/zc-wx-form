@@ -43,6 +43,25 @@
   box-sizing: border-box;
 }
 
+.status-notice-order-main {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.status-notice-order-main .status-badge {
+  flex-shrink: 0;
+  margin-right: 12rpx;
+}
+
+.status-notice-order-no {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .status-notice-link {
   flex-shrink: 0;
   margin-left: 20rpx;

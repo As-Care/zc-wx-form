@@ -15,61 +15,63 @@
   </scroll-view>
 
   <!-- 右侧高奢商品方案网格 -->
-  <scroll-view class="product-main" scroll-y show-scrollbar="{{false}}">
-    <view class="product-search-row flex-row">
-      <text class="product-search-icon">🔍</text>
-      <input class="product-search-input" value="{{searchKeyword}}" placeholder="搜索商品名称、分类或描述" placeholder-style="color:#64748B;" bindinput="onSearchInput" bindconfirm="onSearchConfirm" confirm-type="search" />
-      <text class="product-search-clear" wx:if="{{searchKeyword}}" bindtap="clearSearch">清除</text>
-    </view>
+  <view class="product-main-container">
+    <scroll-view class="product-main" scroll-y show-scrollbar="{{false}}">
+      <view class="product-search-row flex-row">
+        <text class="product-search-icon">🔍</text>
+        <input class="product-search-input" value="{{searchKeyword}}" placeholder="搜索商品名称、分类或描述" placeholder-style="color:#64748B;" bindinput="onSearchInput" bindconfirm="onSearchConfirm" confirm-type="search" />
+        <text class="product-search-clear" wx:if="{{searchKeyword}}" bindtap="clearSearch">清除</text>
+      </view>
 
-    <!-- 分类头部 Header (共 x 款，删去系统方案) -->
-    <view class="cat-header flex-between">
-      <text class="cat-header-title">{{activeCatName}}</text>
-      <text class="cat-header-count">共 {{productList.length}} 款</text>
-    </view>
+      <!-- 分类头部 Header (共 x 款，删去系统方案) -->
+      <view class="cat-header flex-between">
+        <text class="cat-header-title">{{activeCatName}}</text>
+        <text class="cat-header-count">共 {{productList.length}} 款</text>
+      </view>
 
-    <!-- 商品方案卡片列表 -->
-    <view class="product-grid" wx:if="{{productList && productList.length > 0}}">
-      <view class="grid-card glass-card" wx:for="{{productList}}" wx:key="id" bindtap="navToDetail" data-id="{{item.id}}">
-        <image class="grid-card-img" src="{{item.cover_image}}" mode="aspectFill"></image>
-        <view class="grid-card-content flex-column">
-          <text class="grid-card-title">{{item.name}}</text>
-          <text class="grid-card-desc">{{item.description}}</text>
-          
-          <view class="tag-bar flex-row">
-            <text class="min-area-tag">起步 {{item.min_area || 1.5}} ㎡</text>
-          </view>
-
-          <view class="grid-card-bottom flex-between">
-            <view class="grid-price flex-row">
-              <text class="p-symbol">¥</text>
-              <text class="p-amount">{{item.base_price_sqm}}</text>
-              <text class="p-unit">/ ㎡起</text>
+      <!-- 商品方案卡片列表 -->
+      <view class="product-grid" wx:if="{{productList && productList.length > 0}}">
+        <view class="grid-card glass-card" wx:for="{{productList}}" wx:key="id" bindtap="navToDetail" data-id="{{item.id}}">
+          <image class="grid-card-img" src="{{item.cover_image}}" mode="aspectFill"></image>
+          <view class="grid-card-content flex-column">
+            <text class="grid-card-title">{{item.name}}</text>
+            <text class="grid-card-desc">{{item.description}}</text>
+            
+            <view class="tag-bar flex-row">
+              <text class="min-area-tag">起步 {{item.min_area || 1.5}} ㎡</text>
             </view>
-            <view class="action-btn btn-gold">定制下单</view>
+
+            <view class="grid-card-bottom flex-between">
+              <view class="grid-price flex-row">
+                <text class="p-symbol">¥</text>
+                <text class="p-amount">{{item.base_price_sqm}}</text>
+                <text class="p-unit">/ ㎡起</text>
+              </view>
+              <view class="action-btn btn-gold">定制下单</view>
+            </view>
           </view>
         </view>
       </view>
-    </view>
 
-    <!-- 暂无商品空状态提示 -->
-    <view class="empty-product-box flex-column" wx:elif="{{loadError}}">
-      <text class="empty-title">商品加载失败</text>
-      <text class="empty-sub">请检查网络后重新加载</text>
-      <button class="category-retry-btn" bindtap="retryProducts">重新加载</button>
-    </view>
+      <!-- 暂无商品空状态提示 -->
+      <view class="empty-product-box flex-column" wx:elif="{{loadError}}">
+        <text class="empty-title">商品加载失败</text>
+        <text class="empty-sub">请检查网络后重新加载</text>
+        <button class="category-retry-btn" bindtap="retryProducts">重新加载</button>
+      </view>
 
-    <view class="empty-product-box flex-column" wx:else>
-      <text class="empty-icon">📦</text>
-      <text class="empty-title">该分类暂无定制商品方案</text>
-      <text class="empty-sub">商家正在为您陆续配置上架中，敬请期待</text>
-    </view>
+      <view class="empty-product-box flex-column" wx:else>
+        <text class="empty-icon">📦</text>
+        <text class="empty-title">该分类暂无定制商品方案</text>
+        <text class="empty-sub">商家正在为您陆续配置上架中，敬请期待</text>
+      </view>
+    </scroll-view>
 
     <!-- 右侧商品列表 Loading 遮罩蒙层 -->
     <view class="product-loading-mask flex-column flex-center" wx:if="{{loading}}">
       <view class="loading-spinner"></view>
       <text class="loading-text">加载中...</text>
     </view>
-  </scroll-view>
+  </view>
 
 </view>

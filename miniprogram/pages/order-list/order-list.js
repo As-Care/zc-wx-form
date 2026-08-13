@@ -9,6 +9,14 @@ const STATUS_MAP = {
   'cancelled': { label: '已取消', class: 'status-cancelled' }
 };
 
+const STATUS_ALIASES = {
+  '待复核': 'pending_review',
+  '生产中': 'producing',
+  '待提货': 'installing',
+  '已完成': 'completed',
+  '已取消': 'cancelled'
+};
+
 const PAGE_SIZE = 10;
 
 Page({
@@ -40,7 +48,18 @@ Page({
     app.refreshOrderStatusNotices().then(() => {
       const notices = app.consumeOrderStatusNotices();
       if (notices.length > 0) {
-        this.setData({ statusNotices: notices });
+        const formattedNotices = notices.map(item => {
+          const rawStatus = item.status || item.to_status || item.order_status || '';
+          const statusKey = STATUS_ALIASES[rawStatus] || rawStatus;
+          const info = STATUS_MAP[statusKey] || STATUS_MAP.pending_review;
+          return {
+            ...item,
+            status: statusKey,
+            statusText: info.label,
+            statusClass: info.class
+          };
+        });
+        this.setData({ statusNotices: formattedNotices });
       }
     });
     const requestedStatus = app.globalData.orderListInitialStatus;
